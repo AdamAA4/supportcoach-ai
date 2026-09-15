@@ -28,7 +28,7 @@ describe("practice-pack contract", () => {
   it("requires a non-empty public HTTPS link or pasted source for every session", () => {
     expect(
       validatePracticePack({
-        source: { kind: "public-https-link", url: "http://example.com/faq", confirmation: "confirmed" },
+        source: { kind: "public-https-link", url: "http://example.com/faq", confirmation: "pending" },
         scenario: "late-delivery",
       }),
     ).toEqual({
@@ -60,6 +60,72 @@ describe("practice-pack contract", () => {
     ).toEqual({
       ok: false,
       issues: ["Confirm the source snapshot before starting practice."],
+    });
+  });
+
+  it("requires confirmed public links to retain their sanitized snapshot and content hash", () => {
+    expect(
+      validatePracticePack({
+        source: {
+          kind: "public-https-link",
+          url: "https://example.com/faq",
+          confirmation: "confirmed",
+        },
+        scenario: "late-delivery",
+      } as never),
+    ).toEqual({
+      ok: false,
+      issues: [
+        "Confirmed public links require a non-empty sanitized source snapshot and content hash.",
+      ],
+    });
+
+    expect(
+      validatePracticePack({
+        source: {
+          kind: "public-https-link",
+          url: "https://example.com/faq",
+          confirmation: "confirmed",
+          snapshot: { extractedText: "Refund policy", contentHash: "   " },
+        },
+        scenario: "late-delivery",
+      }),
+    ).toEqual({
+      ok: false,
+      issues: [
+        "Confirmed public links require a non-empty sanitized source snapshot and content hash.",
+      ],
+    });
+
+    expect(
+      validatePracticePack({
+        source: {
+          kind: "public-https-link",
+          url: "https://example.com/faq",
+          confirmation: "confirmed",
+          snapshot: {
+            extractedText: "Refunds are available within 30 days.",
+            contentHash: "sha256:abc123",
+          },
+        },
+        scenario: "late-delivery",
+      }),
+    ).toEqual({ ok: true });
+  });
+
+  it("rejects a runtime scenario outside the approved scenario archetypes", () => {
+    expect(
+      validatePracticePack({
+        source: {
+          kind: "pasted-text",
+          text: "Delivery policy",
+          confirmation: "confirmed",
+        },
+        scenario: "damaged-item" as "late-delivery",
+      }),
+    ).toEqual({
+      ok: false,
+      issues: ["Choose a supported practice scenario."],
     });
   });
 

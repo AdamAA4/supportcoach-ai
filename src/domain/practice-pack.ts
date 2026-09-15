@@ -15,11 +15,28 @@ export type Score = 0 | 1 | 2 | 3;
 
 export type SourceConfirmation = "pending" | "confirmed";
 
-export type PublicHttpsLinkSource = {
+export type PublicLinkSnapshot = {
+  extractedText: string;
+  contentHash: string;
+};
+
+export type PendingPublicHttpsLinkSource = {
   kind: "public-https-link";
   url: string;
-  confirmation: SourceConfirmation;
+  confirmation: "pending";
+  snapshot?: never;
 };
+
+export type ConfirmedPublicHttpsLinkSource = {
+  kind: "public-https-link";
+  url: string;
+  confirmation: "confirmed";
+  snapshot: PublicLinkSnapshot;
+};
+
+export type PublicHttpsLinkSource =
+  | PendingPublicHttpsLinkSource
+  | ConfirmedPublicHttpsLinkSource;
 
 export type PastedTextSource = {
   kind: "pasted-text";
@@ -81,6 +98,23 @@ export const validatePracticePack = (input: PracticePack): PracticePackValidatio
 
   if (sourceIsPresent && input.source.confirmation !== "confirmed") {
     issues.push("Confirm the source snapshot before starting practice.");
+  }
+
+  if (
+    sourceIsPresent &&
+    input.source.kind === "public-https-link" &&
+    input.source.confirmation === "confirmed" &&
+    (!input.source.snapshot ||
+      !isNonEmptyText(input.source.snapshot.extractedText) ||
+      !isNonEmptyText(input.source.snapshot.contentHash))
+  ) {
+    issues.push(
+      "Confirmed public links require a non-empty sanitized source snapshot and content hash.",
+    );
+  }
+
+  if (!PRACTICE_SCENARIOS.includes(input.scenario)) {
+    issues.push("Choose a supported practice scenario.");
   }
 
   if (input.notes?.content && !EXPERIENCE_NOTE_FORMATS.includes(input.notes.format)) {

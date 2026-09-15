@@ -10,3 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Initial per-session practice-pack domain contract and product-input decision record.
+
+### Fixed
+
+- Require confirmed public HTTPS links to retain the sanitized source snapshot and content hash used to ground practice.
+- Reject unsupported runtime scenario values before a practice session starts.
