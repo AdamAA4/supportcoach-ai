@@ -57,3 +57,26 @@ On this Windows runner, `next build` consistently reached its final trace stage 
 ### Self-review and concern
 
 The adapter remains the only voice boundary and keeps customer audio, source setup, and deterministic transcript paths separate. Source confirmation gating, the trainee-as-responder boundary, no suggested-answer surface, and no source/transcript logging were not changed. The WAV fixtures are deterministic offline assets generated with Windows SAPI and do not require a microphone or API key. Browser unit tests cannot decode/play real audio because JSDOM has no `AudioContext`; the production build includes both fixtures and `AudioPlayer` loads them only in a browser with Web Audio support.
+
+## Final review-finding remediation — 2026-09-15
+
+### Delivered
+
+- Restored `VoiceAgentEvent` and `VoiceAgent` exactly to the Task 4 brief: `customer-audio` contains only `audio`, and `setMuted` is no longer part of the public adapter interface.
+- Kept mute behavior as an optional internal adapter capability. The call console always stops its local playback and calls the mandated `interruptCustomer`; the mock capability additionally stops/resumes Web Speech recognition.
+- Replaced fixture-URL playback with browser `speechSynthesis` of the exact scenario opening and deterministic source-aware follow-up text. In browsers without synthesis, the mock fetches and emits the bundled opening WAV through the unchanged `customer-audio` `ArrayBuffer` event.
+- Interruption cancels active speech synthesis; pending fallback fixture audio is suppressed after interruption, while the call console stops active `AudioPlayer` playback when it consumes the interruption event.
+
+### TDD evidence
+
+- The dynamic-speech regression test first failed with no `speechSynthesis` calls. The smallest mock-adapter change made it pass with the exact opening and follow-up strings.
+- The fixture-fallback regression initially failed before its async fixture event had settled; it now waits for the real asynchronous `ArrayBuffer` event and verifies the unchanged event shape. The interruption regression verifies pending fixture data is not emitted after interruption.
+
+### Verification
+
+- `npm test -- src/voice/voice-agent.test.ts src/components/call-console.test.tsx` — passed, 16 tests across 2 files.
+- `npm run typecheck` — passed.
+- `npm run lint` — passed with no ESLint warnings or errors; Next.js printed its existing `next lint` deprecation notice.
+- `npm test` — passed, 30 tests across 4 files.
+- `npm run build` — passed with exit code 0 after 52 seconds. Compilation, type validation, static generation, final optimization, and trace collection completed; `/call` builds as a static route (6.42 kB, 112 kB first load).
+- `git diff --check` — passed.

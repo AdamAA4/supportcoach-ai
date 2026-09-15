@@ -5,7 +5,7 @@ export type VoiceAgentEvent =
   | { type: "session-ready"; sessionId: string }
   | { type: "customer-transcript"; text: string; final: boolean }
   | { type: "trainee-transcript"; text: string; final: boolean }
-  | { type: "customer-audio"; audio: ArrayBuffer; fixtureUrl?: string }
+  | { type: "customer-audio"; audio: ArrayBuffer }
   | { type: "customer-turn-started" }
   | { type: "customer-turn-ended" }
   | { type: "interrupted" }
@@ -18,7 +18,6 @@ export interface VoiceAgent {
     onEvent: (event: VoiceAgentEvent) => void;
   }): Promise<void>;
   startMicrophone(): Promise<void>;
-  setMuted(muted: boolean): Promise<void>;
   sendTypedTraineeTurn(text: string): void;
   interruptCustomer(): void;
   end(): Promise<void>;

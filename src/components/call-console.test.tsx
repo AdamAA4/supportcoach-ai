@@ -22,7 +22,6 @@ class ErrorVoiceAgent implements VoiceAgent {
   async startMicrophone() {}
   sendTypedTraineeTurn() {}
   interruptCustomer() {}
-  async setMuted() {}
   async end() {}
 }
 
@@ -32,7 +31,6 @@ class PermissionDeniedVoiceAgent implements VoiceAgent {
   async startMicrophone() { this.onEvent?.({ type: "error", code: "permission-denied", message: "Microphone access was denied." }); }
   sendTypedTraineeTurn() {}
   interruptCustomer() {}
-  async setMuted() {}
   async end() {}
 }
 
@@ -46,7 +44,7 @@ class InteractiveVoiceAgent implements VoiceAgent {
   }
   async startMicrophone() {}
   sendTypedTraineeTurn(text: string) { this.interruptCustomer(); this.onEvent?.({ type: "trainee-transcript", text, final: true }); this.onEvent?.({ type: "customer-turn-started" }); }
-  interruptCustomer() { this.onEvent?.({ type: "interrupted" }); }
+  interruptCustomer = vi.fn(() => { this.onEvent?.({ type: "interrupted" }); });
   async end() {}
 }
 
@@ -101,6 +99,7 @@ describe("CallConsole", () => {
 
     expect(await screen.findByText("Customer audio: Speaking")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Mute" }));
+    expect(interactive.interruptCustomer).toHaveBeenCalled();
     expect(interactive.setMuted).toHaveBeenCalledWith(true);
     expect(screen.getByText("Customer audio: Idle")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Unmute" }));

@@ -16,6 +16,8 @@ type SpeechRecognitionLike = {
 };
 
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+type SpeechSynthesisLike = { speak: (utterance: { text: string }) => void; cancel: () => void };
+type SpeechSynthesisUtteranceConstructor = new (text: string) => { text: string };
 
 const mockFollowUp = (scenario: ScenarioDefinition, facts: ReferenceFact[]): string => {
   const fact = facts.find((candidate) => scenario.factIds.includes(candidate.id)) ?? facts[0];
@@ -24,9 +26,8 @@ const mockFollowUp = (scenario: ScenarioDefinition, facts: ReferenceFact[]): str
     : "Thanks. What is the next step you can offer me?";
 };
 
-/** Spoken, browser-playable WAV fixture for deterministic mock customer playback. */
-export const mockCustomerAudioFixture = "/voice/mock-customer-opening.wav";
-export const mockCustomerFollowUpAudioFixture = "/voice/mock-customer-follow-up.wav";
+/** Offline fallback for browsers without Web Speech synthesis. */
+const mockCustomerAudioFixture = "/voice/mock-customer-opening.wav";
 
 export class MockVoiceAgent implements VoiceAgent {
   private onEvent?: (event: VoiceAgentEvent) => void;
@@ -42,7 +43,7 @@ export class MockVoiceAgent implements VoiceAgent {
     this.scenario = input.scenario;
     this.facts = input.facts;
     this.emit({ type: "session-ready", sessionId: "mock-session" });
-    this.emitCustomerTurn(input.scenario.openingLine, mockCustomerAudioFixture);
+    this.emitCustomerTurn(input.scenario.openingLine);
   }
 
   async startMicrophone(): Promise<void> {
@@ -87,6 +88,7 @@ export class MockVoiceAgent implements VoiceAgent {
   interruptCustomer(): void {
     if (!this.customerSpeaking) return;
     this.clearTimers();
+    this.speechSynthesis()?.cancel();
     this.customerSpeaking = false;
     this.emit({ type: "interrupted" });
   }
@@ -94,7 +96,7 @@ export class MockVoiceAgent implements VoiceAgent {
   requestMockCustomerTurn(): void {
     if (!this.scenario) return;
     this.interruptCustomer();
-    this.emitCustomerTurn(mockFollowUp(this.scenario, this.facts), mockCustomerFollowUpAudioFixture);
+    this.emitCustomerTurn(mockFollowUp(this.scenario, this.facts));
   }
 
   async end(): Promise<void> {
@@ -107,18 +109,40 @@ export class MockVoiceAgent implements VoiceAgent {
 
   private respondAfterTraineeTurn(): void {
     if (!this.scenario) return;
-    this.schedule(() => this.emitCustomerTurn(mockFollowUp(this.scenario!, this.facts), mockCustomerFollowUpAudioFixture), 250);
+    this.schedule(() => this.emitCustomerTurn(mockFollowUp(this.scenario!, this.facts)), 250);
   }
 
-  private emitCustomerTurn(text: string, fixtureUrl: string): void {
+  private emitCustomerTurn(text: string): void {
     this.customerSpeaking = true;
     this.emit({ type: "customer-turn-started" });
-    this.emit({ type: "customer-audio", audio: new ArrayBuffer(0), fixtureUrl });
+    if (!this.speak(text)) void this.emitFallbackAudio();
     this.emit({ type: "customer-transcript", text, final: true });
     this.schedule(() => {
       this.customerSpeaking = false;
       this.emit({ type: "customer-turn-ended" });
     }, 400);
+  }
+
+  private speak(text: string): boolean {
+    const synthesis = this.speechSynthesis();
+    const Utterance = (globalThis as typeof globalThis & { SpeechSynthesisUtterance?: SpeechSynthesisUtteranceConstructor }).SpeechSynthesisUtterance;
+    if (!synthesis || !Utterance) return false;
+    synthesis.speak(new Utterance(text));
+    return true;
+  }
+
+  private speechSynthesis(): SpeechSynthesisLike | undefined {
+    return (globalThis as typeof globalThis & { speechSynthesis?: SpeechSynthesisLike }).speechSynthesis;
+  }
+
+  private async emitFallbackAudio(): Promise<void> {
+    try {
+      const response = await fetch(mockCustomerAudioFixture);
+      if (!response.ok) throw new Error("fixture unavailable");
+      if (this.customerSpeaking) this.emit({ type: "customer-audio", audio: await response.arrayBuffer() });
+    } catch {
+      // The deterministic transcript remains available when offline fixture playback is unavailable.
+    }
   }
 
   private schedule(callback: () => void, delay: number): void {

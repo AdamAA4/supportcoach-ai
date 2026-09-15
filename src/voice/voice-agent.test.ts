@@ -1,7 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
 
-import { MockVoiceAgent, mockCustomerAudioFixture, mockCustomerFollowUpAudioFixture } from "./mock-voice-agent";
-import { reduceCallState } from "./voice-agent";
+import type { ScenarioDefinition } from "../domain/practice-pack";
+import type { ReferenceFact } from "../domain/reference-source";
+import { MockVoiceAgent } from "./mock-voice-agent";
+import { reduceCallState, type VoiceAgent, type VoiceAgentEvent } from "./voice-agent";
 
 const scenario = {
   id: "late-delivery",
@@ -14,6 +16,18 @@ const scenario = {
 };
 
 describe("call state machine", () => {
+  it("preserves the mandated public voice-agent contract", () => {
+    type ExpectedVoiceAgent = {
+      connect(input: { scenario: ScenarioDefinition; facts: ReferenceFact[]; onEvent: (event: VoiceAgentEvent) => void }): Promise<void>;
+      startMicrophone(): Promise<void>;
+      sendTypedTraineeTurn(text: string): void;
+      interruptCustomer(): void;
+      end(): Promise<void>;
+    };
+
+    expectTypeOf<VoiceAgent>().toEqualTypeOf<ExpectedVoiceAgent>();
+  });
+
   it("moves through a normal practice turn", () => {
     let state = reduceCallState("idle", { type: "connect" });
     state = reduceCallState(state, { type: "session-ready" });
@@ -77,34 +91,65 @@ describe("mock voice agent", () => {
     await agent.end();
   });
 
-  it("uses a bundled spoken customer audio fixture instead of synthesizing a tone", () => {
-    expect(mockCustomerAudioFixture).toBe("/voice/mock-customer-opening.wav");
-    expect(mockCustomerFollowUpAudioFixture).toBe("/voice/mock-customer-follow-up.wav");
+  it("keeps the customer-audio event to its mandated audio-only shape", () => {
+    const event: VoiceAgentEvent = { type: "customer-audio", audio: new ArrayBuffer(0) };
+    expect(event).toEqual({ type: "customer-audio", audio: expect.any(ArrayBuffer) });
   });
 
-  it("stops recognition while muted and resumes it when unmuted", async () => {
-    const stop = vi.fn();
-    const start = vi.fn();
-    class Recognition {
-      continuous = false;
-      interimResults = false;
-      lang = "";
-      onstart = null;
-      onresult = null;
-      onerror = null;
-      onend = null;
-      start = start;
-      stop = stop;
-    }
-    vi.stubGlobal("SpeechRecognition", Recognition);
+  it("speaks the actual dynamic opening and follow-up when browser synthesis is available", async () => {
+    vi.useFakeTimers();
+    const speak = vi.fn();
+    const cancel = vi.fn();
+    class Utterance { constructor(public text: string) {} }
+    vi.stubGlobal("speechSynthesis", { speak, cancel });
+    vi.stubGlobal("SpeechSynthesisUtterance", Utterance);
     const agent = new MockVoiceAgent();
 
-    await agent.startMicrophone();
-    await agent.setMuted(true);
-    await agent.setMuted(false);
+    await agent.connect({ scenario, facts: [], onEvent: () => {} });
+    agent.sendTypedTraineeTurn("I will check that for you.");
+    await vi.runAllTimersAsync();
 
-    expect(stop).toHaveBeenCalledOnce();
-    expect(start).toHaveBeenCalledTimes(2);
+    expect(speak.mock.calls.map(([utterance]) => utterance.text)).toEqual([
+      scenario.openingLine,
+      "Thanks. What is the next step you can offer me?",
+    ]);
+    agent.interruptCustomer();
+    expect(cancel).toHaveBeenCalled();
+    await agent.end();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("emits bundled fixture audio only when browser synthesis is unavailable", async () => {
+    const fetch = vi.fn(async () => new Response(new ArrayBuffer(4), { status: 200 }));
+    vi.stubGlobal("fetch", fetch);
+    const events: VoiceAgentEvent[] = [];
+    const agent = new MockVoiceAgent();
+
+    await agent.connect({ scenario, facts: [], onEvent: (event) => events.push(event) });
+    await vi.waitFor(() => expect(events.some((event) => event.type === "customer-audio")).toBe(true));
+
+    expect(fetch).toHaveBeenCalledWith("/voice/mock-customer-opening.wav");
+    expect(events.filter((event) => event.type === "customer-audio")).toEqual([
+      { type: "customer-audio", audio: expect.any(ArrayBuffer) },
+    ]);
+    await agent.end();
+    vi.unstubAllGlobals();
+  });
+
+  it("suppresses a pending fixture after customer interruption", async () => {
+    let resolveFixture: ((response: Response) => void) | undefined;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { resolveFixture = resolve; })));
+    const events: VoiceAgentEvent[] = [];
+    const agent = new MockVoiceAgent();
+
+    await agent.connect({ scenario, facts: [], onEvent: (event) => events.push(event) });
+    agent.interruptCustomer();
+    resolveFixture?.(new Response(new ArrayBuffer(4), { status: 200 }));
+    await Promise.resolve();
+
+    expect(events.filter((event) => event.type === "customer-audio")).toEqual([]);
+    await agent.end();
     vi.unstubAllGlobals();
   });
 });

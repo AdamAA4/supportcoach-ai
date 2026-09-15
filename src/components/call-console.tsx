@@ -14,6 +14,7 @@ import { TranscriptPane } from "./transcript-pane";
 type CallConsoleProps = { context: PracticeContext; createAgent?: () => VoiceAgent };
 type MicrophoneStatus = "not-started" | "recording" | "typed-fallback" | "muted";
 type MockControl = VoiceAgent & { requestMockCustomerTurn?: () => void };
+type MuteableVoiceAgent = VoiceAgent & { setMuted?: (muted: boolean) => Promise<void> };
 
 const now = () => new Date().toISOString();
 const transcriptTurn = (speaker: TranscriptTurn["speaker"], text: string, source: TranscriptTurn["source"]): TranscriptTurn => ({ id: `${speaker}-${crypto.randomUUID()}`, speaker, text, source, startedAt: now(), endedAt: now() });
@@ -39,7 +40,7 @@ export function CallConsole({ context, createAgent = createMockAgent }: CallCons
     if (event.type === "customer-turn-started") { setCustomerAudioActive(true); transition(event); return; }
     if (event.type === "customer-turn-ended") { setCustomerAudioActive(false); transition(event); return; }
     if (event.type === "interrupted") { audio.current.stop(); setCustomerAudioActive(false); transition(event); return; }
-    if (event.type === "customer-audio") { const playback = event.fixtureUrl ? audio.current.playFixture(event.fixtureUrl) : audio.current.play(event.audio); playback.catch(() => { setError("Customer audio could not play. Read the transcript or use typed fallback."); setCustomerAudioActive(false); transition({ type: "error" }); }); return; }
+    if (event.type === "customer-audio") { audio.current.play(event.audio).catch(() => { setError("Customer audio could not play. Read the transcript or use typed fallback."); setCustomerAudioActive(false); transition({ type: "error" }); }); return; }
     if (event.type === "customer-transcript" && event.final) { append("customer", event.text, "mock-transcript"); return; }
     if (event.type === "trainee-transcript" && event.final) { append("trainee", event.text, "live-transcript"); transition({ type: "trainee-turn-finalized" }); return; }
     if (event.type === "error") {
@@ -65,9 +66,9 @@ export function CallConsole({ context, createAgent = createMockAgent }: CallCons
     catch { setMicrophone("typed-fallback"); setError("Microphone is unavailable. Typed fallback is active."); }
   };
   const mute = async () => {
-    if (microphone === "muted") { setMicrophone(microphoneBeforeMute.current); await agent.current?.setMuted(false); return; }
+    if (microphone === "muted") { setMicrophone(microphoneBeforeMute.current); const mutedAgent = agent.current as MuteableVoiceAgent | undefined; if (mutedAgent?.setMuted) await mutedAgent.setMuted(false); else if (microphoneBeforeMute.current === "recording") await startMicrophone(); return; }
     microphoneBeforeMute.current = microphone;
-    audio.current.stop(); setCustomerAudioActive(false); setMicrophone("muted"); await agent.current?.setMuted(true);
+    audio.current.stop(); agent.current?.interruptCustomer(); setCustomerAudioActive(false); setMicrophone("muted"); await (agent.current as MuteableVoiceAgent | undefined)?.setMuted?.(true);
   };
   const sendTyped = () => { const text = typedText.trim(); if (!text || state === "error" || microphone === "muted") return; agent.current?.sendTypedTraineeTurn(text); setTypedText(""); setMicrophone("typed-fallback"); };
   const end = async () => { audio.current.stop(); await agent.current?.end(); transition({ type: "end" }); };
