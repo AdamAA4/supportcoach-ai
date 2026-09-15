@@ -1,15 +1,19 @@
 "use client";
 
 import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 
 import { SourcePreview } from "./source-preview";
 import { normalizePracticeContext, validatePracticeContext, type FieldErrors } from "../domain/validation";
 import { createSourceContentHash, type ExperienceNote } from "../domain/reference-source";
 import type { ExperienceNoteFormat } from "../domain/practice-pack";
+import { saveCurrentPracticeSession } from "../domain/practice-session";
+import { ScenarioPicker } from "./scenario-picker";
 
 type SourceKind = "pasted-text" | "public-https-link";
 
 export function SourceSetupForm() {
+  const router = useRouter();
   const [companyName, setCompanyName] = useState("");
   const [sourceKind, setSourceKind] = useState<SourceKind>("pasted-text");
   const [sourceValue, setSourceValue] = useState("");
@@ -74,6 +78,8 @@ export function SourceSetupForm() {
     }
     setErrors({});
     setReady(true);
+    saveCurrentPracticeSession(context);
+    router.push("/call");
   };
 
   const fieldError = (field: keyof FieldErrors) => errors[field]?.map((error) => <p key={error} className="mt-1 text-sm text-rose-700">{error}</p>);
@@ -101,13 +107,8 @@ export function SourceSetupForm() {
         {fieldError("source")}
       </fieldset>
       <SourcePreview sourceText={sourceText} confirmed={confirmed} onConfirm={() => setConfirmed(true)} />
-      <label className="block font-medium text-slate-900">Scenario
-        <select value={scenarioId} onChange={(event) => { setScenarioId(event.target.value as typeof scenarioId); invalidateSetup(); }} className="mt-2 block rounded-md border border-slate-300 px-3 py-2">
-          <option value="late-delivery">Late delivery</option>
-          <option value="refund-eligibility">Refund eligibility</option>
-        </select>
-        {fieldError("scenario")}
-      </label>
+      <ScenarioPicker value={scenarioId} onChange={(value) => { setScenarioId(value); invalidateSetup(); }} />
+      {fieldError("scenario")}
       <fieldset className="space-y-3">
         <legend className="font-medium text-slate-900">Optional experience notes</legend>
         <input type="file" accept="text/plain,text/markdown,.txt,.md" onChange={readNoteFile} className="block text-sm" />

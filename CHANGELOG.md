@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Reusable voice-agent transport contract, browser audio player, and mock simulated-customer adapter with Web Speech recognition and typed fallback.
+- Confirmed-session call route with an explicit call-state machine, live transcript, reference panel, microphone/audio status, retry handling, and Playwright-safe mock customer turn control.
 - Initial per-session practice-pack domain contract and product-input decision record.
 - Next.js App Router and Tailwind scaffold with lint, typecheck, unit-test, build, and CI gates.
 - Normalized source facts, scenario definitions, transcript/report contracts, and validation for grounded practice sessions.
