@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { MockVoiceAgent, createMockCustomerAudio } from "./mock-voice-agent";
+import { MockVoiceAgent, mockCustomerAudioFixture, mockCustomerFollowUpAudioFixture } from "./mock-voice-agent";
 import { reduceCallState } from "./voice-agent";
 
 const scenario = {
@@ -16,12 +16,20 @@ const scenario = {
 describe("call state machine", () => {
   it("moves through a normal practice turn", () => {
     let state = reduceCallState("idle", { type: "connect" });
+    state = reduceCallState(state, { type: "session-ready" });
     state = reduceCallState(state, { type: "customer-turn-started" });
     state = reduceCallState(state, { type: "customer-turn-ended" });
     state = reduceCallState(state, { type: "trainee-turn-finalized" });
     state = reduceCallState(state, { type: "customer-turn-started" });
 
     expect(state).toBe("customer-speaking");
+  });
+
+  it("consumes session readiness and rejects invalid jumps", () => {
+    expect(reduceCallState("connecting", { type: "customer-turn-started" })).toBe("connecting");
+    expect(reduceCallState("idle", { type: "session-ready" })).toBe("idle");
+    expect(reduceCallState("connecting", { type: "session-ready" })).toBe("listening");
+    expect(reduceCallState("listening", { type: "customer-turn-ended" })).toBe("listening");
   });
 
   it("returns to listening after an interruption", () => {
@@ -69,9 +77,34 @@ describe("mock voice agent", () => {
     await agent.end();
   });
 
-  it("creates a browser-playable WAV fixture for customer audio", () => {
-    const audio = createMockCustomerAudio();
-    expect(new TextDecoder().decode(audio.slice(0, 4))).toBe("RIFF");
-    expect(new TextDecoder().decode(audio.slice(8, 12))).toBe("WAVE");
+  it("uses a bundled spoken customer audio fixture instead of synthesizing a tone", () => {
+    expect(mockCustomerAudioFixture).toBe("/voice/mock-customer-opening.wav");
+    expect(mockCustomerFollowUpAudioFixture).toBe("/voice/mock-customer-follow-up.wav");
+  });
+
+  it("stops recognition while muted and resumes it when unmuted", async () => {
+    const stop = vi.fn();
+    const start = vi.fn();
+    class Recognition {
+      continuous = false;
+      interimResults = false;
+      lang = "";
+      onstart = null;
+      onresult = null;
+      onerror = null;
+      onend = null;
+      start = start;
+      stop = stop;
+    }
+    vi.stubGlobal("SpeechRecognition", Recognition);
+    const agent = new MockVoiceAgent();
+
+    await agent.startMicrophone();
+    await agent.setMuted(true);
+    await agent.setMuted(false);
+
+    expect(stop).toHaveBeenCalledOnce();
+    expect(start).toHaveBeenCalledTimes(2);
+    vi.unstubAllGlobals();
   });
 });

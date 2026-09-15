@@ -5,7 +5,7 @@ export type VoiceAgentEvent =
   | { type: "session-ready"; sessionId: string }
   | { type: "customer-transcript"; text: string; final: boolean }
   | { type: "trainee-transcript"; text: string; final: boolean }
-  | { type: "customer-audio"; audio: ArrayBuffer }
+  | { type: "customer-audio"; audio: ArrayBuffer; fixtureUrl?: string }
   | { type: "customer-turn-started" }
   | { type: "customer-turn-ended" }
   | { type: "interrupted" }
@@ -18,6 +18,7 @@ export interface VoiceAgent {
     onEvent: (event: VoiceAgentEvent) => void;
   }): Promise<void>;
   startMicrophone(): Promise<void>;
+  setMuted(muted: boolean): Promise<void>;
   sendTypedTraineeTurn(text: string): void;
   interruptCustomer(): void;
   end(): Promise<void>;
@@ -42,7 +43,8 @@ export const reduceCallState = (state: CallState, event: CallStateEvent): CallSt
 
   switch (event.type) {
     case "connect": return state === "idle" ? "connecting" : state;
-    case "customer-turn-started": return "customer-speaking";
+    case "session-ready": return state === "connecting" ? "listening" : state;
+    case "customer-turn-started": return state === "listening" || state === "processing" ? "customer-speaking" : state;
     case "customer-turn-ended": return state === "customer-speaking" ? "listening" : state;
     case "trainee-turn-finalized": return state === "listening" ? "processing" : state;
     case "interrupted": return state === "customer-speaking" ? "listening" : state;

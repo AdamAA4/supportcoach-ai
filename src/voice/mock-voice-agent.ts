@@ -24,32 +24,9 @@ const mockFollowUp = (scenario: ScenarioDefinition, facts: ReferenceFact[]): str
     : "Thanks. What is the next step you can offer me?";
 };
 
-export const createMockCustomerAudio = (): ArrayBuffer => {
-  const sampleRate = 8_000;
-  const samples = Math.floor(sampleRate * 0.18);
-  const bytesPerSample = 2;
-  const dataSize = samples * bytesPerSample;
-  const buffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buffer);
-  const writeText = (offset: number, value: string) => [...value].forEach((character, index) => view.setUint8(offset + index, character.charCodeAt(0)));
-  writeText(0, "RIFF");
-  view.setUint32(4, 36 + dataSize, true);
-  writeText(8, "WAVE");
-  writeText(12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * bytesPerSample, true);
-  view.setUint16(32, bytesPerSample, true);
-  view.setUint16(34, 16, true);
-  writeText(36, "data");
-  view.setUint32(40, dataSize, true);
-  for (let index = 0; index < samples; index += 1) {
-    view.setInt16(44 + index * bytesPerSample, Math.round(Math.sin(index / 16) * 2_000), true);
-  }
-  return buffer;
-};
+/** Spoken, browser-playable WAV fixture for deterministic mock customer playback. */
+export const mockCustomerAudioFixture = "/voice/mock-customer-opening.wav";
+export const mockCustomerFollowUpAudioFixture = "/voice/mock-customer-follow-up.wav";
 
 export class MockVoiceAgent implements VoiceAgent {
   private onEvent?: (event: VoiceAgentEvent) => void;
@@ -58,13 +35,14 @@ export class MockVoiceAgent implements VoiceAgent {
   private customerSpeaking = false;
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private recognition?: SpeechRecognitionLike;
+  private microphoneActive = false;
 
   async connect(input: { scenario: ScenarioDefinition; facts: ReferenceFact[]; onEvent: (event: VoiceAgentEvent) => void }): Promise<void> {
     this.onEvent = input.onEvent;
     this.scenario = input.scenario;
     this.facts = input.facts;
     this.emit({ type: "session-ready", sessionId: "mock-session" });
-    this.emitCustomerTurn(input.scenario.openingLine);
+    this.emitCustomerTurn(input.scenario.openingLine, mockCustomerAudioFixture);
   }
 
   async startMicrophone(): Promise<void> {
@@ -76,7 +54,7 @@ export class MockVoiceAgent implements VoiceAgent {
     this.recognition.continuous = true;
     this.recognition.interimResults = true;
     this.recognition.lang = "en-US";
-    this.recognition.onstart = () => this.interruptCustomer();
+    this.recognition.onstart = () => { this.microphoneActive = true; this.interruptCustomer(); };
     this.recognition.onresult = (event) => {
       for (let index = 0; index < event.results.length; index += 1) {
         const result = event.results[index];
@@ -84,8 +62,18 @@ export class MockVoiceAgent implements VoiceAgent {
         if (result.isFinal) this.respondAfterTraineeTurn();
       }
     };
-    this.recognition.onerror = (event) => this.emit({ type: "error", code: "permission-denied", message: `Microphone recognition failed: ${event.error}` });
+    this.recognition.onerror = (event) => { this.microphoneActive = false; this.emit({ type: "error", code: "permission-denied", message: `Microphone recognition failed: ${event.error}` }); };
+    this.recognition.onend = () => { this.microphoneActive = false; };
     this.recognition.start();
+  }
+
+  async setMuted(muted: boolean): Promise<void> {
+    if (muted) {
+      this.recognition?.stop();
+      this.microphoneActive = false;
+      return;
+    }
+    if (this.recognition && !this.microphoneActive) this.recognition.start();
   }
 
   sendTypedTraineeTurn(text: string): void {
@@ -106,7 +94,7 @@ export class MockVoiceAgent implements VoiceAgent {
   requestMockCustomerTurn(): void {
     if (!this.scenario) return;
     this.interruptCustomer();
-    this.emitCustomerTurn(mockFollowUp(this.scenario, this.facts));
+    this.emitCustomerTurn(mockFollowUp(this.scenario, this.facts), mockCustomerFollowUpAudioFixture);
   }
 
   async end(): Promise<void> {
@@ -119,13 +107,13 @@ export class MockVoiceAgent implements VoiceAgent {
 
   private respondAfterTraineeTurn(): void {
     if (!this.scenario) return;
-    this.schedule(() => this.emitCustomerTurn(mockFollowUp(this.scenario!, this.facts)), 250);
+    this.schedule(() => this.emitCustomerTurn(mockFollowUp(this.scenario!, this.facts), mockCustomerFollowUpAudioFixture), 250);
   }
 
-  private emitCustomerTurn(text: string): void {
+  private emitCustomerTurn(text: string, fixtureUrl: string): void {
     this.customerSpeaking = true;
     this.emit({ type: "customer-turn-started" });
-    this.emit({ type: "customer-audio", audio: createMockCustomerAudio() });
+    this.emit({ type: "customer-audio", audio: new ArrayBuffer(0), fixtureUrl });
     this.emit({ type: "customer-transcript", text, final: true });
     this.schedule(() => {
       this.customerSpeaking = false;

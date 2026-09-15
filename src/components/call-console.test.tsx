@@ -1,6 +1,6 @@
 import React from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CallConsole } from "./call-console";
 import type { VoiceAgent, VoiceAgentEvent } from "../voice/voice-agent";
@@ -22,6 +22,31 @@ class ErrorVoiceAgent implements VoiceAgent {
   async startMicrophone() {}
   sendTypedTraineeTurn() {}
   interruptCustomer() {}
+  async setMuted() {}
+  async end() {}
+}
+
+class PermissionDeniedVoiceAgent implements VoiceAgent {
+  private onEvent?: (event: VoiceAgentEvent) => void;
+  async connect(input: { onEvent: (event: VoiceAgentEvent) => void }) { this.onEvent = input.onEvent; this.onEvent({ type: "session-ready", sessionId: "test" }); }
+  async startMicrophone() { this.onEvent?.({ type: "error", code: "permission-denied", message: "Microphone access was denied." }); }
+  sendTypedTraineeTurn() {}
+  interruptCustomer() {}
+  async setMuted() {}
+  async end() {}
+}
+
+class InteractiveVoiceAgent implements VoiceAgent {
+  private onEvent?: (event: VoiceAgentEvent) => void;
+  setMuted = vi.fn(async () => {});
+  async connect(input: { onEvent: (event: VoiceAgentEvent) => void }) {
+    this.onEvent = input.onEvent;
+    this.onEvent({ type: "session-ready", sessionId: "test" });
+    this.onEvent({ type: "customer-turn-started" });
+  }
+  async startMicrophone() {}
+  sendTypedTraineeTurn(text: string) { this.interruptCustomer(); this.onEvent?.({ type: "trainee-transcript", text, final: true }); this.onEvent?.({ type: "customer-turn-started" }); }
+  interruptCustomer() { this.onEvent?.({ type: "interrupted" }); }
   async end() {}
 }
 
@@ -44,5 +69,41 @@ describe("CallConsole", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Send typed response" }));
     await waitFor(() => expect(screen.getByText("I will check the tracking link.", { selector: "p" })).toBeVisible());
+  });
+
+  it("keeps typed fallback usable after microphone permission is denied", async () => {
+    render(<CallConsole context={context} createAgent={() => new PermissionDeniedVoiceAgent()} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Start microphone" }));
+
+    expect(await screen.findByText("Microphone access was denied. Typed fallback is active.")).toBeVisible();
+    const input = screen.getByLabelText("Typed response");
+    expect(input).toBeEnabled();
+    fireEvent.change(input, { target: { value: "I will check that now." } });
+    expect(screen.getByRole("button", { name: "Send typed response" })).toBeEnabled();
+  });
+
+  it("shows the normal typed turn sequence and keeps the session reference available during an active call", async () => {
+    render(<CallConsole context={context} createAgent={() => new InteractiveVoiceAgent()} />);
+    const input = await screen.findByLabelText("Typed response");
+
+    expect(screen.getByText("customer speaking")).toBeVisible();
+    expect(screen.getByText("Delivery takes 3 to 5 days.")).toBeVisible();
+    fireEvent.change(input, { target: { value: "I will review the delivery status." } });
+    fireEvent.click(screen.getByRole("button", { name: "Send typed response" }));
+
+    expect(await screen.findByText("I will review the delivery status.", { selector: "p" })).toBeVisible();
+    expect(screen.getByText("customer speaking")).toBeVisible();
+  });
+
+  it("flushes customer audio and pauses then resumes microphone capture when muted", async () => {
+    const interactive = new InteractiveVoiceAgent();
+    render(<CallConsole context={context} createAgent={() => interactive} />);
+
+    expect(await screen.findByText("Customer audio: Speaking")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Mute" }));
+    expect(interactive.setMuted).toHaveBeenCalledWith(true);
+    expect(screen.getByText("Customer audio: Idle")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Unmute" }));
+    await waitFor(() => expect(interactive.setMuted).toHaveBeenLastCalledWith(false));
   });
 });

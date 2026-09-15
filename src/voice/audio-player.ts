@@ -15,6 +15,13 @@ export class AudioPlayer {
     source.start();
   }
 
+  async playFixture(url: string): Promise<void> {
+    if (typeof window === "undefined" || !("AudioContext" in window)) return;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Customer audio fixture could not be loaded.");
+    await this.play(await response.arrayBuffer());
+  }
+
   stop(): void {
     if (!this.source) return;
     this.source.stop();
