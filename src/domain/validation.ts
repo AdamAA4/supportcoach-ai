@@ -1,17 +1,19 @@
 import { createScenarioDefinition } from "../data/seed-packs";
-import type { ScenarioDefinition, SessionSource } from "./practice-pack";
+import { validatePracticePack, type PracticeScenario, type ScenarioDefinition, type SessionSource } from "./practice-pack";
 import {
-  createSourceContentHash,
+  createSourceProvenance,
   getSourceText,
   normalizeReferenceFacts,
   type ExperienceNote,
   type ReferenceFact,
+  type SourceProvenance,
 } from "./reference-source";
 
 export type PracticeContext = {
   source: SessionSource;
   sourceLabel: string;
   sourceContentHash: string;
+  sourceProvenance: SourceProvenance;
   sourceText: string;
   facts: ReferenceFact[];
   notes: ExperienceNote[];
@@ -31,19 +33,33 @@ type NormalizeInput = {
 export const normalizePracticeContext = (input: NormalizeInput): PracticeContext => {
   const sourceText = getSourceText(input.source);
   const facts = normalizeReferenceFacts(sourceText, input.notes);
+  const sourceProvenance = createSourceProvenance(input.source, sourceText);
 
   return {
     source: input.source,
     sourceLabel: input.sourceLabel.trim(),
-    sourceContentHash:
-      input.source.kind === "public-https-link" && input.source.confirmation === "confirmed"
-        ? input.source.snapshot.contentHash
-        : createSourceContentHash(sourceText),
+    sourceContentHash: sourceProvenance.contentHash,
+    sourceProvenance,
     sourceText,
     facts,
     notes: input.notes,
     scenario: createScenarioDefinition(input.scenarioId, facts),
   };
+};
+
+const addPracticePackErrors = (errors: FieldErrors, issues: string[]): void => {
+  for (const issue of issues) {
+    if (issue === "A public HTTPS link or pasted FAQ/policy text is required.") {
+      continue;
+    }
+    if (issue === "Choose a supported practice scenario.") {
+      addError(errors, "scenario", issue);
+    } else if (issue.startsWith("Experience notes")) {
+      addError(errors, "notes", issue);
+    } else {
+      addError(errors, "source", issue);
+    }
+  }
 };
 
 const addError = (errors: FieldErrors, field: keyof FieldErrors, message: string): void => {
@@ -71,14 +87,33 @@ export const validatePracticeContext = ({
   const errors: FieldErrors = {};
   if (!companyName.trim()) addError(errors, "companyName", "Enter your company name.");
 
-  if (context.source.kind === "public-https-link") {
+  const packValidation = validatePracticePack({
+    source: context.source,
+    scenario: context.scenario.id as PracticeScenario,
+  });
+  if (!packValidation.ok) addPracticePackErrors(errors, packValidation.issues);
+
+  for (const note of context.notes) {
+    if (!note.text.trim()) continue;
+    const noteValidation = validatePracticePack({
+      source: context.source,
+      scenario: context.scenario.id as PracticeScenario,
+      notes: { content: note.text, format: note.format, classification: note.kind },
+    });
+    if (!noteValidation.ok) {
+      addPracticePackErrors(
+        errors,
+        noteValidation.issues.filter((issue) => issue.startsWith("Experience notes")),
+      );
+    }
+  }
+
+  if (context.source.kind === "public-https-link" && !packValidation.ok) {
     const issue = urlIssue(context.source.url);
-    if (issue) addError(errors, "source", issue);
+    if (issue && !errors.source?.includes(issue)) addError(errors, "source", issue);
   }
-  if (!context.sourceText.trim()) addError(errors, "source", "Extracted FAQ/policy text is required.");
-  if (context.source.confirmation !== "confirmed") {
-    addError(errors, "source", "Confirm the extracted source preview before starting.");
-  }
+  if (!context.sourceText.trim() && !errors.source?.includes("Extracted FAQ/policy text is required.")) addError(errors, "source", "Extracted FAQ/policy text is required.");
+  if (context.source.confirmation !== "confirmed" && !errors.source?.includes("Confirm the extracted source preview before starting.")) addError(errors, "source", "Confirm the extracted source preview before starting.");
 
   const seenFactIds = new Set<string>();
   for (const fact of context.facts) {

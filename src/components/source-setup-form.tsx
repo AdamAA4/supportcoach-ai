@@ -5,6 +5,7 @@ import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { SourcePreview } from "./source-preview";
 import { normalizePracticeContext, validatePracticeContext, type FieldErrors } from "../domain/validation";
 import { createSourceContentHash, type ExperienceNote } from "../domain/reference-source";
+import type { ExperienceNoteFormat } from "../domain/practice-pack";
 
 type SourceKind = "pasted-text" | "public-https-link";
 
@@ -16,6 +17,7 @@ export function SourceSetupForm() {
   const [scenarioId, setScenarioId] = useState<"late-delivery" | "refund-eligibility">("late-delivery");
   const [notes, setNotes] = useState("");
   const [noteKind, setNoteKind] = useState<ExperienceNote["kind"]>("personal-coaching-note");
+  const [noteFormat, setNoteFormat] = useState<ExperienceNoteFormat>("plain-text");
   const [noteFileSizeBytes, setNoteFileSizeBytes] = useState<number>();
   const [confirmed, setConfirmed] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -29,9 +31,9 @@ export function SourceSetupForm() {
         ? { kind: "public-https-link", url: sourceValue, confirmation: "confirmed", snapshot: { extractedText: previewText, contentHash: createSourceContentHash(previewText) } }
         : { kind: "public-https-link", url: sourceValue, confirmation: "pending" },
     sourceLabel: companyName,
-    notes: notes.trim() ? [{ id: "session-note", text: notes, kind: noteKind }] : [],
+    notes: notes.trim() ? [{ id: "session-note", text: notes, format: noteFormat, kind: noteKind }] : [],
     scenarioId,
-  }), [companyName, confirmed, noteKind, notes, previewText, scenarioId, sourceKind, sourceValue]);
+  }), [companyName, confirmed, noteFormat, noteKind, notes, previewText, scenarioId, sourceKind, sourceValue]);
 
   const updateSource = (value: string) => {
     setSourceValue(value);
@@ -49,6 +51,7 @@ export function SourceSetupForm() {
     const file = event.target.files?.[0];
     setNoteFileSizeBytes(file?.size);
     if (!file || file.size > 200 * 1024) return;
+    setNoteFormat(file.name.toLowerCase().endsWith(".md") ? "markdown" : "plain-text");
     const reader = new FileReader();
     reader.addEventListener("load", () => setNotes(typeof reader.result === "string" ? reader.result : ""));
     reader.readAsText(file);
@@ -105,6 +108,10 @@ export function SourceSetupForm() {
         <select value={noteKind} onChange={(event) => setNoteKind(event.target.value as ExperienceNote["kind"])} className="rounded-md border border-slate-300 px-3 py-2">
           <option value="personal-coaching-note">Personal coaching note</option>
           <option value="approved-practice-advice">Approved practice advice</option>
+        </select>
+        <select value={noteFormat} onChange={(event) => setNoteFormat(event.target.value as ExperienceNoteFormat)} className="rounded-md border border-slate-300 px-3 py-2" aria-label="Experience note format">
+          <option value="plain-text">Plain text</option>
+          <option value="markdown">Markdown</option>
         </select>
         {fieldError("notes")}
       </fieldset>

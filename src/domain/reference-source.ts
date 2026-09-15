@@ -1,4 +1,4 @@
-import type { SessionSource } from "./practice-pack";
+import type { ExperienceNoteFormat, SessionSource } from "./practice-pack";
 
 export type ReferenceFact = {
   id: string;
@@ -11,8 +11,14 @@ export type ReferenceFact = {
 export type ExperienceNote = {
   id: string;
   text: string;
+  format: ExperienceNoteFormat;
   kind: "approved-practice-advice" | "personal-coaching-note";
 };
+
+export type SourceProvenance = Readonly<{
+  sourceUrl?: string;
+  contentHash: string;
+}>;
 
 export const getSourceText = (source: SessionSource): string =>
   source.kind === "pasted-text" ? source.text.trim() : source.snapshot?.extractedText.trim() ?? "";
@@ -24,6 +30,18 @@ export const createSourceContentHash = (sourceText: string): string => {
   }
   return `local:${(hash >>> 0).toString(16)}`;
 };
+
+export const createSourceProvenance = (
+  source: SessionSource,
+  sourceText: string,
+): SourceProvenance =>
+  Object.freeze({
+    ...(source.kind === "public-https-link" ? { sourceUrl: source.url } : {}),
+    contentHash:
+      source.kind === "public-https-link" && source.confirmation === "confirmed"
+        ? source.snapshot.contentHash
+        : createSourceContentHash(sourceText),
+  });
 
 const keywordsFor = (value: string): string[] =>
   [...new Set(value.toLowerCase().match(/[a-z0-9]{3,}/g) ?? [])].slice(0, 8);
