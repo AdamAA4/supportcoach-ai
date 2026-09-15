@@ -52,3 +52,21 @@ The public-link input accepts the extracted snapshot in the UI; server-side fetc
 ### Self-review and concern
 
 The UI continues to make the trainee the voice responder and the customer a simulation grounded in the confirmed session source. Personal coaching notes remain available in context but never become facts. The report contract is intentionally type-level because Task 3 does not yet create runtime coaching reports; the later call/report producer must copy `PracticeContext.sourceProvenance` into its required `CoachingReport.sourceProvenance` field.
+
+## Review-finding remediation — 2026-09-15 (setup invalidation)
+
+### Fixed
+
+- Centralized setup invalidation in `src/components/source-setup-form.tsx` so changing source kind, company name, source text or preview, scenario, notes, note kind, note format, or note file clears both confirmation and the ready status. Start remains gated by source confirmation and submit validation.
+
+### Verification
+
+- `npm test -- --run src/domain/validation.test.ts tests/domain/practice-pack.test.ts` — 14 passing tests across 2 files.
+- `npm run lint` — passed with no ESLint warnings or errors; Next.js printed its existing `next lint` deprecation notice.
+- `npm run typecheck` — passed.
+- `npm run build` — passed; static `/setup` page generated successfully.
+- `git diff --check` — passed; no whitespace errors.
+
+### Self-review
+
+The change is limited to setup state transitions and preserves the Task 3 domain contracts. Every setup field that can alter the normalized context now uses the same invalidation path, preventing stale green readiness after a successful validation.

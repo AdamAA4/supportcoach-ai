@@ -35,16 +35,19 @@ export function SourceSetupForm() {
     scenarioId,
   }), [companyName, confirmed, noteFormat, noteKind, notes, previewText, scenarioId, sourceKind, sourceValue]);
 
-  const updateSource = (value: string) => {
-    setSourceValue(value);
+  const invalidateSetup = () => {
     setConfirmed(false);
     setReady(false);
   };
 
+  const updateSource = (value: string) => {
+    setSourceValue(value);
+    invalidateSetup();
+  };
+
   const updatePreview = (value: string) => {
     setPreviewText(value);
-    setConfirmed(false);
-    setReady(false);
+    invalidateSetup();
   };
 
   const readNoteFile = (event: ChangeEvent<HTMLInputElement>) => {
@@ -74,14 +77,14 @@ export function SourceSetupForm() {
   return (
     <form onSubmit={submit} className="space-y-6" noValidate>
       <label className="block font-medium text-slate-900">Company name
-        <input value={companyName} onChange={(event) => setCompanyName(event.target.value)} className="mt-2 block w-full rounded-md border border-slate-300 px-3 py-2" />
+        <input value={companyName} onChange={(event) => { setCompanyName(event.target.value); invalidateSetup(); }} className="mt-2 block w-full rounded-md border border-slate-300 px-3 py-2" />
         {fieldError("companyName")}
       </label>
       <fieldset className="space-y-3">
         <legend className="font-medium text-slate-900">FAQ or policy source</legend>
         <div className="flex gap-4 text-sm">
-          <label><input type="radio" checked={sourceKind === "pasted-text"} onChange={() => { setSourceKind("pasted-text"); setConfirmed(false); }} /> Paste text</label>
-          <label><input type="radio" checked={sourceKind === "public-https-link"} onChange={() => { setSourceKind("public-https-link"); setConfirmed(false); }} /> Public HTTPS link</label>
+          <label><input type="radio" checked={sourceKind === "pasted-text"} onChange={() => { setSourceKind("pasted-text"); invalidateSetup(); }} /> Paste text</label>
+          <label><input type="radio" checked={sourceKind === "public-https-link"} onChange={() => { setSourceKind("public-https-link"); invalidateSetup(); }} /> Public HTTPS link</label>
         </div>
         {sourceKind === "pasted-text" ? (
           <textarea value={sourceValue} onChange={(event) => updateSource(event.target.value)} rows={7} className="w-full rounded-md border border-slate-300 p-3" aria-label="FAQ or policy text" />
@@ -95,7 +98,7 @@ export function SourceSetupForm() {
       </fieldset>
       <SourcePreview sourceText={sourceText} confirmed={confirmed} onConfirm={() => setConfirmed(true)} />
       <label className="block font-medium text-slate-900">Scenario
-        <select value={scenarioId} onChange={(event) => setScenarioId(event.target.value as typeof scenarioId)} className="mt-2 block rounded-md border border-slate-300 px-3 py-2">
+        <select value={scenarioId} onChange={(event) => { setScenarioId(event.target.value as typeof scenarioId); invalidateSetup(); }} className="mt-2 block rounded-md border border-slate-300 px-3 py-2">
           <option value="late-delivery">Late delivery</option>
           <option value="refund-eligibility">Refund eligibility</option>
         </select>
@@ -104,12 +107,12 @@ export function SourceSetupForm() {
       <fieldset className="space-y-3">
         <legend className="font-medium text-slate-900">Optional experience notes</legend>
         <input type="file" accept="text/plain,text/markdown,.txt,.md" onChange={readNoteFile} className="block text-sm" />
-        <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className="w-full rounded-md border border-slate-300 p-3" placeholder="Paste a coaching note" />
-        <select value={noteKind} onChange={(event) => setNoteKind(event.target.value as ExperienceNote["kind"])} className="rounded-md border border-slate-300 px-3 py-2">
+        <textarea value={notes} onChange={(event) => { setNotes(event.target.value); invalidateSetup(); }} rows={3} className="w-full rounded-md border border-slate-300 p-3" placeholder="Paste a coaching note" />
+        <select value={noteKind} onChange={(event) => { setNoteKind(event.target.value as ExperienceNote["kind"]); invalidateSetup(); }} className="rounded-md border border-slate-300 px-3 py-2">
           <option value="personal-coaching-note">Personal coaching note</option>
           <option value="approved-practice-advice">Approved practice advice</option>
         </select>
-        <select value={noteFormat} onChange={(event) => setNoteFormat(event.target.value as ExperienceNoteFormat)} className="rounded-md border border-slate-300 px-3 py-2" aria-label="Experience note format">
+        <select value={noteFormat} onChange={(event) => { setNoteFormat(event.target.value as ExperienceNoteFormat); invalidateSetup(); }} className="rounded-md border border-slate-300 px-3 py-2" aria-label="Experience note format">
           <option value="plain-text">Plain text</option>
           <option value="markdown">Markdown</option>
         </select>
