@@ -1,10 +1,13 @@
+import React from "react";
+
 type SourcePreviewProps = {
   sourceText: string;
   confirmed: boolean;
+  canConfirm?: boolean;
   onConfirm: () => void;
 };
 
-export function SourcePreview({ sourceText, confirmed, onConfirm }: SourcePreviewProps) {
+export function SourcePreview({ sourceText, confirmed, canConfirm = true, onConfirm }: SourcePreviewProps) {
   return (
     <section aria-labelledby="source-preview-heading" className="rounded-xl border border-slate-200 bg-slate-50 p-4">
       <div className="flex items-center justify-between gap-4">
@@ -17,7 +20,7 @@ export function SourcePreview({ sourceText, confirmed, onConfirm }: SourcePrevie
         </span>
       </div>
       <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-white p-3 text-sm text-slate-800">{sourceText.trim() || "Add FAQ or policy text to preview it here."}</pre>
-      <button type="button" onClick={onConfirm} disabled={!sourceText.trim() || confirmed} className="mt-3 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50">
+      <button type="button" onClick={onConfirm} disabled={!sourceText.trim() || !canConfirm || confirmed} className="mt-3 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50">
         {confirmed ? "Source confirmed" : "Confirm this source"}
       </button>
     </section>

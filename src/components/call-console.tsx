@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PracticeContext } from "../domain/validation";
 import type { TranscriptTurn } from "../domain/transcript";
 import { AudioPlayer } from "../voice/audio-player";
+import { createConfiguredVoiceAgent } from "../voice/assemblyai-voice-agent";
 import { MockVoiceAgent } from "../voice/mock-voice-agent";
 import { reduceCallState, type CallState, type VoiceAgent, type VoiceAgentEvent } from "../voice/voice-agent";
 import { ReferencePanel } from "./reference-panel";
@@ -19,9 +20,9 @@ type FixturePlaybackAwareVoiceAgent = VoiceAgent & { completeCustomerAudioPlayba
 
 const now = () => new Date().toISOString();
 const transcriptTurn = (speaker: TranscriptTurn["speaker"], text: string, source: TranscriptTurn["source"]): TranscriptTurn => ({ id: `${speaker}-${crypto.randomUUID()}`, speaker, text, source, startedAt: now(), endedAt: now() });
-const createMockAgent = (): VoiceAgent => new MockVoiceAgent();
+const createConfiguredAgent = (): VoiceAgent => createConfiguredVoiceAgent();
 
-export function CallConsole({ context, createAgent = createMockAgent }: CallConsoleProps) {
+export function CallConsole({ context, createAgent = createConfiguredAgent }: CallConsoleProps) {
   const agent = useRef<VoiceAgent | undefined>(undefined);
   const audio = useRef(new AudioPlayer());
   const microphoneBeforeMute = useRef<MicrophoneStatus>("not-started");

@@ -1,16 +1,17 @@
 "use client";
 
-import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import React, { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { SourcePreview } from "./source-preview";
 import { normalizePracticeContext, validatePracticeContext, type FieldErrors } from "../domain/validation";
-import { createSourceContentHash, type ExperienceNote } from "../domain/reference-source";
+import { type ExperienceNote } from "../domain/reference-source";
 import type { ExperienceNoteFormat } from "../domain/practice-pack";
 import { saveCurrentPracticeSession } from "../domain/practice-session";
 import { ScenarioPicker } from "./scenario-picker";
 
 type SourceKind = "pasted-text" | "public-https-link";
+type ImportedSource = { canonicalUrl: string; extractedText: string; contentHash: string };
 
 export function SourceSetupForm() {
   const router = useRouter();
@@ -18,6 +19,8 @@ export function SourceSetupForm() {
   const [sourceKind, setSourceKind] = useState<SourceKind>("pasted-text");
   const [sourceValue, setSourceValue] = useState("");
   const [previewText, setPreviewText] = useState("");
+  const [importedSource, setImportedSource] = useState<ImportedSource>();
+  const [importing, setImporting] = useState(false);
   const [scenarioId, setScenarioId] = useState<"late-delivery" | "refund-eligibility">("late-delivery");
   const [notes, setNotes] = useState("");
   const [noteKind, setNoteKind] = useState<ExperienceNote["kind"]>("personal-coaching-note");
@@ -31,13 +34,13 @@ export function SourceSetupForm() {
   const context = useMemo(() => normalizePracticeContext({
     source: sourceKind === "pasted-text"
       ? { kind: "pasted-text", text: sourceValue, confirmation: confirmed ? "confirmed" : "pending" }
-      : confirmed
-        ? { kind: "public-https-link", url: sourceValue, confirmation: "confirmed", snapshot: { extractedText: previewText, contentHash: createSourceContentHash(previewText) } }
+      : confirmed && importedSource
+        ? { kind: "public-https-link", url: importedSource.canonicalUrl, confirmation: "confirmed", snapshot: { extractedText: importedSource.extractedText, contentHash: importedSource.contentHash } }
         : { kind: "public-https-link", url: sourceValue, confirmation: "pending" },
     sourceLabel: companyName,
     notes: notes.trim() ? [{ id: "session-note", text: notes, format: noteFormat, kind: noteKind }] : [],
     scenarioId,
-  }), [companyName, confirmed, noteFormat, noteKind, notes, previewText, scenarioId, sourceKind, sourceValue]);
+  }), [companyName, confirmed, importedSource, noteFormat, noteKind, notes, scenarioId, sourceKind, sourceValue]);
 
   const invalidateSetup = () => {
     setConfirmed(false);
@@ -46,12 +49,40 @@ export function SourceSetupForm() {
 
   const updateSource = (value: string) => {
     setSourceValue(value);
+    setPreviewText("");
+    setImportedSource(undefined);
     invalidateSetup();
   };
 
-  const updatePreview = (value: string) => {
-    setPreviewText(value);
+  const importPublicSource = async () => {
     invalidateSetup();
+    setErrors((current) => ({ ...current, source: undefined }));
+    setImporting(true);
+    try {
+      const response = await fetch("/api/reference-import", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url: sourceValue }),
+      });
+      const payload: unknown = await response.json();
+      if (!response.ok || !payload || typeof payload !== "object" ||
+        typeof (payload as ImportedSource).canonicalUrl !== "string" ||
+        typeof (payload as ImportedSource).extractedText !== "string" ||
+        typeof (payload as ImportedSource).contentHash !== "string") {
+        const message = (payload as { error?: { message?: unknown } })?.error?.message;
+        throw new Error(typeof message === "string" ? message : "The public source could not be imported.");
+      }
+      const imported = payload as ImportedSource;
+      setSourceValue(imported.canonicalUrl);
+      setPreviewText(imported.extractedText);
+      setImportedSource(imported);
+    } catch (error) {
+      setPreviewText("");
+      setImportedSource(undefined);
+      setErrors((current) => ({ ...current, source: [error instanceof Error ? error.message : "The public source could not be imported."] }));
+    } finally {
+      setImporting(false);
+    }
   };
 
   const readNoteFile = (event: ChangeEvent<HTMLInputElement>) => {
@@ -101,12 +132,12 @@ export function SourceSetupForm() {
         ) : (
           <>
             <input value={sourceValue} onChange={(event) => updateSource(event.target.value)} placeholder="https://company.example/faq" className="block w-full rounded-md border border-slate-300 px-3 py-2" aria-label="FAQ or policy URL" />
-            <textarea value={previewText} onChange={(event) => updatePreview(event.target.value)} rows={7} className="mt-3 w-full rounded-md border border-slate-300 p-3" aria-label="Extracted FAQ or policy preview" placeholder="Paste the extracted source snapshot for confirmation" />
+            <button type="button" onClick={() => void importPublicSource()} disabled={!sourceValue.trim() || importing} className="mt-3 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50">{importing ? "Importing source…" : "Import source"}</button>
           </>
         )}
         {fieldError("source")}
       </fieldset>
-      <SourcePreview sourceText={sourceText} confirmed={confirmed} onConfirm={() => setConfirmed(true)} />
+      <SourcePreview sourceText={sourceText} confirmed={confirmed} canConfirm={sourceKind === "pasted-text" || Boolean(importedSource)} onConfirm={() => setConfirmed(true)} />
       <ScenarioPicker value={scenarioId} onChange={(value) => { setScenarioId(value); invalidateSetup(); }} />
       {fieldError("scenario")}
       <fieldset className="space-y-3">

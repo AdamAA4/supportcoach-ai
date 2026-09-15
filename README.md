@@ -18,11 +18,11 @@ Open [http://localhost:3000](http://localhost:3000). Run the engineering checks 
 
 `NEXT_PUBLIC_VOICE_MODE=mock` is the default and needs no API key. It supports the hackathon demo with simulated voice behavior.
 
-Set `NEXT_PUBLIC_VOICE_MODE=live` only when live voice is implemented and a valid `ASSEMBLYAI_API_KEY` is available to server-side code. `ASSEMBLYAI_API_KEY` is server-only: do not prefix it with `NEXT_PUBLIC_`, place it in client code, or commit it.
+Set `NEXT_PUBLIC_VOICE_MODE=live` with a valid server-side `ASSEMBLYAI_API_KEY` to use AssemblyAI Voice Agents. The server exchanges the permanent key for a single-use temporary token valid for five minutes; the browser receives only that temporary token before it opens the live WebSocket. `ASSEMBLYAI_API_KEY` is server-only: do not prefix it with `NEXT_PUBLIC_`, place it in client code, or commit it.
 
 ## Practice setup and demo path
 
-The trainee starts each practice session by pasting a company FAQ or policy and confirming it. They can also paste experience notes, or add them as a plain-text or Markdown file; approved practice advice affects factual scoring while personal coaching notes affect suggestions only.
+The trainee starts each practice session by pasting a company FAQ or policy, or importing one public HTTPS page once and confirming its sanitized preview. They can also paste experience notes, or add them as a plain-text or Markdown file; approved practice advice affects factual scoring while personal coaching notes affect suggestions only.
 
 The golden demo path is: start in mock voice mode, paste and confirm a practice FAQ, add optional experience notes, choose either late delivery or refund eligibility, allow microphone access, speak to the simulated customer, then review the four-score coaching report.
 
