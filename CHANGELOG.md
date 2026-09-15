@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial per-session practice-pack domain contract and product-input decision record.
 - Next.js App Router and Tailwind scaffold with lint, typecheck, unit-test, build, and CI gates.
+- Normalized source facts, scenario definitions, transcript/report contracts, and validation for grounded practice sessions.
+- Source setup screen that requires FAQ/policy preview confirmation before a trainee can start a simulated customer call.
 
 ### Fixed
 

@@ -70,6 +70,16 @@ export type PracticePack = {
   scenario: PracticeScenario;
 };
 
+export type ScenarioDefinition = {
+  id: string;
+  title: string;
+  customerPersona: string;
+  openingLine: string;
+  goals: string[];
+  factIds: string[];
+  difficulty: "beginner" | "intermediate";
+};
+
 export type PracticePackValidation =
   | { ok: true }
   | { ok: false; issues: string[] };
