@@ -141,10 +141,17 @@ export class MockVoiceAgent implements VoiceAgent {
     this.customerSpeaking = true;
     this.activeCustomerTurn = turn;
     this.fixturePlaybackPending = false;
-    this.customerAudioAvailability = "available";
+    const hasFixture = Boolean(mockCustomerAudioFixtures[text]);
+    this.customerAudioAvailability = hasFixture ? "available" : "text-only";
     this.emit({ type: "customer-turn-started" });
+    const speechStarted = this.speak(text, () => this.finishCustomerTurn(turn));
+    if (!speechStarted && !hasFixture) {
+      this.emit({ type: "customer-transcript", text, final: true });
+      this.finishCustomerTurn(turn);
+      return;
+    }
+    if (!speechStarted) void this.emitFallbackAudio(text, turn);
     this.emit({ type: "customer-transcript", text, final: true });
-    if (!this.speak(text, () => this.finishCustomerTurn(turn))) void this.emitFallbackAudio(text, turn);
   }
 
   private speak(text: string, onFinished: () => void): boolean {
@@ -169,8 +176,6 @@ export class MockVoiceAgent implements VoiceAgent {
   private async emitFallbackAudio(text: string, turn: number): Promise<void> {
     const fixture = mockCustomerAudioFixtures[text];
     if (!fixture) {
-      this.customerAudioAvailability = "text-only";
-      this.finishCustomerTurn(turn);
       return;
     }
     try {

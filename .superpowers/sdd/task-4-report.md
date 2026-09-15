@@ -106,3 +106,20 @@ The adapter remains the only voice boundary and keeps customer audio, source set
 ### Self-review and concern
 
 The `VoiceAgentEvent` union and `VoiceAgent` interface remain exactly as specified. The two playback-completion helpers are optional mock-only capabilities, not transport events or adapter-contract members. The fallback status is presented without logging source material or transcript text. Actual browser speech-synthesis voices and fixture duration remain browser-dependent; their completion callbacks, rather than an arbitrary timeout, now control the call lifecycle.
+
+## Audio-first event-order remediation — 2026-09-15
+
+### Delivered
+
+- Reordered `MockVoiceAgent.emitCustomerTurn` so speech synthesis is started before the final `customer-transcript` event is emitted.
+- For unmatched turns, the explicit transcript-only availability state is selected before the transcript event, then the turn completes without mismatched audio.
+- Added a focused regression test that observes `speak` before `customer-transcript`.
+
+### Verification
+
+- `npm test -- src/voice/voice-agent.test.ts src/components/call-console.test.tsx` — passed, 19 tests across 2 files.
+- `npm run lint` — passed with no ESLint warnings or errors; Next.js printed its existing `next lint` deprecation notice.
+- `npm run typecheck` — passed.
+- `npm test` — passed, 33 tests across 4 files.
+- `npm run build` — passed with exit code 0; compilation, type validation, static generation, optimization, and trace collection completed.
+- `git diff --check` — passed.

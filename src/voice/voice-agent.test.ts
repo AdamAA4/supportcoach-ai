@@ -142,6 +142,31 @@ describe("mock voice agent", () => {
     vi.unstubAllGlobals();
   });
 
+  it("starts customer audio before emitting the customer transcript", async () => {
+    const order: string[] = [];
+    const speak = vi.fn(() => order.push("speak"));
+    class Utterance {
+      onend: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      constructor(public text: string) {}
+    }
+    vi.stubGlobal("speechSynthesis", { speak, cancel: vi.fn() });
+    vi.stubGlobal("SpeechSynthesisUtterance", Utterance);
+
+    const agent = new MockVoiceAgent();
+    await agent.connect({
+      scenario,
+      facts: [],
+      onEvent: (event) => {
+        if (event.type === "customer-transcript") order.push("transcript");
+      },
+    });
+
+    expect(order).toEqual(["speak", "transcript"]);
+    await agent.end();
+    vi.unstubAllGlobals();
+  });
+
   it("returns to listening when speech synthesis reports an error", async () => {
     const speak = vi.fn();
     class Utterance {
