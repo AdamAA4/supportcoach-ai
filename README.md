@@ -8,7 +8,7 @@ Use Node.js 20 or later.
 
 ```bash
 npm ci
-copy .env.example .env.local
+cp .env.example .env.local
 npm run dev
 ```
 

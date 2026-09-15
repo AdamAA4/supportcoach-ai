@@ -28,3 +28,9 @@ Implemented the Next.js App Router, TypeScript, and Tailwind scaffold around the
 
 - The required `next lint` script is deprecated by Next.js 15 and removed in Next.js 16. This scaffold pins Next.js 15.5.25 so the exact required command continues to work; a future deliberate migration can move the script to the ESLint CLI.
 - The page is intentionally a minimal scaffold. The approved practice setup, simulated voice flow, and clear-data control are future MVP tasks; the README describes their specified final behavior without claiming the placeholder page provides it yet.
+
+## Review follow-up â€” 2026-09-15
+
+- Fixed the README Bash setup block to use the portable `cp .env.example .env.local` command instead of the Windows-only `copy` command.
+- Focused docs check: passed (`README.md` contains the Bash `cp` command and no `copy .env.example .env.local` command).
+- Relevant gate: `npm run lint` — passed with no ESLint warnings or errors.
