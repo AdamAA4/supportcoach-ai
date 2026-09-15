@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Pin public reference imports to a validated numeric address while preserving HTTPS hostname verification; reject equivalent mapped/private IPv6 forms, special-use ranges, redirects, and oversized or stalled responses.
+- Queue live customer audio chunks in order and invalidate active, queued, and decoding playback on interruption or remote termination.
+- Make live mute pause frame transmission and disable microphone tracks while reusing the existing capture graph on unmute.
+- Guard pending voice-token, socket, and microphone startup against ended sessions; repeated startup and cleanup release resources once.
+- Keep microphone permission denial recoverable for live typed turns, and report every remote socket/session termination through the existing error contract.
+- Prevent the console from marking an ended call as recording when a pending microphone request completes.
+
 - Emit the mock customer transcript only after speech synthesis starts or transcript-only fallback is selected, preserving the audio-first turn contract.
 - Keep mock-customer turns active until browser speech synthesis ends or errors, and until matched fixture playback reports completion; interruptions invalidate pending completion callbacks.
 - Prevent mismatched static customer audio for dynamic text, show an explicit transcript-only audio fallback, and suppress fixture audio when an interruption happens during decoding.

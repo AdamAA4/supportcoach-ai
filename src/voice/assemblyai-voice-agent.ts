@@ -76,7 +76,13 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
   private onEvent?: (event: VoiceAgentEvent) => void;
   private callId?: string;
   private sessionReady = false;
-  private closed = false;
+  private closed = true;
+  private generation = 0;
+  private connectionTask?: Promise<void>;
+  private microphoneTask?: Promise<void>;
+  private tokenController?: AbortController;
+  private settleConnection?: () => void;
+  private muted = false;
   private stream?: MediaStream;
   private audioContext?: AudioContext;
   private microphoneSource?: MediaStreamAudioSourceNode;
@@ -90,28 +96,45 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
     this.AudioContext = dependencies.AudioContext ?? (typeof window === "undefined" ? undefined : window.AudioContext);
   }
 
-  async connect(input: { scenario: ScenarioDefinition; facts: ReferenceFact[]; onEvent: (event: VoiceAgentEvent) => void }): Promise<void> {
-    await this.end();
+  connect(input: { scenario: ScenarioDefinition; facts: ReferenceFact[]; onEvent: (event: VoiceAgentEvent) => void }): Promise<void> {
+    if (this.connectionTask) return this.connectionTask;
+    if (!this.closed) return Promise.resolve();
     this.closed = false;
+    this.muted = false;
     this.onEvent = input.onEvent;
+    const generation = ++this.generation;
+    this.tokenController = new AbortController();
+    const task = this.openConnection(input, generation, this.tokenController.signal);
+    this.connectionTask = task;
+    void task.finally(() => { if (this.connectionTask === task) this.connectionTask = undefined; }).catch(() => {});
+    return task;
+  }
+
+  private async openConnection(input: Parameters<VoiceAgent["connect"]>[0], generation: number, signal: AbortSignal): Promise<void> {
     let token: string;
     try {
-      const response = await this.request(VOICE_TOKEN_URL, { cache: "no-store" });
+      const response = await this.request(VOICE_TOKEN_URL, { cache: "no-store", signal });
+      if (!this.isCurrent(generation)) return;
       if (!response.ok) throw new Error("token-request");
       const payload: unknown = await response.json();
+      if (!this.isCurrent(generation)) return;
       if (!payload || typeof payload !== "object" || typeof (payload as { token?: unknown }).token !== "string") throw new Error("token-payload");
       token = (payload as { token: string }).token;
     } catch {
+      if (!this.isCurrent(generation)) return;
       this.fail("network", "The live voice service could not be reached.");
       throw new Error("Voice token request failed.");
     }
 
     await new Promise<void>((resolve, reject) => {
+      if (!this.isCurrent(generation)) { resolve(); return; }
+      this.settleConnection = resolve;
       const url = new URL(VOICE_SOCKET_URL);
       url.searchParams.set("token", token);
       const socket = new this.Socket(url.toString());
       this.socket = socket;
       socket.onopen = () => {
+        if (!this.isCurrent(generation)) return;
         try {
           this.send({
             type: "session.update",
@@ -129,56 +152,84 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
           reject(new Error("Voice session configuration failed."));
         }
       };
-      socket.onmessage = (event) => this.handleMessage(event);
+      socket.onmessage = (event) => { if (this.isCurrent(generation)) this.handleMessage(event); };
       socket.onerror = () => {
-        if (this.closed) return;
+        if (!this.isCurrent(generation)) return;
         this.fail("network", "The live voice connection failed.");
         reject(new Error("Voice socket failed."));
       };
-      socket.onclose = (event) => {
-        if (this.closed || event.code === 1000) return;
+      socket.onclose = () => {
+        if (!this.isCurrent(generation)) return;
         this.fail("network", "The live voice connection closed unexpectedly.");
+        reject(new Error("Voice socket closed."));
       };
+    }).catch(() => {
+      if (!this.isCurrent(generation)) return;
+      this.fail("network", "The live voice connection could not be opened.");
+      throw new Error("Voice socket startup failed.");
     });
   }
 
-  async startMicrophone(): Promise<void> {
+  startMicrophone(): Promise<void> {
+    if (this.closed || this.stream) return Promise.resolve();
+    if (this.microphoneTask) return this.microphoneTask;
+    const task = this.acquireMicrophone(this.generation);
+    this.microphoneTask = task;
+    void task.finally(() => { if (this.microphoneTask === task) this.microphoneTask = undefined; }).catch(() => {});
+    return task;
+  }
+
+  private async acquireMicrophone(generation: number): Promise<void> {
     if (!this.mediaDevices || !this.AudioContext) {
-      this.fail("permission-denied", "Microphone capture is unavailable. Use typed fallback.");
+      this.emit({ type: "error", code: "permission-denied", message: "Microphone capture is unavailable. Use typed fallback." });
       return;
     }
     try {
-      this.stream = await this.mediaDevices.getUserMedia({ audio: { echoCancellation: true, sampleRate: 24_000, channelCount: 1 } });
+      const stream = await this.mediaDevices.getUserMedia({ audio: { echoCancellation: true, sampleRate: 24_000, channelCount: 1 } });
+      if (!this.isCurrent(generation)) { stream.getTracks().forEach((track) => track.stop()); return; }
+      this.stream = stream;
+      stream.getTracks().forEach((track) => { track.enabled = !this.muted; });
       this.audioContext = new this.AudioContext({ sampleRate: 24_000 });
       this.microphoneSource = this.audioContext.createMediaStreamSource(this.stream);
       this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
       this.muteGain = this.audioContext.createGain();
       this.muteGain.gain.value = 0;
       this.processor.onaudioprocess = (event) => {
-        if (!this.sessionReady || !this.socket || this.socket.readyState !== 1) return;
+        if (!this.isCurrent(generation) || this.muted || !this.sessionReady || !this.socket || this.socket.readyState !== 1) return;
         const samples = event.inputBuffer.getChannelData(0);
         const pcm = new Uint8Array(samples.length * 2);
         const view = new DataView(pcm.buffer);
         for (let index = 0; index < samples.length; index += 1) view.setInt16(index * 2, Math.max(-1, Math.min(1, samples[index])) * 0x7fff, true);
-        this.send({ type: "input.audio", audio: asBase64(pcm) });
+        try { this.send({ type: "input.audio", audio: asBase64(pcm) }); }
+        catch { this.fail("network", "The live voice connection failed."); }
       };
       this.microphoneSource.connect(this.processor);
       this.processor.connect(this.muteGain);
       this.muteGain.connect(this.audioContext.destination);
       await this.audioContext.resume();
+      if (!this.isCurrent(generation)) return;
       logEvent("microphone-started", this.callId);
     } catch {
+      if (!this.isCurrent(generation)) return;
       await this.releaseMicrophone();
-      this.fail("permission-denied", "Microphone permission was denied. Use typed fallback.");
+      if (this.isCurrent(generation)) this.emit({ type: "error", code: "permission-denied", message: "Microphone permission was denied. Use typed fallback." });
     }
+  }
+
+  /** Optional adapter capability: preserve the capture graph while pausing transmission. */
+  async setMuted(muted: boolean): Promise<void> {
+    this.muted = muted;
+    this.stream?.getTracks().forEach((track) => { track.enabled = !muted; });
   }
 
   sendTypedTraineeTurn(text: string): void {
     const normalized = text.trim();
     if (!normalized || !this.sessionReady) return;
     this.emit({ type: "trainee-transcript", text: normalized, final: true });
-    this.send({ type: "conversation.message", role: "user", content: normalized });
-    this.send({ type: "reply.create" });
+    try {
+      this.send({ type: "conversation.message", role: "user", content: normalized });
+      this.send({ type: "reply.create" });
+    } catch { this.fail("network", "The live voice connection failed."); }
   }
 
   interruptCustomer(): void {
@@ -189,17 +240,25 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
   async end(): Promise<void> {
     if (this.closed && !this.socket && !this.stream) return;
     this.closed = true;
+    this.generation += 1;
     this.sessionReady = false;
+    this.tokenController?.abort();
+    this.tokenController = undefined;
+    this.connectionTask = undefined;
+    this.microphoneTask = undefined;
+    this.settleConnection?.();
+    this.settleConnection = undefined;
     const socket = this.socket;
     this.socket = undefined;
     if (socket) {
+      socket.onopen = null; socket.onmessage = null; socket.onerror = null; socket.onclose = null;
       try { if (socket.readyState === 1) socket.send(JSON.stringify({ type: "session.end" })); } catch { /* socket is already unavailable */ }
       try { socket.close(); } catch { /* socket is already unavailable */ }
     }
-    await this.releaseMicrophone();
     this.onEvent = undefined;
     logEvent("session-ended", this.callId);
     this.callId = undefined;
+    await this.releaseMicrophone();
   }
 
   private handleMessage(event: MessageEvent): void {
@@ -252,7 +311,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
         this.fail("protocol", "The live voice service rejected the session.");
         return;
       case "session.ended":
-        void this.end();
+        this.fail("network", "The live voice session ended. Start a new practice call.");
         return;
       default:
         return;
@@ -268,6 +327,10 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
     this.onEvent?.(event);
   }
 
+  private isCurrent(generation: number): boolean {
+    return !this.closed && this.generation === generation;
+  }
+
   private fail(code: Extract<VoiceAgentEvent, { type: "error" }>["code"], message: string): void {
     if (this.closed) return;
     this.emit({ type: "error", code, message });
@@ -276,6 +339,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
   }
 
   private async releaseMicrophone(): Promise<void> {
+    if (this.processor) this.processor.onaudioprocess = null;
     this.processor?.disconnect();
     this.microphoneSource?.disconnect();
     this.muteGain?.disconnect();

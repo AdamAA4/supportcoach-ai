@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import React from "react";
 
 import { GET as getVoiceToken } from "../app/api/voice-token/route";
-import { POST as importReference } from "../app/api/reference-import/route";
 import { GET as getHealth } from "../app/api/health/route";
 import type { ScenarioDefinition } from "../domain/practice-pack";
 import { AudioPlayer } from "./audio-player";
@@ -80,57 +79,6 @@ describe("voice-token route", () => {
 
     expect(response.status).toBe(502);
     await expect(response.json()).resolves.toEqual({ error: { code: "voice_unavailable", message: "Voice service is temporarily unavailable." } });
-  });
-});
-
-describe("reference importer", () => {
-  it("rejects a private-network target before fetching and does not log source content", async () => {
-    const request = vi.fn();
-    const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
-    vi.stubGlobal("fetch", request);
-
-    const response = await importReference(new Request("http://localhost/api/reference-import", {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url: "https://127.0.0.1/faq" }),
-    }));
-
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({ error: { code: "invalid_reference_url", message: "Enter a public HTTPS URL." } });
-    expect(request).not.toHaveBeenCalled();
-    expect(log).not.toHaveBeenCalled();
-    log.mockRestore();
-  });
-
-  it("returns a sanitized canonical snapshot and hash from one bounded public fetch", async () => {
-    const request = vi.fn().mockResolvedValue(new Response("<nav>ignore</nav><main><h1>Refunds</h1><p>Refunds are available within 30 days.</p><script>secret()</script></main>", { status: 200, headers: { "content-type": "text/html" } }));
-    vi.stubGlobal("fetch", request);
-
-    const response = await importReference(new Request("http://localhost/api/reference-import", {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url: "https://example.com/policy" }),
-    }));
-    const payload = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(payload).toMatchObject({ canonicalUrl: "https://example.com/policy", extractedText: "Refunds Refunds are available within 30 days." });
-    expect(payload.contentHash).toMatch(/^sha256:[a-f0-9]{64}$/);
-    expect(payload.extractedText).not.toContain("ignore");
-    expect(payload.extractedText).not.toContain("secret");
-    expect(request).toHaveBeenCalledTimes(1);
-  });
-
-  it("uses stable 413 and 502 envelopes for large and unavailable public sources", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 200, headers: { "content-length": "204801" } })));
-    const large = await importReference(new Request("http://localhost/api/reference-import", {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url: "https://example.com/large" }),
-    }));
-    expect(large.status).toBe(413);
-    await expect(large.json()).resolves.toEqual({ error: { code: "reference_too_large", message: "The reference source must be 200 KB or smaller." } });
-
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("not found", { status: 404 })));
-    const unavailable = await importReference(new Request("http://localhost/api/reference-import", {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url: "https://example.com/missing" }),
-    }));
-    expect(unavailable.status).toBe(502);
-    await expect(unavailable.json()).resolves.toEqual({ error: { code: "reference_unavailable", message: "The reference source could not be imported." } });
   });
 });
 

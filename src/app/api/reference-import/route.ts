@@ -1,5 +1,9 @@
 import { createHash } from "node:crypto";
 import { lookup } from "node:dns/promises";
+import { request as httpsRequest } from "node:https";
+import type { IncomingMessage } from "node:http";
+import { BlockList, isIP } from "node:net";
+import { checkServerIdentity } from "node:tls";
 
 import { NextResponse } from "next/server";
 
@@ -19,31 +23,37 @@ const failure = (kind: ImportFailure) => {
   return NextResponse.json({ error: { code: payload.code, message: payload.message } }, { status: payload.status });
 };
 
-const isPrivateIpv4 = (address: string): boolean => {
-  const parts = address.split(".").map(Number);
-  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
-  const [first, second] = parts;
-  return first === 0 || first === 10 || first === 127 || first >= 224 ||
-    (first === 100 && second >= 64 && second <= 127) ||
-    (first === 169 && second === 254) ||
-    (first === 172 && second >= 16 && second <= 31) ||
-    (first === 192 && (second === 0 || second === 168)) ||
-    (first === 198 && (second === 18 || second === 19));
+const nonpublic = new BlockList();
+for (const [address, prefix] of [
+  ["0.0.0.0", 8], ["10.0.0.0", 8], ["100.64.0.0", 10], ["127.0.0.0", 8],
+  ["169.254.0.0", 16], ["172.16.0.0", 12], ["192.0.0.0", 24], ["192.0.2.0", 24],
+  ["192.88.99.0", 24], ["192.168.0.0", 16], ["198.18.0.0", 15], ["198.51.100.0", 24],
+  ["203.0.113.0", 24], ["224.0.0.0", 4], ["240.0.0.0", 4],
+] as const) nonpublic.addSubnet(address, prefix, "ipv4");
+for (const [address, prefix] of [
+  ["2001::", 23], ["2001:db8::", 32], ["2002::", 16], ["3fff::", 20],
+] as const) nonpublic.addSubnet(address, prefix, "ipv6");
+const globalIpv6 = new BlockList();
+globalIpv6.addSubnet("2000::", 3, "ipv6");
+
+// Node parses equivalent IPv6 spellings, including IPv4-mapped addresses.
+// Fail closed outside global unicast; transition, local and reserved IPv6 are refused.
+const isPublicAddress = (address: string): boolean => {
+  const family = isIP(address);
+  if (!family) return false;
+  if (family === 4) return !nonpublic.check(address, "ipv4");
+  return globalIpv6.check(address, "ipv6") && !nonpublic.check(address, "ipv6");
 };
 
-const isPrivateAddress = (address: string): boolean => {
-  const normalized = address.toLowerCase().replace(/^\[|\]$/g, "");
-  if (normalized.includes(".")) return isPrivateIpv4(normalized.replace(/^::ffff:/, ""));
-  return normalized === "::" || normalized === "::1" || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe80:");
-};
+const hostnameOf = (url: URL) => url.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "");
 
 const publicHttpsUrl = (value: unknown): URL | undefined => {
   if (typeof value !== "string") return undefined;
   try {
     const url = new URL(value);
     if (url.protocol !== "https:" || url.username || url.password || !url.hostname) return undefined;
-    const hostname = url.hostname.toLowerCase();
-    if (hostname === "localhost" || hostname.endsWith(".localhost") || hostname.endsWith(".local") || isPrivateAddress(hostname)) return undefined;
+    const hostname = hostnameOf(url).toLowerCase();
+    if (hostname === "localhost" || hostname.endsWith(".localhost") || hostname.endsWith(".local") || (isIP(hostname) && !isPublicAddress(hostname))) return undefined;
     return url;
   } catch {
     return undefined;
@@ -63,31 +73,46 @@ const textFromHtml = (html: string): string => html
   .replace(/\s+/g, " ")
   .trim();
 
-const readBoundedBody = async (response: Response): Promise<string> => {
-  const advertisedLength = Number(response.headers.get("content-length"));
-  if (Number.isFinite(advertisedLength) && advertisedLength > MAX_BYTES) throw new Error("too-large");
-  if (!response.body) return "";
-
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
+const readBoundedBody = async (response: IncomingMessage): Promise<string> => {
+  const advertisedLength = Number(response.headers["content-length"]);
+  if (Number.isFinite(advertisedLength) && advertisedLength > MAX_BYTES) { response.destroy(); throw new Error("too-large"); }
+  const chunks: Buffer[] = [];
   let size = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > MAX_BYTES) { await reader.cancel(); throw new Error("too-large"); }
-    chunks.push(value);
+  for await (const chunk of response) {
+    const bytes = Buffer.from(chunk);
+    size += bytes.byteLength;
+    if (size > MAX_BYTES) { response.destroy(); throw new Error("too-large"); }
+    chunks.push(bytes);
   }
-  const combined = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) { combined.set(chunk, offset); offset += chunk.byteLength; }
-  return new TextDecoder().decode(combined);
+  return Buffer.concat(chunks, size).toString("utf8");
 };
 
-const assertPublicDns = async (url: URL): Promise<void> => {
-  const addresses = await lookup(url.hostname, { all: true, verbatim: true });
-  if (addresses.length === 0 || addresses.some((entry) => isPrivateAddress(entry.address))) throw new Error("invalid");
+const resolvePublicAddress = async (url: URL): Promise<string> => {
+  const hostname = hostnameOf(url);
+  const addresses = isIP(hostname) ? [{ address: hostname }] : await lookup(hostname, { all: true, verbatim: true });
+  if (addresses.length === 0 || addresses.some((entry) => !isPublicAddress(entry.address))) throw new Error("invalid");
+  return addresses[0].address;
 };
+
+const retrieve = (url: URL, address: string, signal: AbortSignal): Promise<string> => new Promise((resolve, reject) => {
+  const hostname = hostnameOf(url);
+  // The connection uses a validated numeric IP, so it cannot perform a second DNS
+  // lookup. Host, SNI and certificate verification retain the requested identity.
+  const request = httpsRequest({
+    hostname: address, port: url.port || 443, path: `${url.pathname}${url.search}`, method: "GET",
+    headers: { Host: url.host, "Accept-Encoding": "identity" },
+    servername: isIP(hostname) ? "" : hostname,
+    checkServerIdentity: (_host, certificate) => checkServerIdentity(hostname, certificate),
+    rejectUnauthorized: true, agent: false, signal,
+  }, (response) => {
+    if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
+      response.destroy(); reject(new Error("unavailable")); return;
+    }
+    void readBoundedBody(response).then(resolve, reject);
+  });
+  request.on("error", reject);
+  request.end();
+});
 
 export async function POST(request: Request) {
   let sourceUrl: URL | undefined;
@@ -105,12 +130,10 @@ export async function POST(request: Request) {
     timeout = setTimeout(() => { controller.abort(); reject(new Error("timeout")); }, TIMEOUT_MS);
   });
   try {
-    await Promise.race([assertPublicDns(sourceUrl), deadline]);
-    const response = await fetch(sourceUrl, { signal: controller.signal, redirect: "error", cache: "no-store" });
-    if (!response.ok) return failure("unavailable");
-    const extractedText = textFromHtml(await readBoundedBody(response));
+    const address = await Promise.race([resolvePublicAddress(sourceUrl), deadline]);
+    const extractedText = textFromHtml(await Promise.race([retrieve(sourceUrl, address, controller.signal), deadline]));
     if (!extractedText) return failure("unavailable");
-    const canonicalUrl = new URL(response.url || sourceUrl.toString()).toString();
+    const canonicalUrl = sourceUrl.toString();
     return NextResponse.json({
       canonicalUrl,
       extractedText,
