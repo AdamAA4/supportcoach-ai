@@ -70,3 +70,23 @@ The UI continues to make the trainee the voice responder and the customer a simu
 ### Self-review
 
 The change is limited to setup state transitions and preserves the Task 3 domain contracts. Every setup field that can alter the normalized context now uses the same invalidation path, preventing stale green readiness after a successful validation.
+
+## Review-finding remediation — 2026-09-15 (note file invalidation)
+
+### Fixed
+
+- Note file selection now immediately invalidates confirmation and ready state, including oversized files that are rejected before reading.
+- The asynchronous `FileReader` completion also invalidates before applying loaded note text, preventing a late file result from restoring stale readiness after confirmation.
+
+### Verification
+
+- `npm test -- --run src/domain/validation.test.ts tests/domain/practice-pack.test.ts` — 14 passing tests across 2 files.
+- `npm run lint` — passed with no ESLint warnings or errors; Next.js printed its existing `next lint` deprecation notice.
+- `npm run typecheck` — passed.
+- `npm test` — 14 passing tests across 2 files.
+- `npm run build` — passed; static `/setup` page generated successfully.
+- `git diff --check` — passed; no whitespace errors.
+
+### Self-review and concerns
+
+The fix is scoped to setup state invalidation and preserves the existing file size validation and note format behavior. A dedicated component test was not added because the repository currently has no component test harness; the focused domain suite and full build checks pass.

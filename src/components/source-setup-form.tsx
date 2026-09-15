@@ -53,10 +53,14 @@ export function SourceSetupForm() {
   const readNoteFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     setNoteFileSizeBytes(file?.size);
+    invalidateSetup();
     if (!file || file.size > 200 * 1024) return;
     setNoteFormat(file.name.toLowerCase().endsWith(".md") ? "markdown" : "plain-text");
     const reader = new FileReader();
-    reader.addEventListener("load", () => setNotes(typeof reader.result === "string" ? reader.result : ""));
+    reader.addEventListener("load", () => {
+      invalidateSetup();
+      setNotes(typeof reader.result === "string" ? reader.result : "");
+    });
     reader.readAsText(file);
   };
 
