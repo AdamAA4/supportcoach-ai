@@ -80,3 +80,29 @@ The adapter remains the only voice boundary and keeps customer audio, source set
 - `npm test` — passed, 30 tests across 4 files.
 - `npm run build` — passed with exit code 0 after 52 seconds. Compilation, type validation, static generation, final optimization, and trace collection completed; `/call` builds as a static route (6.42 kB, 112 kB first load).
 - `git diff --check` — passed.
+
+## Speech-lifecycle review-finding remediation — 2026-09-15
+
+### Delivered
+
+- Replaced the fixed 400 ms mock customer-turn timeout with turn-scoped completion. Browser speech synthesis now ends the turn only through its `onend` or `onerror` callback, and stale callbacks are ignored after an interruption.
+- Kept fixture playback only for exact known fixture text. The call console reports completion to the mock adapter when its `AudioPlayer` source actually ends, so the fixture path also reaches listening only after playback completion.
+- Dynamic or unmatched customer text now stays transcript-only when synthesis is unavailable. The UI labels this as `Customer audio: Unavailable — transcript-only fallback`; it never emits a mismatched WAV.
+- Added a second current-turn check after `response.arrayBuffer()` resolves, preventing an interrupted fixture decode from emitting stale audio.
+
+### TDD evidence
+
+- Added the lifecycle, unmatched-text, and decode-interruption tests before implementation. The focused run failed with the expected missing synthesis completion and static-fixture behavior: 2 failures, `keeps the customer turn open until speech synthesis finishes` and `uses a text-only fallback instead of mismatched audio for an unmatched customer turn`.
+- After the minimal lifecycle and fixture-routing changes, `npm test -- src/voice/voice-agent.test.ts src/components/call-console.test.tsx` passed: 17 tests across 2 files.
+
+### Verification
+
+- `npm run typecheck` — passed.
+- `npm run lint` — passed with no warnings or errors; Next.js printed its existing `next lint` deprecation notice.
+- `npm test` — passed: 32 tests across 4 files.
+- `npm run build` — passed with exit code 0. Compilation, type validation, static generation, optimization, and trace collection completed; `/call` builds as a static route (6.75 kB, 113 kB first load).
+- `git diff --check` — passed.
+
+### Self-review and concern
+
+The `VoiceAgentEvent` union and `VoiceAgent` interface remain exactly as specified. The two playback-completion helpers are optional mock-only capabilities, not transport events or adapter-contract members. The fallback status is presented without logging source material or transcript text. Actual browser speech-synthesis voices and fixture duration remain browser-dependent; their completion callbacks, rather than an arbitrary timeout, now control the call lifecycle.

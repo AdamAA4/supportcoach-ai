@@ -120,32 +120,77 @@ describe("mock voice agent", () => {
     vi.useRealTimers();
   });
 
-  it("emits bundled fixture audio only when browser synthesis is unavailable", async () => {
+  it("keeps the customer turn open until speech synthesis finishes", async () => {
+    const speak = vi.fn();
+    const cancel = vi.fn();
+    class Utterance {
+      onend: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      constructor(public text: string) {}
+    }
+    vi.stubGlobal("speechSynthesis", { speak, cancel });
+    vi.stubGlobal("SpeechSynthesisUtterance", Utterance);
+    const events: VoiceAgentEvent[] = [];
+    const agent = new MockVoiceAgent();
+
+    await agent.connect({ scenario, facts: [], onEvent: (event) => events.push(event) });
+
+    expect(events.map((event) => event.type)).not.toContain("customer-turn-ended");
+    (speak.mock.calls[0][0] as Utterance).onend?.();
+    expect(events.map((event) => event.type)).toContain("customer-turn-ended");
+    await agent.end();
+    vi.unstubAllGlobals();
+  });
+
+  it("returns to listening when speech synthesis reports an error", async () => {
+    const speak = vi.fn();
+    class Utterance {
+      onend: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      constructor(public text: string) {}
+    }
+    vi.stubGlobal("speechSynthesis", { speak, cancel: vi.fn() });
+    vi.stubGlobal("SpeechSynthesisUtterance", Utterance);
+    const events: VoiceAgentEvent[] = [];
+    const agent = new MockVoiceAgent();
+
+    await agent.connect({ scenario, facts: [], onEvent: (event) => events.push(event) });
+    (speak.mock.calls[0][0] as Utterance).onerror?.();
+
+    expect(events.map((event) => event.type)).toContain("customer-turn-ended");
+    await agent.end();
+    vi.unstubAllGlobals();
+  });
+
+  it("uses a text-only fallback instead of mismatched audio for an unmatched customer turn", async () => {
     const fetch = vi.fn(async () => new Response(new ArrayBuffer(4), { status: 200 }));
     vi.stubGlobal("fetch", fetch);
     const events: VoiceAgentEvent[] = [];
     const agent = new MockVoiceAgent();
 
-    await agent.connect({ scenario, facts: [], onEvent: (event) => events.push(event) });
-    await vi.waitFor(() => expect(events.some((event) => event.type === "customer-audio")).toBe(true));
+    await agent.connect({ scenario: { ...scenario, openingLine: "A different customer question." }, facts: [], onEvent: (event) => events.push(event) });
+    await Promise.resolve();
 
-    expect(fetch).toHaveBeenCalledWith("/voice/mock-customer-opening.wav");
-    expect(events.filter((event) => event.type === "customer-audio")).toEqual([
-      { type: "customer-audio", audio: expect.any(ArrayBuffer) },
-    ]);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(events.map((event) => event.type)).toContain("customer-turn-ended");
+    expect(events.filter((event) => event.type === "customer-audio")).toEqual([]);
     await agent.end();
     vi.unstubAllGlobals();
   });
 
-  it("suppresses a pending fixture after customer interruption", async () => {
-    let resolveFixture: ((response: Response) => void) | undefined;
-    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { resolveFixture = resolve; })));
+  it("suppresses fixture audio when customer speech is interrupted during decoding", async () => {
+    let resolveDecodedAudio: ((audio: ArrayBuffer) => void) | undefined;
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      arrayBuffer: () => new Promise<ArrayBuffer>((resolve) => { resolveDecodedAudio = resolve; }),
+    }) as Response));
     const events: VoiceAgentEvent[] = [];
     const agent = new MockVoiceAgent();
 
     await agent.connect({ scenario, facts: [], onEvent: (event) => events.push(event) });
+    await Promise.resolve();
     agent.interruptCustomer();
-    resolveFixture?.(new Response(new ArrayBuffer(4), { status: 200 }));
+    resolveDecodedAudio?.(new ArrayBuffer(4));
     await Promise.resolve();
 
     expect(events.filter((event) => event.type === "customer-audio")).toEqual([]);

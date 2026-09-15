@@ -16,8 +16,9 @@ type SpeechRecognitionLike = {
 };
 
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
-type SpeechSynthesisLike = { speak: (utterance: { text: string }) => void; cancel: () => void };
-type SpeechSynthesisUtteranceConstructor = new (text: string) => { text: string };
+type SpeechSynthesisLike = { speak: (utterance: SpeechSynthesisUtteranceLike) => void; cancel: () => void };
+type SpeechSynthesisUtteranceLike = { text: string; onend: (() => void) | null; onerror: (() => void) | null };
+type SpeechSynthesisUtteranceConstructor = new (text: string) => SpeechSynthesisUtteranceLike;
 
 const mockFollowUp = (scenario: ScenarioDefinition, facts: ReferenceFact[]): string => {
   const fact = facts.find((candidate) => scenario.factIds.includes(candidate.id)) ?? facts[0];
@@ -26,8 +27,13 @@ const mockFollowUp = (scenario: ScenarioDefinition, facts: ReferenceFact[]): str
     : "Thanks. What is the next step you can offer me?";
 };
 
-/** Offline fallback for browsers without Web Speech synthesis. */
-const mockCustomerAudioFixture = "/voice/mock-customer-opening.wav";
+/** Fixtures are used only when their spoken text exactly matches the current turn. */
+const mockCustomerAudioFixtures: Record<string, string> = {
+  "My order was meant to arrive already. Where is it?": "/voice/mock-customer-opening.wav",
+  "Thanks. What is the next step you can offer me?": "/voice/mock-customer-follow-up.wav",
+};
+
+type CustomerAudioAvailability = "available" | "text-only";
 
 export class MockVoiceAgent implements VoiceAgent {
   private onEvent?: (event: VoiceAgentEvent) => void;
@@ -37,6 +43,10 @@ export class MockVoiceAgent implements VoiceAgent {
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private recognition?: SpeechRecognitionLike;
   private microphoneActive = false;
+  private activeCustomerTurn?: number;
+  private nextCustomerTurn = 0;
+  private fixturePlaybackPending = false;
+  private customerAudioAvailability: CustomerAudioAvailability = "available";
 
   async connect(input: { scenario: ScenarioDefinition; facts: ReferenceFact[]; onEvent: (event: VoiceAgentEvent) => void }): Promise<void> {
     this.onEvent = input.onEvent;
@@ -90,7 +100,19 @@ export class MockVoiceAgent implements VoiceAgent {
     this.clearTimers();
     this.speechSynthesis()?.cancel();
     this.customerSpeaking = false;
+    this.fixturePlaybackPending = false;
+    this.activeCustomerTurn = undefined;
     this.emit({ type: "interrupted" });
+  }
+
+  /** Internal mock capability: the UI calls this when a matched fixture actually finishes playing. */
+  completeCustomerAudioPlayback(): void {
+    if (this.activeCustomerTurn !== undefined && this.fixturePlaybackPending) this.finishCustomerTurn(this.activeCustomerTurn);
+  }
+
+  /** Internal mock capability used only to label transcript-only fallback in the call UI. */
+  getCustomerAudioAvailability(): CustomerAudioAvailability {
+    return this.customerAudioAvailability;
   }
 
   requestMockCustomerTurn(): void {
@@ -102,6 +124,8 @@ export class MockVoiceAgent implements VoiceAgent {
   async end(): Promise<void> {
     this.clearTimers();
     this.customerSpeaking = false;
+    this.fixturePlaybackPending = false;
+    this.activeCustomerTurn = undefined;
     this.recognition?.stop();
     this.recognition = undefined;
     this.onEvent = undefined;
@@ -113,36 +137,67 @@ export class MockVoiceAgent implements VoiceAgent {
   }
 
   private emitCustomerTurn(text: string): void {
+    const turn = ++this.nextCustomerTurn;
     this.customerSpeaking = true;
+    this.activeCustomerTurn = turn;
+    this.fixturePlaybackPending = false;
+    this.customerAudioAvailability = "available";
     this.emit({ type: "customer-turn-started" });
-    if (!this.speak(text)) void this.emitFallbackAudio();
     this.emit({ type: "customer-transcript", text, final: true });
-    this.schedule(() => {
-      this.customerSpeaking = false;
-      this.emit({ type: "customer-turn-ended" });
-    }, 400);
+    if (!this.speak(text, () => this.finishCustomerTurn(turn))) void this.emitFallbackAudio(text, turn);
   }
 
-  private speak(text: string): boolean {
+  private speak(text: string, onFinished: () => void): boolean {
     const synthesis = this.speechSynthesis();
     const Utterance = (globalThis as typeof globalThis & { SpeechSynthesisUtterance?: SpeechSynthesisUtteranceConstructor }).SpeechSynthesisUtterance;
     if (!synthesis || !Utterance) return false;
-    synthesis.speak(new Utterance(text));
-    return true;
+    const utterance = new Utterance(text) as unknown as SpeechSynthesisUtteranceLike;
+    utterance.onend = onFinished;
+    utterance.onerror = onFinished;
+    try {
+      synthesis.speak(utterance);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private speechSynthesis(): SpeechSynthesisLike | undefined {
-    return (globalThis as typeof globalThis & { speechSynthesis?: SpeechSynthesisLike }).speechSynthesis;
+    return (globalThis as unknown as { speechSynthesis?: SpeechSynthesisLike }).speechSynthesis;
   }
 
-  private async emitFallbackAudio(): Promise<void> {
-    try {
-      const response = await fetch(mockCustomerAudioFixture);
-      if (!response.ok) throw new Error("fixture unavailable");
-      if (this.customerSpeaking) this.emit({ type: "customer-audio", audio: await response.arrayBuffer() });
-    } catch {
-      // The deterministic transcript remains available when offline fixture playback is unavailable.
+  private async emitFallbackAudio(text: string, turn: number): Promise<void> {
+    const fixture = mockCustomerAudioFixtures[text];
+    if (!fixture) {
+      this.customerAudioAvailability = "text-only";
+      this.finishCustomerTurn(turn);
+      return;
     }
+    try {
+      const response = await fetch(fixture);
+      if (!response.ok) throw new Error("fixture unavailable");
+      if (!this.isCurrentCustomerTurn(turn)) return;
+      const audio = await response.arrayBuffer();
+      if (!this.isCurrentCustomerTurn(turn)) return;
+      this.fixturePlaybackPending = true;
+      this.emit({ type: "customer-audio", audio });
+    } catch {
+      if (!this.isCurrentCustomerTurn(turn)) return;
+      this.customerAudioAvailability = "text-only";
+      this.finishCustomerTurn(turn);
+    }
+  }
+
+  private isCurrentCustomerTurn(turn: number): boolean {
+    return this.customerSpeaking && this.activeCustomerTurn === turn;
+  }
+
+  private finishCustomerTurn(turn: number): void {
+    if (!this.isCurrentCustomerTurn(turn)) return;
+    this.customerSpeaking = false;
+    this.fixturePlaybackPending = false;
+    this.activeCustomerTurn = undefined;
+    this.emit({ type: "customer-turn-ended" });
   }
 
   private schedule(callback: () => void, delay: number): void {

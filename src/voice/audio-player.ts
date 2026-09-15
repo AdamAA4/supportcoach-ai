@@ -2,24 +2,28 @@ export class AudioPlayer {
   private context?: AudioContext;
   private source?: AudioBufferSourceNode;
 
-  async play(audio: ArrayBuffer): Promise<void> {
-    if (typeof window === "undefined" || !("AudioContext" in window)) return;
+  async play(audio: ArrayBuffer, onEnded?: () => void): Promise<void> {
+    if (typeof window === "undefined" || !("AudioContext" in window)) { onEnded?.(); return; }
     this.stop();
     this.context ??= new AudioContext();
     const decoded = await this.context.decodeAudioData(audio.slice(0));
     const source = this.context.createBufferSource();
     source.buffer = decoded;
     source.connect(this.context.destination);
-    source.onended = () => { if (this.source === source) this.source = undefined; };
+    source.onended = () => {
+      if (this.source !== source) return;
+      this.source = undefined;
+      onEnded?.();
+    };
     this.source = source;
     source.start();
   }
 
-  async playFixture(url: string): Promise<void> {
+  async playFixture(url: string, onEnded?: () => void): Promise<void> {
     if (typeof window === "undefined" || !("AudioContext" in window)) return;
     const response = await fetch(url);
     if (!response.ok) throw new Error("Customer audio fixture could not be loaded.");
-    await this.play(await response.arrayBuffer());
+    await this.play(await response.arrayBuffer(), onEnded);
   }
 
   stop(): void {
