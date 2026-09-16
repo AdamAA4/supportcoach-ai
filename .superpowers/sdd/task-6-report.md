@@ -123,3 +123,47 @@ After the independent claim-scope repair, the same command exited **0**, with **
 - Staged code/docs review and `git diff --cached --check`: exit 0, no whitespace errors; exactly the evaluator, evaluator tests, Task 6 report, and three diaries were staged. Public interfaces, report shape, dependencies, voice code, and progress ledger were unchanged.
 
 The rubric is still conservative English lexical matching. Topic boundaries are derived from reference words, not a semantic parser; arbitrary paraphrases, omitted subjects, and ambiguous shared topics remain outside general correctness guarantees. No browser interaction was repeated for this evaluator-only repair; the existing report/component, route, persistence, and voice tests passed in the full suite.
+
+## Third targeted attempt: BLOCKED diagnostic handoff
+
+Date: 2026-09-16. Starting clean HEAD: `9b25444`. The user authorized exactly one final targeted hypothesis, with a structured matcher as a separately authorized fallback. No fourth local repair was attempted, and no structured matcher was implemented in this attempt.
+
+### Reproduction and root cause
+
+Use two scenario-selected confirmed facts: A = `Refunds are available within 30 days`; B = `Refunds are processed within 5 business days`. With a single trainee turn `A and B` (or `B and A`), the existing evaluator misses both facts and treats the sentence as unsupported. Expected: no missed facts, no unsupported claims, factual accuracy 3.
+
+The traced path is `evaluate` -> `claimsForFact` -> `assess`. Both answers supply the leading topic `refunds`. Every occurrence belongs to both answers, so no claim boundary is introduced; `assess` sees both 30 and 5 for each fact and raises an extra-number conflict. This is evaluator-local and deterministic, independent of the endpoint, UI, persistence, or voice provider.
+
+### Single hypothesis and evidence
+
+Hypothesis: a unique nonnumeric content word after the shared topic prefix can identify each confirmed fact while retaining its original subject boundary. The attempted evaluator-only change derived `available` and `processed` from the answers, matched existing opposite-word pairs to the same anchor identity, and used that identity to classify the existing topic spans. It did not special-case refund wording or split every `and`.
+
+Tests were added before production edits. All commands below were `npx vitest run src/evaluation/evaluator.test.ts` in the existing Node/Next.js/TypeScript/Vitest project; no dependency or stack change occurred.
+
+| Stage | Observed result |
+| --- | --- |
+| RED: original 22 tests plus ten targeted cases | Exit 1; **9 failed / 23 passed**. Both correct orderings and seven mixed-claim cases failed; the new single-fact extra-number guard passed. |
+| Single anchor implementation | Exit 0; **32/32 passed**. |
+| Adversarial self-review with five further cases | Exit 1; **1 failed / 36 passed**. The required-conjunction overlap case below lost credit for a correct fact. |
+| Original production code restored, expanded tests still present for comparison | Exit 1; **14 failed / 23 passed**. The overlap case retained the combined fact's credit but falsely reported a conflict; separate correct same-topic sentences also produced false conflicts. |
+| Original tests also restored for the clean handoff | Exit 0; **22/22 passed**. `git diff` showed no production or test changes. This baseline pass does not resolve the reported bug. |
+
+The ten initial cases were: A+B and B+A; correct A with B changed to 7 days in both orderings; correct B with A changed to 60 days in both orderings; correct A with `Refunds are not processed within 5 business days`; `Refunds are unavailable within 30 days` with correct B; correct A with `Refunds are processed within 5 or 7 business days`; and the single-fact `Refunds are available within 30 or 60 days for unopened items`. Mixed claims must miss only the contradictory fact, retain the original sentence as the unsupported claim, and acknowledge partial factual coverage. Existing distinct-topic, conjunction, negation, and strength tests were preserved during the attempt.
+
+Four further self-review cases passed with the candidate: A and B separated by a full stop; comma-and with lowercase second topic; B followed by `and No refunds are available within 30 days`; and two facts using the longer generic prefix `Delivery requests are approved within 30 days` / `Delivery requests are processed within 5 business days`, coordinated exactly. The fifth case blocked the attempt.
+
+### Blocking close variant
+
+Confirmed facts, all selected in the scenario:
+
+1. `Refunds and exchanges are processed within 5 days`
+2. `Exchanges are processed within 5 days`
+3. `Exchanges are available within 30 days`
+
+The trainee states fact 1 exactly. Expected: facts 1 and 2 supported, only fact 3 missed, no unsupported claim. Candidate result: facts 1 and 3 missed. At `exchanges`, the peer anchor identifies fact 2 and changes ownership away from fact 1, cutting off a conjunction that fact 1 requires. The original code supports fact 1 but falsely treats the statement as a conflict with fact 3. This demonstrates interacting subject-group, predicate, and constraint ownership that the topic-word patch does not represent reliably.
+
+### Recovery and next step
+
+Stopped after this single hypothesis failed self-review. Used `apply_patch` to remove only this attempt's uncommitted evaluator and test edits; no reset, checkout, dependency changes, progress-ledger edits, or unrelated edits occurred. The test inputs and observed outputs are preserved above rather than leaving failing tests or partial matcher code in HEAD. BUGS.md retains the open critical issue; CHANGELOG.md and ENHANCEMENTS.md were skimmed and their existing feature/fix entries and priorities remain accurate.
+
+No full lint/typecheck/test/build or browser gate was claimed for the rejected candidate. The final focused baseline run passed 22/22. The controller can now start the separately authorized structured matcher from unchanged production code and recreate these regressions first. The key acceptance boundary is independent ownership of subject groups, predicates, numbers, negation, and conditions; support for one fact must not suppress a conflict in another, and a required conjunction must remain intact.
