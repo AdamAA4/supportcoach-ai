@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Give each call-console startup exact agent ownership so React StrictMode replay, retry, end, and unmount close obsolete agents and ignore their late events.
 - Pin public reference imports to a validated numeric address while preserving HTTPS hostname verification; reject equivalent mapped/private IPv6 forms, special-use ranges, redirects, and oversized or stalled responses.
 - Queue live customer audio chunks in order and invalidate active, queued, and decoding playback on interruption or remote termination.
 - Make live mute pause frame transmission and disable microphone tracks while reusing the existing capture graph on unmute.

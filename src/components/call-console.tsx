@@ -28,6 +28,7 @@ export function CallConsole({ context, createAgent = createConfiguredAgent }: Ca
   const microphoneBeforeMute = useRef<MicrophoneStatus>("not-started");
   const microphoneFailed = useRef(false);
   const captureRevision = useRef(0);
+  const connectionRevision = useRef(0);
   const [state, setState] = useState<CallState>("idle");
   const [microphone, setMicrophone] = useState<MicrophoneStatus>("not-started");
   const [customerAudioActive, setCustomerAudioActive] = useState(false);
@@ -55,16 +56,23 @@ export function CallConsole({ context, createAgent = createConfiguredAgent }: Ca
   }, [append, transition]);
 
   const connect = useCallback(async (retry = false) => {
+    const revision = ++connectionRevision.current;
     captureRevision.current += 1;
     setError(undefined); setCustomerAudioActive(false); transition({ type: retry ? "retry" : "connect" });
-    await agent.current?.end();
+    const previousAgent = agent.current;
+    agent.current = undefined;
+    if (previousAgent) await previousAgent.end();
+    if (revision !== connectionRevision.current) return;
     const nextAgent = createAgent();
     agent.current = nextAgent;
-    try { await nextAgent.connect({ scenario: context.scenario, facts: context.facts, onEvent: handleEvent }); }
-    catch { handleEvent({ type: "error", code: "network", message: "The practice call could not connect. Try again." }); }
+    const handleOwnedEvent = (event: VoiceAgentEvent) => {
+      if (revision === connectionRevision.current && agent.current === nextAgent) handleEvent(event);
+    };
+    try { await nextAgent.connect({ scenario: context.scenario, facts: context.facts, onEvent: handleOwnedEvent }); }
+    catch { handleOwnedEvent({ type: "error", code: "network", message: "The practice call could not connect. Try again." }); }
   }, [context.facts, context.scenario, createAgent, handleEvent, transition]);
 
-  useEffect(() => { const player = audio.current; void connect(); return () => { captureRevision.current += 1; player.stop(); void agent.current?.end(); }; }, [connect]);
+  useEffect(() => { const player = audio.current; void connect(); return () => { connectionRevision.current += 1; captureRevision.current += 1; player.stop(); const currentAgent = agent.current; agent.current = undefined; void currentAgent?.end(); }; }, [connect]);
 
   const startMicrophone = async () => {
     const revision = captureRevision.current;
@@ -78,7 +86,7 @@ export function CallConsole({ context, createAgent = createConfiguredAgent }: Ca
     audio.current.stop(); agent.current?.interruptCustomer(); setCustomerAudioActive(false); setMicrophone("muted"); await (agent.current as MuteableVoiceAgent | undefined)?.setMuted?.(true);
   };
   const sendTyped = () => { const text = typedText.trim(); if (!text || state === "error" || microphone === "muted") return; agent.current?.sendTypedTraineeTurn(text); setTypedText(""); setMicrophone("typed-fallback"); };
-  const end = async () => { captureRevision.current += 1; setMicrophone("not-started"); audio.current.stop(); await agent.current?.end(); transition({ type: "end" }); };
+  const end = async () => { connectionRevision.current += 1; captureRevision.current += 1; setMicrophone("not-started"); audio.current.stop(); const currentAgent = agent.current; agent.current = undefined; await currentAgent?.end(); transition({ type: "end" }); };
   const mockTurn = () => { (agent.current as MockControl | undefined)?.requestMockCustomerTurn?.(); };
 
   return <main className="max-w-6xl"><p className="text-sm font-semibold uppercase tracking-wide text-indigo-700">Practice call</p><h1 className="mt-2 text-3xl font-bold text-slate-950">{context.scenario.title}</h1><p className="mt-2 text-slate-700">You are speaking with an AI simulated customer. Answer from the confirmed session reference.</p><div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)]"><div className="space-y-6"><section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" aria-label="Call controls"><p className="font-semibold text-slate-950">Call status: <span className="capitalize">{state.replace("-", " ")}</span></p><p className="mt-2 text-sm text-slate-700">Microphone: {microphone === "recording" ? "Recording" : microphone === "typed-fallback" ? "Typed fallback active" : microphone === "muted" ? "Muted" : "Not started"}</p><p className="mt-1 text-sm text-slate-700">Customer audio: {customerAudioActive ? "Speaking" : customerAudioAvailability === "text-only" ? "Unavailable — transcript-only fallback" : "Idle"}</p>{error && <div role={state === "error" ? "alert" : "status"} className="mt-4 rounded-md bg-rose-50 p-3 text-rose-800">{error}{state === "error" && <button type="button" onClick={() => void connect(true)} className="ml-3 underline">Retry call</button>}</div>}<div className="mt-4 flex flex-wrap gap-3"><button type="button" onClick={() => void startMicrophone()} disabled={state === "error" || state === "ended" || microphone === "muted"} className="rounded-md bg-indigo-600 px-4 py-2 font-medium text-white disabled:opacity-50">Start microphone</button><button type="button" onClick={() => void mute()} disabled={state === "ended"} className="rounded-md border border-slate-300 px-4 py-2">{microphone === "muted" ? "Unmute" : "Mute"}</button><button type="button" onClick={() => void end()} disabled={state === "ended"} className="rounded-md border border-rose-300 px-4 py-2 text-rose-800">End call</button>{agent.current instanceof MockVoiceAgent && <button type="button" onClick={mockTurn} className="rounded-md border border-slate-300 px-4 py-2">Mock customer turn</button>}</div><label className="mt-5 block font-medium text-slate-900">Typed response<textarea aria-label="Typed response" value={typedText} onChange={(event) => setTypedText(event.target.value)} disabled={state === "error" || state === "ended" || microphone === "muted"} rows={3} className="mt-2 block w-full rounded-md border border-slate-300 p-3" /></label><button type="button" onClick={sendTyped} disabled={!typedText.trim() || state === "error" || state === "ended" || microphone === "muted"} className="mt-2 rounded-md bg-slate-900 px-4 py-2 font-medium text-white disabled:opacity-50">Send typed response</button></section><TranscriptPane turns={turns} /></div><ReferencePanel context={context} /></div></main>;

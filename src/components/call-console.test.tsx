@@ -1,8 +1,9 @@
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CallConsole } from "./call-console";
+import { AudioPlayer } from "../voice/audio-player";
 import type { VoiceAgent, VoiceAgentEvent } from "../voice/voice-agent";
 
 const context = {
@@ -48,8 +49,70 @@ class InteractiveVoiceAgent implements VoiceAgent {
   async end() {}
 }
 
+const deferred = () => {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => { resolve = done; });
+  return { promise, resolve };
+};
+
+class StartupVoiceAgent implements VoiceAgent {
+  private onEvent?: (event: VoiceAgentEvent) => void;
+  connect = vi.fn(async (input: { onEvent: (event: VoiceAgentEvent) => void }) => {
+    this.onEvent = input.onEvent;
+    await this.startup;
+  });
+  end = vi.fn(async () => {});
+
+  constructor(private readonly startup: Promise<void> = Promise.resolve()) {}
+  emit(event: VoiceAgentEvent) { this.onEvent?.(event); }
+  async startMicrophone() {}
+  sendTypedTraineeTurn() {}
+  interruptCustomer() {}
+}
+
 describe("CallConsole", () => {
-  afterEach(cleanup);
+  afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+  it("keeps a single owned agent through React StrictMode effect replay", async () => {
+    const agents: StartupVoiceAgent[] = [];
+    const view = render(
+      <React.StrictMode>
+        <CallConsole context={context} createAgent={() => {
+          const created = new StartupVoiceAgent();
+          agents.push(created);
+          return created;
+        }} />
+      </React.StrictMode>,
+    );
+
+    await waitFor(() => expect(agents.some((created) => created.connect.mock.calls.length === 1)).toBe(true));
+    const ownershipBeforeUnmount = agents.map((created) => ({ connected: created.connect.mock.calls.length, ended: created.end.mock.calls.length }));
+    view.unmount();
+
+    expect(ownershipBeforeUnmount.filter(({ connected, ended }) => connected === 1 && ended === 0)).toHaveLength(1);
+    expect(ownershipBeforeUnmount.filter(({ ended }) => ended === 0)).toHaveLength(1);
+    expect(agents.every((created) => created.end.mock.calls.length === 1)).toBe(true);
+  });
+
+  it("ends an agent and ignores its events when unmounted during startup", async () => {
+    const startup = deferred();
+    const created = new StartupVoiceAgent(startup.promise);
+    const stop = vi.spyOn(AudioPlayer.prototype, "stop");
+    const view = render(<CallConsole context={context} createAgent={() => created} />);
+    await waitFor(() => expect(created.connect).toHaveBeenCalledTimes(1));
+
+    view.unmount();
+    expect(created.end).toHaveBeenCalledTimes(1);
+    const stopsAfterUnmount = stop.mock.calls.length;
+
+    await act(async () => {
+      created.emit({ type: "error", code: "network", message: "Late startup failure." });
+      startup.resolve();
+      await startup.promise;
+    });
+
+    expect(stop).toHaveBeenCalledTimes(stopsAfterUnmount);
+  });
   it("renders an error with retry while keeping reference material available", async () => {
     render(<CallConsole context={context} createAgent={() => new ErrorVoiceAgent()} />);
 
