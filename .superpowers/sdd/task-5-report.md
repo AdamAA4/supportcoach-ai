@@ -132,3 +132,43 @@ The repeatable scanner is saved beside this report. It prints counts and file pa
 - `git diff --cached --exit-code -- src/voice/voice-agent.ts package.json package-lock.json` returned exit 0 with no output: contract and dependencies unchanged.
 - The final staged `node .superpowers/sdd/task-5-secret-scan.cjs` run checked 57 tracked files and 22 browser artifacts, with zero findings and zero tracked private environment files.
 - The report and raw `.superpowers/sdd/task-5-fix-*.log` evidence remain at the paths listed above. The report is committed separately from the implementation so this record can cite the implementation commit exactly.
+
+## Task 5 console startup ownership repair — 2026-09-16
+
+Starting commit: `6ca2919272612f85e06afb0924859b4abcc73091`. Implementation commit: `868c2e8103a859444a68de2c0128d83b6bcd1ece` (`Fix call console agent ownership`). The public `VoiceAgent` contract and dependencies are unchanged.
+
+### Root cause and fix
+
+`CallConsole.connect()` always awaited `agent.current?.end()` before creating its next agent, even when the ref was empty. React StrictMode runs an effect setup, cleanup, and setup replay; both startup calls reached that await while the shared ref was empty, then both continuations created and connected agents. The ref retained only the second agent, so cleanup ended the second while the first remained connected. The shared event callback also allowed the first agent to update console state after its effect lifetime ended. Adapter-level generation checks could not repair this console-level continuation ownership failure.
+
+The console now assigns a revision to each connection start, clears the prior ref before awaiting its cleanup, and continues only while that revision remains current. Each created agent receives an event callback closed over both its revision and identity. Retry, explicit end, and effect cleanup invalidate the revision, clear the ref, and end the captured agent. This keeps exactly one unended owner and prevents obsolete agents from changing console state or playback. Existing live/mute/fallback behavior and the `VoiceAgent` interface were preserved.
+
+### RED / GREEN evidence
+
+Two focused tests were added before the production change in `src/components/call-console.test.tsx`: StrictMode effect replay must leave exactly one owned agent and end every agent on unmount; unmount during pending startup must end that agent and ignore its late error event.
+
+Initial command and observed RED result:
+
+```text
+npm test -- src/components/call-console.test.tsx
+Test Files  1 failed (1)
+Tests       2 failed | 5 passed (7)
+```
+
+The StrictMode assertion showed two connected agents with end counts `[0, 1]` after unmount. The unmount-during-startup assertion showed the obsolete late error calling `AudioPlayer.stop` a second time.
+
+The same command after the ownership fix reported `1 passed (1)` and `7 passed (7)`. The related focused command `npm test -- src/components/call-console.test.tsx src/voice/assemblyai-lifecycle.test.ts` reported `2 passed (2)` and `20 passed (20)`.
+
+### Final verification
+
+| Command | Observed result |
+| --- | --- |
+| `npm run lint` | No ESLint warnings or errors; exit 0. The existing Next.js lint deprecation notice remains. |
+| `npm run typecheck` | `tsc --noEmit`; no diagnostics; exit 0. |
+| `npm test` | 8 files passed; 97 tests passed; exit 0. |
+| `npm run build` | Production build compiled successfully; 8/8 static pages generated; exit 0. |
+| `git diff --cached --check` | No whitespace errors; exit 0. |
+| `git diff --cached --exit-code -- src/voice/voice-agent.ts package.json package-lock.json` | No output; the public contract and dependencies did not change. |
+| `node .superpowers/sdd/task-5-secret-scan.cjs` | 57 tracked files and 22 browser artifacts scanned; zero credential, browser key/canary, or private environment-file findings. |
+
+The staged implementation diff was inspected before commit. `BUGS.md` recorded the issue while open and now archives it as fixed; `CHANGELOG.md` records the ownership repair. `README.md` required no update because its adapter-lifetime description did not claim console effect ownership. Live provider traffic and physical microphone/audio hardware were not exercised in this console-only repair; the external-boundary limitation remains as documented above.
