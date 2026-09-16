@@ -51,6 +51,47 @@ describe("deterministic evaluation", () => {
     expect(report.scores.factualAccuracy).toBe(3);
     expect(report.unsupportedClaims).toEqual([]);
   });
+  it("does not let a supported fact hide a contradiction in another factual clause", async () => {
+    const second = { ...context.facts[0], id: "processing", answer: "Refund processing takes 5 business days.", keywords: ["refund", "processing", "days"] };
+    const answer = "Refunds are available within 30 days for unopened items, but refund processing takes 7 business days.";
+    const report = await new DeterministicEvaluator(context.sourceProvenance).evaluate({
+      ...context,
+      facts: [...context.facts, second],
+      scenario: { ...context.scenario, factIds: [...context.scenario.factIds, second.id] },
+      transcript: [turn(answer)],
+    });
+    expect(report.missedFacts).toEqual([second.answer]);
+    expect(report.unsupportedClaims).toContain(answer);
+  });
+  it("supports an equivalent confirmed negative fact phrased with aren't", async () => {
+    const fact = { ...context.facts[0], answer: "Refunds are not available after 30 days.", keywords: ["refunds", "available", "days"] };
+    const report = await new DeterministicEvaluator(context.sourceProvenance).evaluate({
+      ...context,
+      facts: [fact],
+      transcript: [turn("Refunds aren't available after 30 days.")],
+    });
+    expect(report.scores.factualAccuracy).toBe(3);
+    expect(report.missedFacts).toEqual([]);
+    expect(report.unsupportedClaims).toEqual([]);
+  });
+  it("does not apply unrelated don't-worry reassurance to a supported factual clause", async () => {
+    const answer = "Refunds are available within 30 days for unopened items, and don't worry.";
+    const report = await evaluate([turn(answer)]);
+    expect(report.scores.factualAccuracy).toBe(3);
+    expect(report.missedFacts).toEqual([]);
+    expect(report.unsupportedClaims).toEqual([]);
+  });
+  it("detects isn't as a direct contradiction of an affirmative fact", async () => {
+    const fact = { ...context.facts[0], answer: "A refund is available within 30 days for unopened items.", keywords: ["refund", "available", "days", "unopened"] };
+    const answer = "A refund isn't available within 30 days for unopened items.";
+    const report = await new DeterministicEvaluator(context.sourceProvenance).evaluate({
+      ...context,
+      facts: [fact],
+      transcript: [turn(answer)],
+    });
+    expect(report.unsupportedClaims).toContain(answer);
+    expect(report.missedFacts).toEqual([fact.answer]);
+  });
   it("does not score approved advice entries as confirmed FAQ facts", async () => {
     const report = await new DeterministicEvaluator(context.sourceProvenance).evaluate({
       ...context, facts: [{ ...context.facts[0], id: "note-advice" }],
@@ -62,6 +103,14 @@ describe("deterministic evaluation", () => {
     const report = await evaluate([]);
     expect(report.scores).toEqual({ factualAccuracy: 0, empathy: 0, clarity: 0, resolution: 0 });
     expect(report.nextExercise.length).toBeGreaterThan(0);
+    expect(report.strengths).toEqual([
+      "No factual strength was demonstrated in this attempt.",
+      "No communication strength was demonstrated in this attempt.",
+    ]);
+  });
+  it("keeps weak-call strengths observational rather than instructional", async () => {
+    const report = await evaluate([turn("I do not know.")]);
     expect(report.strengths).toHaveLength(2);
+    expect(report.strengths.join(" ")).not.toMatch(/\b(?:use|build|try|should)\b/i);
   });
 });

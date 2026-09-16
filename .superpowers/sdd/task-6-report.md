@@ -67,3 +67,31 @@ The scanner's sole production `console.` match was manually inspected in the unc
 - Persistence: failed evaluation never replaces the completed report. Browser storage denial can prevent saving/clearing; the UI reports that failure. Active setup retains its prior storage technology.
 - UI: native buttons, links, labels, alert/status feedback, native disclosure keyboard interaction, desktop/mobile rendered inspection, and exact transcript checks passed. Physical microphone capture, live provider traffic, Safari, and Firefox were not exercised by Task 6; existing mocked adapter suites remained in the full gate.
 - Documentation: CHANGELOG, ENHANCEMENTS, BUGS, and README updated. Existing backlog priorities and unrelated code preserved. The three diaries will be skimmed with the staged diff before commit.
+
+## Independent evaluator review fixes
+
+Review date: 2026-09-16. Starting commit: `738a912`.
+
+### Root cause and correction
+
+- Conflict suppression used a sentence-wide set. A sentence that supported any confirmed fact therefore suppressed conflicts against every other fact, while evaluating all numbers in that sentence could also make a correct fact appear missed. The evaluator now splits only explicit contrasting factual clauses (`but`, `however`, or a semicolon), assesses each clause independently, and suppresses cross-fact conflicts only when that same clause supports a confirmed fact. Unsupported claims retain the original trainee sentence for the report.
+- Negation detection scanned an entire relevant sentence after stripping apostrophes. It omitted `isn't` and `aren't`, misclassified equivalent negative wording, and let unrelated language such as `don't worry` invert a correct factual statement. Common negative contractions are now expanded before lexical matching, and negation changes a fact result only when it scopes to a nearby content term from that fact.
+- The two-strength contract used coaching instructions as fallbacks. Empty and weak calls now return honest observations about the absence of a demonstrated factual or communication strength, while demonstrated accuracy, empathy, resolution, or concision keep their existing positive observations.
+
+No evaluator interface, report shape, score range, endpoint, dependency, or product flow changed.
+
+### Regression-first and verification evidence
+
+Before implementation, `npx vitest run src/evaluation/evaluator.test.ts` produced **6 expected failures out of 16 tests**: mixed correct/conflicting facts in one sentence, equivalent negative wording with `aren't`, a correct fact followed by unrelated `don't worry`, direct contradiction with `isn't`, empty-call strength fallbacks, and weak-call instructional strength text.
+
+After the correction:
+
+| Command/check | Observed result |
+| --- | --- |
+| `npx vitest run src/evaluation/evaluator.test.ts` | Exit 0; 16/16 evaluator tests passed. |
+| `npm run lint` | Exit 0; no ESLint warnings or errors; existing Next.js lint deprecation notice only. |
+| `npm run typecheck` | Exit 0; no TypeScript diagnostics. |
+| `npm test` | Exit 0; 13 files and 143/143 tests passed. |
+| `npm run build` | Exit 0; production compilation successful; 10/10 pages generated. |
+| `node .superpowers/sdd/task-5-secret-scan.cjs` | Exit 0; 71 tracked files and 25 browser artifacts scanned with zero credential, browser canary/server-key, or private environment-file findings. |
+| Staged diff review and `git diff --cached --check` | Only the evaluator, focused evaluator tests, Task 6 report, and three project diaries are staged; no whitespace errors or dependency/report/voice-contract changes. |

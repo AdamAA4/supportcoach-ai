@@ -3,12 +3,36 @@ import type { SourceProvenance } from "../domain/reference-source";
 import type { CoachingReport } from "../domain/report";
 import type { Score } from "../domain/practice-pack";
 
-const words = (text: string): string[] => text.toLowerCase().replace(/[’']/g, "").match(/[a-z0-9]+/g) ?? [];
+const words = (text: string): string[] => text.toLowerCase()
+  .replace(/\bisn[’']t\b/g, "is not")
+  .replace(/\baren[’']t\b/g, "are not")
+  .replace(/\bwasn[’']t\b/g, "was not")
+  .replace(/\bweren[’']t\b/g, "were not")
+  .replace(/\bdon[’']t\b/g, "do not")
+  .replace(/\bdoesn[’']t\b/g, "does not")
+  .replace(/\bwon[’']t\b/g, "will not")
+  .replace(/\bcan[’']t\b/g, "cannot")
+  .match(/[a-z0-9]+/g) ?? [];
 const sentences = (text: string): string[] => text.match(/[^.!?]+[.!?]?/g)?.map((sentence) => sentence.trim()).filter(Boolean) ?? [];
+const factualClauses = (sentence: string): string[] => sentence
+  .split(/(?:\s*;\s*|\s*,\s*(?:but|however)\s+|\s+(?:but|however)\s+)/i)
+  .map((clause) => clause.trim())
+  .filter(Boolean);
 const score = (value: number): Score => Math.max(0, Math.min(3, Math.round(value))) as Score;
-const negative = (text: string) => /\b(?:not|never|no|cannot|cant|dont|doesnt|wont)\b/.test(words(text).join(" "));
 const oppositePairs = [["unopened", "opened"], ["before", "after"], ["within", "outside"], ["eligible", "ineligible"], ["available", "unavailable"]];
 const commonWords = new Set(["a", "an", "the", "is", "are", "be", "can", "will", "for", "to", "of", "in", "on", "and", "or", "when", "what", "where", "how", "my", "your", "within", "before", "after", "with", "not"]);
+const negators = new Set(["not", "never", "no", "cannot", "cant"]);
+const negationFillers = new Set(["currently", "generally", "normally", "ordinarily", "really", "typically", "usually"]);
+const factNegated = (actual: string[], expected: string[]): boolean => actual.some((word, index) => {
+  if (!negators.has(word)) return false;
+  for (let offset = 1; offset <= 3; offset += 1) {
+    const candidate = actual[index + offset];
+    if (!candidate) return false;
+    if (negationFillers.has(candidate) || commonWords.has(candidate)) continue;
+    return expected.includes(candidate) && !commonWords.has(candidate);
+  }
+  return false;
+});
 
 // Deliberately conservative lexical rubric: omitted conditions do not earn credit.
 // This is practice feedback, not general-purpose semantic policy verification.
@@ -22,7 +46,7 @@ const assess = (answer: string, keywords: string[], sentence: string) => {
   const conflictingNumbers = actualNumbers.length > 0 && expectedNumbers.length > 0 && actualNumbers.some((number) => !expectedNumbers.includes(number));
   const opposite = oppositePairs.some(([a, b]) => (expected.includes(a) && actual.includes(b)) || (expected.includes(b) && actual.includes(a)));
   const removesConditions = /\b(?:within|before|after|unopened|only|if)\b/i.test(answer) && /\b(?:always|regardless|all items|no conditions)\b/i.test(sentence) && !/\b(?:always|regardless|all items|no conditions)\b/i.test(answer);
-  const conflict = relevant && !question && (conflictingNumbers || opposite || removesConditions || negative(answer) !== negative(sentence));
+  const conflict = relevant && !question && (conflictingNumbers || opposite || removesConditions || factNegated(expected, expected) !== factNegated(actual, expected));
   const supported = relevant && !question && !conflict && expected.every((word) => actual.includes(word));
   return { supported, conflict };
 };
@@ -36,13 +60,14 @@ export class DeterministicEvaluator implements Evaluator {
     const referenceFacts = facts.filter((fact) => !fact.id.startsWith("note-") && scenario.factIds.includes(fact.id));
     const missedFacts: string[] = [];
     const unsupportedClaims = new Set<string>();
-    const supportedSentences = new Set(traineeSentences.filter((sentence) => referenceFacts.some((fact) => assess(fact.answer, fact.keywords, sentence).supported)));
+    const traineeClauses = traineeSentences.flatMap((sentence) => factualClauses(sentence).map((clause) => ({ clause, sentence })));
+    const supportedClauses = new Set(traineeClauses.filter(({ clause }) => referenceFacts.some((fact) => assess(fact.answer, fact.keywords, clause).supported)));
     for (const fact of referenceFacts) {
       let supported = false;
-      for (const sentence of traineeSentences) {
-        const result = assess(fact.answer, fact.keywords, sentence);
+      for (const candidate of traineeClauses) {
+        const result = assess(fact.answer, fact.keywords, candidate.clause);
         supported ||= result.supported;
-        if (result.conflict && !supportedSentences.has(sentence)) unsupportedClaims.add(sentence);
+        if (result.conflict && !supportedClauses.has(candidate)) unsupportedClaims.add(candidate.sentence);
       }
       if (!supported) missedFacts.push(fact.answer);
     }
@@ -58,8 +83,8 @@ export class DeterministicEvaluator implements Evaluator {
       callId: crypto.randomUUID(), scenarioId: scenario.id, completedAt: new Date().toISOString(),
       scores: { factualAccuracy, empathy: score(Number(acknowledgement) * 2 + Number(apology)), clarity: score(Number(concise) + Number(direct) * 2), resolution: score(Number(nextStep) * 2 + Number(escalation)) },
       strengths: [
-        factualAccuracy === 3 ? "You stated the confirmed reference facts accurately." : acknowledgement || apology ? "You acknowledged the customer's experience." : "Use the confirmed reference as your anchor for the next attempt.",
-        nextStep ? "You offered a concrete next step." : concise ? "You kept your sentences concise." : "Build on this attempt by giving one clear next step.",
+        factualAccuracy === 3 ? "You stated the confirmed reference facts accurately." : "No factual strength was demonstrated in this attempt.",
+        acknowledgement || apology ? "You acknowledged the customer's experience." : nextStep ? "You offered a concrete next step." : concise ? "You kept your sentences concise." : "No communication strength was demonstrated in this attempt.",
       ],
       missedFacts, unsupportedClaims: [...unsupportedClaims],
       nextExercise: `Repeat ${scenario.title.toLowerCase()}: ${missedFacts.length ? `state this confirmed answer, then offer a next step: ${missedFacts[0]}` : "acknowledge the concern, give the confirmed answer, and explain the next step."}${personalNote ? ` Coaching reminder: ${personalNote.text.trim()}` : ""}`,

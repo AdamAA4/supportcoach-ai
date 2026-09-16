@@ -6,6 +6,8 @@ Task 5 review fixes are recorded in the changelog; they do not change the approv
 
 Completed: Task 6 coaching evaluation, report, and local persistence. There was no matching open backlog item; existing priorities are unchanged.
 
+Task 6 evaluator review fixes were completed on 2026-09-16; they correct approved behavior and do not change the enhancement priorities below.
+
 | Priority | Idea | Notes |
 | --- | --- | --- |
 | ⭐⭐ | Add PDF and DOCX experience-note imports | Deferred from the hackathon MVP; plain text and Markdown are the approved formats. |
