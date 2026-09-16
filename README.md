@@ -24,13 +24,23 @@ Live mute disables microphone tracks and pauses audio-frame transmission; unmute
 
 ## Practice setup and demo path
 
-The trainee starts each practice session by pasting a company FAQ or policy, or importing one public HTTPS page once and confirming its sanitized preview. They can also paste experience notes, or add them as a plain-text or Markdown file; approved practice advice affects factual scoring while personal coaching notes affect suggestions only.
+The trainee starts each practice session by pasting a company FAQ or policy, or importing one public HTTPS page once and confirming its sanitized preview. They can also paste experience notes, or add them as a plain-text or Markdown file. Factual scores use confirmed FAQ/policy facts only. Experience notes remain available as practice guidance; personal coaching notes can shape the next exercise but cannot establish a factual pass.
 
 The reference importer resolves and validates addresses once, then connects directly to a validated numeric address using Node HTTPS. It retains the original Host header, TLS server name, and certificate hostname check, so a later DNS change cannot redirect the connection. Redirects are refused, and the complete operation has a five-second deadline and 200 KB body limit. The address policy conservatively refuses special-use IPv4 ranges and IPv6 outside ordinary global unicast, including mapped and transition addresses. Reproduce these controls with `npm test -- src/app/api/reference-import/route.test.ts`.
 
 The golden demo path is: start in mock voice mode, paste and confirm a practice FAQ, add optional experience notes, choose either late delivery or refund eligibility, allow microphone access, speak to the simulated customer, then review the four-score coaching report.
 
-The browser keeps the current source snapshot, notes, final transcript, and final report as local practice data. Use the **Clear practice data** action in the app to remove all four. Until that control is added, clear the site data for `localhost` in your browser settings.
+The browser stages the current source snapshot and notes in the existing active-session localStorage key. It saves the completed context, final transcript, and report together under `supportcoach.completed-practice.v1` only after the call ends and evaluation succeeds. Reloading `/report` restores that saved report. **Clear practice data** removes both keys, including source, notes, transcript, and report, while leaving unrelated site data alone. Invalid stored values are discarded; storage failures show a retryable error instead of claiming success.
+
+## Evaluation and debugging
+
+`src/components/call-console.tsx` freezes the same transcript displayed in the call and waits for voice shutdown. `src/app/call/page.tsx` posts that snapshot to `/api/evaluate`, checks the returned transcript and provenance, saves the successful report, and navigates to `/report`. Failed requests retain the final transcript on the call page for retry; they do not save a new completed report. The request times out after 15 seconds.
+
+`src/app/api/evaluate/route.ts` validates the full request, reconstructs the normalized source facts, checks the active context/content-hash match, independently checks imported SHA-256 snapshots, and caps transcripts at 200 turns and 20,000 text characters. No transcript, notes, or source text is logged by application code. Sessions are browser-owned: these consistency checks detect mismatches, but do not authenticate a client-supplied source or prove that a call occurred. There is no server session registry.
+
+`src/evaluation/deterministic-evaluator.ts` implements the 0–3 rubric. Only trainee turns earn credit. Matching requires the answer's words and conditions; numeric, negation, opposite-condition, and unconditional-promise conflicts reduce factual scores. A correct answer to one confirmed fact is not treated as a contradiction of another fact. Empathy checks acknowledgement/apology phrases, clarity checks concise direct answers, and resolution checks next steps/escalation. This conservative English lexical rubric can miss paraphrases and subtle contradictions; it is practice feedback, not semantic policy verification. Inspect missed facts alongside the full transcript to understand a score.
+
+Reproduce the boundary and persistence checks with `npm test -- src/evaluation/evaluator.test.ts src/app/api/evaluate/route.test.ts src/storage/local-practice-store.test.ts src/app/call/page.test.tsx src/components/coaching-report.test.tsx`. The report preserves the existing typed `sourceProvenance` contract. No dependencies were added.
 
 ## Fallback behavior
 

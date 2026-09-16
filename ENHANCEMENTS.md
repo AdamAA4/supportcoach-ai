@@ -1,8 +1,10 @@
 # Enhancements
 
-Last updated: 2026-09-15
+Last updated: 2026-09-16
 
 Task 5 review fixes are recorded in the changelog; they do not change the approved enhancement priorities below.
+
+Completed: Task 6 coaching evaluation, report, and local persistence. There was no matching open backlog item; existing priorities are unchanged.
 
 | Priority | Idea | Notes |
 | --- | --- | --- |

@@ -73,6 +73,30 @@ class StartupVoiceAgent implements VoiceAgent {
 describe("CallConsole", () => {
   afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
+  it("hands the displayed final transcript to evaluation only after shutdown, ignoring late events", async () => {
+    const stopped = deferred();
+    const created = new StartupVoiceAgent();
+    created.end.mockImplementation(() => stopped.promise);
+    const onCallEnded = vi.fn();
+    render(<CallConsole context={context} createAgent={() => created} onCallEnded={onCallEnded} />);
+    await waitFor(() => expect(created.connect).toHaveBeenCalled());
+    act(() => {
+      created.emit({ type: "session-ready", sessionId: "test" });
+      created.emit({ type: "customer-transcript", text: "Where is my order?", final: true });
+      created.emit({ type: "trainee-transcript", text: "Delivery takes 3 to 5 days.", final: true });
+    });
+    fireEvent.click(screen.getByRole("button", { name: "End call" }));
+    expect(onCallEnded).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Send typed response" })).toBeDisabled();
+    await act(async () => {
+      created.emit({ type: "trainee-transcript", text: "Late event", final: true });
+      stopped.resolve();
+    });
+    expect(onCallEnded).toHaveBeenCalledTimes(1);
+    expect(onCallEnded.mock.calls[0][0].map((entry: { text: string }) => entry.text)).toEqual(["Where is my order?", "Delivery takes 3 to 5 days."]);
+    expect(screen.queryByText("Late event")).not.toBeInTheDocument();
+  });
+
   it("keeps a single owned agent through React StrictMode effect replay", async () => {
     const agents: StartupVoiceAgent[] = [];
     const view = render(
