@@ -56,7 +56,7 @@ Final checks after all implementation and boundary fixes:
 | Staged dependency/report/voice-contract diff | Exit 0 with no changes to `package.json`, lockfile, `src/domain/report.ts`, or the voice-agent interface. |
 | Temporary secret scanner using the existing Task 5 patterns | Exit 0; 71 tracked/staged files and 25 browser artifacts scanned, zero credential or browser server-key/canary findings, zero tracked private environment files. |
 
-The scanner's sole production `console.` text match was manually inspected in the unchanged live adapter; it is a comment mentioning the console, not a logging call. New evaluator, route, UI, and persistence modules contain no application log sites. Both production/UI staged diffs and the three project diaries were inspected before commit. The SDD report was explicitly force-added because its existing directory ignore rule ignores new evidence files, matching the tracked prior task reports. Temporary browser/server processes were shut down after verification.
+The scanner's sole production `console.` match was manually inspected in the unchanged live adapter: a development-only metadata logger emits `{ event, callId, code }`, without source, notes, or transcript content. New evaluator, route, UI, and persistence modules contain no application log sites. Both production/UI staged diffs and the three project diaries were inspected before commit. The SDD report was explicitly force-added because its existing directory ignore rule ignores new evidence files, matching the tracked prior task reports. Temporary browser/server processes were shut down after verification.
 
 ## Self-review and limits
 
