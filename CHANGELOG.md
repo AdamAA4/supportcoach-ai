@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Examine coordinated factual claims independently so a supported fact cannot hide another fact's contradiction, and acknowledge partial factual coverage without relying on rounded scores.
+- Improve evaluation of distinct-topic coordinated factual claims so a supported fact cannot hide another fact's contradiction, and acknowledge partial factual coverage without relying on rounded scores.
 - Scope deterministic conflict suppression and negation to the relevant factual clause, recognize common negative contractions, and keep empty or weak-call strengths observational.
 - Clear malformed practice storage safely and avoid treating unrelated negative sentences or different confirmed numeric facts as policy contradictions.
 - Give each call-console startup exact agent ownership so React StrictMode replay, retry, end, and unmount close obsolete agents and ignore their late events.

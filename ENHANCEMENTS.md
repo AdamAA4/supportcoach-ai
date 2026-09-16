@@ -8,7 +8,7 @@ Completed: Task 6 coaching evaluation, report, and local persistence. There was 
 
 Task 6 evaluator review fixes were completed on 2026-09-16; they correct approved behavior and do not change the enhancement priorities below.
 
-Completed: follow-up Task 6 review fixes for independently checked coordinated facts and honest partial-coverage strengths (2026-09-16). No new feature or backlog priority was introduced.
+Completed: follow-up Task 6 review fixes for distinct-topic coordinated facts and honest partial-coverage strengths (2026-09-16). The remaining same-topic coordinated-fact issue is tracked in BUGS.md. No new feature or backlog priority was introduced.
 
 | Priority | Idea | Notes |
 | --- | --- | --- |
