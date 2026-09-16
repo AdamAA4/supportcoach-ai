@@ -95,3 +95,31 @@ After the correction:
 | `npm run build` | Exit 0; production compilation successful; 10/10 pages generated. |
 | `node .superpowers/sdd/task-5-secret-scan.cjs` | Exit 0; 71 tracked files and 25 browser artifacts scanned with zero credential, browser canary/server-key, or private environment-file findings. |
 | Staged diff review and `git diff --cached --check` | Only the evaluator, focused evaluator tests, Task 6 report, and three project diaries are staged; no whitespace errors or dependency/report/voice-contract changes. |
+
+## Follow-up independent evaluator review fixes
+
+Review date: 2026-09-16. Starting commit: `9602de3`.
+
+### Root cause and correction
+
+- P1: the prior `supportedClauses` set still used support for any fact as a veto on every other fact's conflict. Splitting contrasting conjunctions did not repair this decision: `Exchanges are available for damaged items and returns are accepted for opened items` hid the opened-return contradiction because the exchange fact was supported.
+- Removed that shared veto. Each fact now independently assesses lexical claim scopes delimited by leading content words from the confirmed answers. Topics included in the current fact's answer stay together, preserving conjunctions within a fact. This also isolates the existing 30-day eligibility and 5-business-day processing claims when coordinated in one sentence. Every detected conflict retains the original trainee sentence in the report.
+- P2: factual-strength wording depended on a rounded score equaling three. It now uses actual supported-fact coverage: complete coverage without a conflict gets the full statement, partial demonstrated coverage gets `You stated some confirmed reference facts accurately.`, and no demonstrated coverage retains the honest absence statement. A score that rounds from five of six facts to three cannot imply complete coverage.
+- Scope remains evaluator implementation, regression tests, and documentation. No model, dependency, public contract, UI structure, source validation, or progress-ledger changes.
+
+### Regression-first evidence
+
+`npx vitest run src/evaluation/evaluator.test.ts` first exited **1**, with **4 failed / 17 passed**. The exact exchange/returns claim and its reversed ordering both returned `unsupportedClaims: []`; correct coordinated numeric claims scored **0 instead of 3**; partial coverage scored **2** but returned `No factual strength was demonstrated in this attempt.` The conjunction-required fact boundary passed before and after the repair.
+
+After the independent claim-scope repair, the same command exited **0**, with **21/21 passed**. A further strength boundary was added before changing its behavior: five of six facts yielded a rounded score of three and the complete-coverage wording; the command exited **1**, with **1 failed / 21 passed**. Basing wording on actual coverage then produced **22/22 passed**.
+
+### Verification and limits
+
+- `npm run lint`: exit 0, no ESLint warnings/errors; existing Next.js lint-command deprecation notice only.
+- `npm run typecheck`: exit 0, no TypeScript diagnostics.
+- `npm test`: exit 0, **13 files / 149 tests passed**.
+- `npm run build`: exit 0, production compilation succeeded and **10/10 pages generated**.
+- `node .superpowers/sdd/task-5-secret-scan.cjs`: exit 0; **71 tracked files / 25 browser artifacts**, zero credential patterns, browser canary/server-key findings, or tracked private environment files. The sole production logger remains the unchanged development-only voice metadata logger (`event`, `callId`, `code`); no evaluator log sites were added.
+- Staged code/docs review and `git diff --cached --check`: exit 0, no whitespace errors; exactly the evaluator, evaluator tests, Task 6 report, and three diaries were staged. Public interfaces, report shape, dependencies, voice code, and progress ledger were unchanged.
+
+The rubric is still conservative English lexical matching. Topic boundaries are derived from reference words, not a semantic parser; arbitrary paraphrases, omitted subjects, and ambiguous shared topics remain outside general correctness guarantees. No browser interaction was repeated for this evaluator-only repair; the existing report/component, route, persistence, and voice tests passed in the full suite.
