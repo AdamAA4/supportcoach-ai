@@ -9,16 +9,24 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const MAX_BYTES = 200 * 1024;
+const MAX_BYTES = 2 * 1024 * 1024;
 const TIMEOUT_MS = 5_000;
 
 type ImportFailure = "invalid" | "too-large" | "unavailable";
 
-const failure = (kind: ImportFailure) => {
+const formatMb = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+
+const failure = (kind: ImportFailure, measuredBytes?: number) => {
   const payload = kind === "invalid"
     ? { status: 400, code: "invalid_reference_url", message: "Enter a public HTTPS URL." }
     : kind === "too-large"
-      ? { status: 413, code: "reference_too_large", message: "This page is larger than 200 KB. Copy the FAQ or policy text and paste it instead." }
+      ? {
+          status: 413,
+          code: "reference_too_large",
+          message: measuredBytes
+            ? `This page is ${formatMb(measuredBytes)}, over the 2 MB import limit. Open the page, copy the FAQ or policy text, and paste it instead.`
+            : "This page is over the 2 MB import limit. Open the page, copy the FAQ or policy text, and paste it instead.",
+        }
       : { status: 502, code: "reference_unavailable", message: "The reference source could not be imported." };
   return NextResponse.json({ error: { code: payload.code, message: payload.message } }, { status: payload.status });
 };
@@ -75,7 +83,10 @@ const textFromHtml = (html: string): string => html
 
 const readBoundedBody = async (response: IncomingMessage): Promise<string> => {
   const advertisedLength = Number(response.headers["content-length"]);
-  if (Number.isFinite(advertisedLength) && advertisedLength > MAX_BYTES) { response.destroy(); throw new Error("too-large"); }
+  if (Number.isFinite(advertisedLength) && advertisedLength > MAX_BYTES) {
+    response.destroy();
+    throw Object.assign(new Error("too-large"), { measuredBytes: advertisedLength });
+  }
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of response) {
@@ -140,7 +151,11 @@ export async function POST(request: Request) {
       contentHash: `sha256:${createHash("sha256").update(extractedText).digest("hex")}`,
     });
   } catch (error) {
-    return failure(error instanceof Error && error.message === "too-large" ? "too-large" : error instanceof Error && error.message === "invalid" ? "invalid" : "unavailable");
+    if (error instanceof Error && error.message === "too-large") {
+      const measuredBytes = (error as Error & { measuredBytes?: number }).measuredBytes;
+      return failure("too-large", measuredBytes);
+    }
+    return failure(error instanceof Error && error.message === "invalid" ? "invalid" : "unavailable");
   } finally {
     if (timeout) clearTimeout(timeout);
   }

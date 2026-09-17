@@ -95,7 +95,7 @@ describe("public HTTPS import boundary", () => {
   });
 
   it.each([true, false])("enforces advertised and streamed size limits (advertised: %s)", async (advertised) => {
-    const upstream = respond([Buffer.alloc(204800), Buffer.alloc(1)], 200, advertised ? { "content-length": "204801" } : {});
+    const upstream = respond([Buffer.alloc(2 * 1024 * 1024), Buffer.alloc(1)], 200, advertised ? { "content-length": String(2 * 1024 * 1024 + 1) } : {});
     const response = await importUrl();
     expect(response.status).toBe(413);
     expect(await response.json()).toMatchObject({ error: { code: "reference_too_large" } });
