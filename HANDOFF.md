@@ -13,16 +13,11 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `10c6793`
-- Generated: 2026-09-17T23:09:16.194Z
-- Uncommitted files excluding this handoff: 
+- Current commit: `8deb805`
+- Generated: 2026-09-17T23:10:59.302Z
+- Uncommitted files excluding this handoff: none
 
-```text
-M CHANGELOG.md
- M README.md
- M src/app/api/reference-import/route.test.ts
- M src/app/api/reference-import/route.ts
-```
+
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
 
@@ -37,6 +32,8 @@ Follow-up round 2 (same day, product-lead feedback): the source-channel segmente
 - Pages and components rebuilt in the world: console island with signal lamps and pinned status strings, timecoded transcript tracks with live REC, cream session-sheet reference panel, score cards with Fraunces numerals and rose segment meters, segmented source control, scenario cards.
 
 Follow-up round (same day, product-lead feedback): the palette was brightened (canvas #211d1a → #322c26, lighter panels/lines/signal colors, same world and AA contrast), the home page's "or typed fallback" clause was removed with approval so copy matches the voice-only rule, and the mobile headline scale was tuned for 320px viewports. DESIGN.md and review screenshots re-captured to match.
+
+Follow-up round 3 (2026-09-18, product-lead request): the import body cap was raised from 200 KB to 2 MB so heavy real-world FAQ pages import cleanly, and the oversized-page rejection now reports the measured page size with the recovery step ("This page is 4.6 MB, over the 2 MB import limit. Open the page, copy the FAQ or policy text, and paste it instead."). The extracted-text cap (200 KB), five-second deadline, SSRF protections, and test-pinned behavior are unchanged. A user-proposed "accept oversized imports" consent flow was discussed and declined: the endpoint is unauthenticated, so client-side consent cannot be enforced server-side and an absolute cap must exist regardless.
 
 ## Checks run
 
