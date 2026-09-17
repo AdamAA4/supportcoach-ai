@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Replace the mobile live-microphone `ScriptProcessorNode` path with an AudioWorklet that resamples PCM capture before sending each voice frame, preventing the observed post-opening-turn audio stall on Android Chrome.
+
 - Make live practice voice-only, start microphone capture from `Join voice call`, and remove the unsupported typed-turn protocol path.
 - Schedule AssemblyAI PCM customer-audio chunks on one playback timeline and resample browser microphone capture to 24 kHz for clearer cross-browser audio.
 - Replace the persistent start-microphone action with Mute/Unmute after a call joins, with a recoverable permission-denied retry state.

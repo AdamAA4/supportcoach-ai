@@ -86,6 +86,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
   private audioContext?: AudioContext;
   private microphoneSource?: MediaStreamAudioSourceNode;
   private processor?: ScriptProcessorNode;
+  private worklet?: AudioWorkletNode;
   private muteGain?: GainNode;
 
   constructor(dependencies: AssemblyAiVoiceAgentDependencies = {}) {
@@ -196,21 +197,32 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
       stream.getTracks().forEach((track) => { track.enabled = !this.muted; });
       this.audioContext = new this.AudioContext();
       this.microphoneSource = this.audioContext.createMediaStreamSource(this.stream);
-      this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
-      this.muteGain = this.audioContext.createGain();
-      this.muteGain.gain.value = 0;
-      this.processor.onaudioprocess = (event) => {
+      const sendPcm = (pcm: Uint8Array) => {
         if (!this.isCurrent(generation) || this.muted || !this.sessionReady || !this.socket || this.socket.readyState !== 1) return;
-        const samples = resampleTo24k(event.inputBuffer.getChannelData(0), this.audioContext?.sampleRate ?? 24_000);
-        const pcm = new Uint8Array(samples.length * 2);
-        const view = new DataView(pcm.buffer);
-        for (let index = 0; index < samples.length; index += 1) view.setInt16(index * 2, Math.max(-1, Math.min(1, samples[index])) * 0x7fff, true);
         try { this.send({ type: "input.audio", audio: asBase64(pcm) }); }
         catch { this.fail("network", "The live voice connection failed."); }
       };
-      this.microphoneSource.connect(this.processor);
-      this.processor.connect(this.muteGain);
-      this.muteGain.connect(this.audioContext.destination);
+      if (this.audioContext.audioWorklet && typeof AudioWorkletNode !== "undefined") {
+        await this.audioContext.audioWorklet.addModule("/pcm-capture-worklet.js");
+        if (!this.isCurrent(generation)) return;
+        this.worklet = new AudioWorkletNode(this.audioContext, "supportcoach-pcm-capture", { processorOptions: { inputSampleRate: this.audioContext.sampleRate } });
+        this.worklet.port.onmessage = (event) => sendPcm(new Uint8Array(event.data as ArrayBuffer));
+        this.microphoneSource.connect(this.worklet).connect(this.audioContext.destination);
+      } else {
+        this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
+        this.muteGain = this.audioContext.createGain();
+        this.muteGain.gain.value = 0;
+        this.processor.onaudioprocess = (event) => {
+          const samples = resampleTo24k(event.inputBuffer.getChannelData(0), this.audioContext?.sampleRate ?? 24_000);
+          const pcm = new Uint8Array(samples.length * 2);
+          const view = new DataView(pcm.buffer);
+          for (let index = 0; index < samples.length; index += 1) view.setInt16(index * 2, Math.max(-1, Math.min(1, samples[index])) * 0x7fff, true);
+          sendPcm(pcm);
+        };
+        this.microphoneSource.connect(this.processor);
+        this.processor.connect(this.muteGain);
+        this.muteGain.connect(this.audioContext.destination);
+      }
       await this.audioContext.resume();
       if (!this.isCurrent(generation)) return;
       logEvent("microphone-started", this.callId);
@@ -338,10 +350,13 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
 
   private async releaseMicrophone(): Promise<void> {
     if (this.processor) this.processor.onaudioprocess = null;
+    if (this.worklet) this.worklet.port.onmessage = null;
     this.processor?.disconnect();
+    this.worklet?.disconnect();
     this.microphoneSource?.disconnect();
     this.muteGain?.disconnect();
     this.processor = undefined;
+    this.worklet = undefined;
     this.microphoneSource = undefined;
     this.muteGain = undefined;
     this.stream?.getTracks().forEach((track) => track.stop());
