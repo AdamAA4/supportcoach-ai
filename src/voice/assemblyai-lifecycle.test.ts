@@ -131,7 +131,7 @@ describe("live lifecycle and capture", () => {
     await agent.end();
   });
 
-  it("permission denial keeps typed fallback connected and sends a trainee turn", async () => {
+  it("permission denial emits a recoverable voice-only microphone error", async () => {
     getUserMedia.mockRejectedValue(new DOMException("denied", "NotAllowedError"));
     const agent = makeAgent();
     const events: VoiceAgentEvent[] = [];
@@ -140,8 +140,8 @@ describe("live lifecycle and capture", () => {
     expect(events).toContainEqual(expect.objectContaining({ type: "error", code: "permission-denied" }));
     expect(socket.close).not.toHaveBeenCalled();
     agent.sendTypedTraineeTurn("I will check the delivery.");
-    expect(socket.send).toHaveBeenCalledWith(JSON.stringify({ type: "conversation.message", role: "user", content: "I will check the delivery." }));
-    expect(events).toContainEqual({ type: "trainee-transcript", text: "I will check the delivery.", final: true });
+    expect(socket.send).toHaveBeenCalledTimes(1);
+    expect(events).not.toContainEqual(expect.objectContaining({ type: "trainee-transcript" }));
     await agent.end();
   });
 
@@ -149,20 +149,20 @@ describe("live lifecycle and capture", () => {
     const agent = makeAgent();
     const stop = vi.spyOn(AudioPlayer.prototype, "stop");
     render(React.createElement(CallConsole, { context, createAgent: () => agent }));
+    fireEvent.click(screen.getByRole("button", { name: "Join voice call" }))
     await vi.waitFor(() => expect(Socket.instances).toHaveLength(1));
     const socket = Socket.instances[0];
     await act(async () => { socket.open(); socket.receive({ type: "session.ready", session_id: "call-1" }); });
-    fireEvent.click(screen.getByRole("button", { name: "Start microphone" }));
-    await screen.findByText("Microphone: Recording");
+    await screen.findByText("Microphone: On — speak naturally");
     const stopsBefore = stop.mock.calls.length;
     await act(async () => {
       if (termination === "clean-close") socket.onclose?.({ code: 1000 } as CloseEvent);
-      else if (termination === "socket-error") socket.onerror?.(new Event("error"));
+      else if (termination === "socket-error") { socket.onerror?.(new Event("error")); socket.onclose?.({ code: 1006 } as CloseEvent); }
       else socket.receive({ type: termination });
     });
     expect(track.stop).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole("alert")).toBeVisible();
-    expect(screen.getByLabelText("Typed response")).toBeDisabled();
+    expect(screen.queryByLabelText("Typed response")).not.toBeInTheDocument();
     expect(stop.mock.calls.length).toBeGreaterThan(stopsBefore);
   });
 
@@ -195,13 +195,13 @@ describe("live lifecycle and capture", () => {
     getUserMedia.mockReturnValue(acquisition.promise);
     const agent = makeAgent();
     render(React.createElement(CallConsole, { context, createAgent: () => agent }));
+    fireEvent.click(screen.getByRole("button", { name: "Join voice call" }))
     await vi.waitFor(() => expect(Socket.instances).toHaveLength(1));
     const socket = Socket.instances[0];
     await act(async () => { socket.open(); socket.receive({ type: "session.ready", session_id: "call-1" }); });
-    fireEvent.click(screen.getByRole("button", { name: "Start microphone" }));
     fireEvent.click(screen.getByRole("button", { name: "End call" }));
     await act(async () => { acquisition.resolve(stream); });
-    expect(screen.getByText("Microphone: Not started")).toBeVisible();
+    expect(screen.getByText("Microphone: Not connected")).toBeVisible();
     expect(screen.getByText("ended")).toBeVisible();
     expect(track.stop).toHaveBeenCalledTimes(1);
   });

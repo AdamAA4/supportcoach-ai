@@ -4,13 +4,11 @@ import React from "react";
 import { GET as getVoiceToken } from "../app/api/voice-token/route";
 import { GET as getHealth } from "../app/api/health/route";
 import type { ScenarioDefinition } from "../domain/practice-pack";
-import { AudioPlayer } from "./audio-player";
 import { AssemblyAiVoiceAgent, createConfiguredVoiceAgent } from "./assemblyai-voice-agent";
 import type { VoiceSocketConstructor } from "./assemblyai-voice-agent";
 import { MockVoiceAgent } from "./mock-voice-agent";
-import { CallConsole } from "../components/call-console";
 import { SourceSetupForm } from "../components/source-setup-form";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { VoiceAgentEvent } from "./voice-agent";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -156,27 +154,21 @@ describe("AssemblyAI voice agent", () => {
     expect(request).toHaveBeenCalledWith("/api/voice-token", expect.objectContaining({ cache: "no-store" }));
   });
 
-  it("forwards mocked WebSocket customer audio to AudioPlayer and flushes playback on an interruption", async () => {
+  it("forwards mocked WebSocket customer audio and interruption events", async () => {
     FakeWebSocket.instances = [];
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ token: "temporary-token" }), { status: 200 })));
     const live = new AssemblyAiVoiceAgent({ WebSocket: FakeWebSocket as unknown as VoiceSocketConstructor });
-    const play = vi.spyOn(AudioPlayer.prototype, "play").mockResolvedValue(undefined);
-    const stop = vi.spyOn(AudioPlayer.prototype, "stop").mockImplementation(() => undefined);
-    const context = { source: { kind: "pasted-text" as const, text: "FAQ", confirmation: "confirmed" as const }, sourceLabel: "Northstar", sourceContentHash: "local:test", sourceProvenance: { contentHash: "local:test" }, sourceText: "FAQ", facts: [], notes: [], scenario };
-    render(React.createElement(CallConsole, { context, createAgent: () => live }));
+    const events: VoiceAgentEvent[] = [];
+    const connecting = live.connect({ scenario, facts: [], onEvent: (event) => events.push(event) });
     await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
     const socket = FakeWebSocket.instances[0];
-    socket.open();
+    socket.open(); await connecting;
     socket.receive({ type: "session.ready", session_id: "call-1" });
-    await screen.findByText("Call status:");
-
     socket.receive({ type: "reply.started" });
     socket.receive({ type: "reply.audio", data: "AA==" });
-    await waitFor(() => expect(play).toHaveBeenCalledWith(expect.any(ArrayBuffer), expect.any(Function)));
+    expect(events).toContainEqual(expect.objectContaining({ type: "customer-audio", audio: expect.any(ArrayBuffer) }));
     socket.receive({ type: "input.speech.started" });
-    expect(stop).toHaveBeenCalled();
-    play.mockRestore();
-    stop.mockRestore();
+    expect(events).toContainEqual({ type: "interrupted" });
   });
 
   it("keeps the browser WebSocket close code in the recoverable connection error", async () => {

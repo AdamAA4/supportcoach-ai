@@ -45,15 +45,13 @@ const decodeBase64 = (value: string): Uint8Array => {
   return bytes;
 };
 
-const pcmToWav = (pcm: Uint8Array, sampleRate = 24_000): ArrayBuffer => {
-  const wav = new ArrayBuffer(44 + pcm.byteLength);
-  const view = new DataView(wav);
-  const write = (offset: number, value: string) => [...value].forEach((character, index) => view.setUint8(offset + index, character.charCodeAt(0)));
-  write(0, "RIFF"); view.setUint32(4, 36 + pcm.byteLength, true); write(8, "WAVE"); write(12, "fmt ");
-  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true); view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true); write(36, "data"); view.setUint32(40, pcm.byteLength, true);
-  new Uint8Array(wav, 44).set(pcm);
-  return wav;
+const resampleTo24k = (samples: Float32Array, sourceRate: number): Float32Array => {
+  if (sourceRate === 24_000) return samples;
+  const targetLength = Math.max(1, Math.floor(samples.length * 24_000 / sourceRate));
+  const result = new Float32Array(targetLength);
+  const ratio = sourceRate / 24_000;
+  for (let index = 0; index < targetLength; index += 1) result[index] = samples[Math.min(samples.length - 1, Math.floor(index * ratio))];
+  return result;
 };
 
 const promptFor = (scenario: ScenarioDefinition, facts: ReferenceFact[]): string => [
@@ -63,6 +61,7 @@ const promptFor = (scenario: ScenarioDefinition, facts: ReferenceFact[]): string
   `Customer persona: ${scenario.customerPersona}.`,
   `Opening line: ${scenario.openingLine}.`,
   `Customer goals: ${scenario.goals.join("; ") || "Ask for help with the scenario."}.`,
+  "After every trainee answer, react to its specific content with one concise realistic follow-up. Never repeat the opening line after the first turn.",
   "Use only these confirmed FAQ/policy facts when reacting to the trainee's answer:",
   ...facts.map((fact) => `- ${fact.question}: ${fact.answer}`),
 ].join("\n");
@@ -187,22 +186,22 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
 
   private async acquireMicrophone(generation: number): Promise<void> {
     if (!this.mediaDevices || !this.AudioContext) {
-      this.emit({ type: "error", code: "permission-denied", message: "Microphone capture is unavailable. Use typed fallback." });
+      this.emit({ type: "error", code: "permission-denied", message: "Microphone capture is unavailable in this browser." });
       return;
     }
     try {
-      const stream = await this.mediaDevices.getUserMedia({ audio: { echoCancellation: true, sampleRate: 24_000, channelCount: 1 } });
+      const stream = await this.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, channelCount: 1 } });
       if (!this.isCurrent(generation)) { stream.getTracks().forEach((track) => track.stop()); return; }
       this.stream = stream;
       stream.getTracks().forEach((track) => { track.enabled = !this.muted; });
-      this.audioContext = new this.AudioContext({ sampleRate: 24_000 });
+      this.audioContext = new this.AudioContext();
       this.microphoneSource = this.audioContext.createMediaStreamSource(this.stream);
       this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
       this.muteGain = this.audioContext.createGain();
       this.muteGain.gain.value = 0;
       this.processor.onaudioprocess = (event) => {
         if (!this.isCurrent(generation) || this.muted || !this.sessionReady || !this.socket || this.socket.readyState !== 1) return;
-        const samples = event.inputBuffer.getChannelData(0);
+        const samples = resampleTo24k(event.inputBuffer.getChannelData(0), this.audioContext?.sampleRate ?? 24_000);
         const pcm = new Uint8Array(samples.length * 2);
         const view = new DataView(pcm.buffer);
         for (let index = 0; index < samples.length; index += 1) view.setInt16(index * 2, Math.max(-1, Math.min(1, samples[index])) * 0x7fff, true);
@@ -218,7 +217,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
     } catch {
       if (!this.isCurrent(generation)) return;
       await this.releaseMicrophone();
-      if (this.isCurrent(generation)) this.emit({ type: "error", code: "permission-denied", message: "Microphone permission was denied. Use typed fallback." });
+      if (this.isCurrent(generation)) this.emit({ type: "error", code: "permission-denied", message: "Microphone permission was denied." });
     }
   }
 
@@ -228,15 +227,8 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
     this.stream?.getTracks().forEach((track) => { track.enabled = !muted; });
   }
 
-  sendTypedTraineeTurn(text: string): void {
-    const normalized = text.trim();
-    if (!normalized || !this.sessionReady) return;
-    this.emit({ type: "trainee-transcript", text: normalized, final: true });
-    try {
-      this.send({ type: "conversation.message", role: "user", content: normalized });
-      this.send({ type: "reply.create" });
-    } catch { this.fail("network", "The live voice connection failed."); }
-  }
+  // Retained for the shared adapter contract. Live SupportCoach calls are voice-only.
+  sendTypedTraineeTurn(_text?: string): void { void _text; }
 
   interruptCustomer(): void {
     if (!this.sessionReady) return;
@@ -301,7 +293,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
         return;
       case "reply.audio":
         if (typeof message.data !== "string") { this.fail("protocol", "The live voice service returned invalid audio."); return; }
-        try { this.emit({ type: "customer-audio", audio: pcmToWav(decodeBase64(message.data)) }); }
+        try { const pcm = decodeBase64(message.data); this.emit({ type: "customer-audio", audio: pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength) as ArrayBuffer }); }
         catch { this.fail("protocol", "The live voice service returned invalid audio."); }
         return;
       case "transcript.agent":

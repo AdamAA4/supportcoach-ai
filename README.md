@@ -28,7 +28,7 @@ ASSEMBLYAI_API_KEY=your_AssemblyAI_key
 NEXT_PUBLIC_VOICE_MODE=live
 ```
 
-`ASSEMBLYAI_API_KEY` is a server-only secret. Add it for Preview and Production, never as a `NEXT_PUBLIC_` value, and never commit it. Redeploy after saving the variables. Test the deployed app with a short FAQ, one typed fallback response, and one microphone call in desktop Chrome or Edge.
+`ASSEMBLYAI_API_KEY` is a server-only secret. Add it for Preview and Production, never as a `NEXT_PUBLIC_` value, and never commit it. Redeploy after saving the variables. Test the deployed app with a short FAQ and one microphone call in desktop Chrome or Edge.
 
 ## Voice modes
 
@@ -36,7 +36,7 @@ NEXT_PUBLIC_VOICE_MODE=live
 
 Set `NEXT_PUBLIC_VOICE_MODE=live` with a valid server-side `ASSEMBLYAI_API_KEY` to use AssemblyAI Voice Agents. The server exchanges the permanent key for a single-use temporary token valid for five minutes; the browser receives only that temporary token before it opens the live WebSocket. `ASSEMBLYAI_API_KEY` is server-only: do not prefix it with `NEXT_PUBLIC_`, place it in client code, or commit it.
 
-Live mute disables microphone tracks and pauses audio-frame transmission; unmute reuses the same capture graph. Permission denial keeps the live session available for typed replies. Remote session termination closes capture resources and shows the existing retry state. `src/voice/assemblyai-voice-agent.ts` owns connection/capture lifetime, and `src/voice/audio-player.ts` owns ordered playback and interruption cancellation.
+Live calls are voice-only. `Join voice call` starts microphone setup from a direct user action; after it connects, Mute/Unmute and End call are the available controls. Permission denial shows a recoverable retry state. Remote session termination closes capture resources and shows the existing retry state. `src/voice/assemblyai-voice-agent.ts` owns connection/capture lifetime, and `src/voice/audio-player.ts` owns ordered PCM playback and interruption cancellation.
 
 If a live call cannot connect, the call screen now reports the provider session-error code or the browser WebSocket close code. Record that code when debugging; it contains no API key or transcript content.
 
@@ -60,6 +60,6 @@ The browser stages the current source snapshot and notes in the existing active-
 
 Reproduce the boundary and persistence checks with `npm test -- src/evaluation/evaluator.test.ts src/app/api/evaluate/route.test.ts src/storage/local-practice-store.test.ts src/app/call/page.test.tsx src/components/coaching-report.test.tsx`. The report preserves the existing typed `sourceProvenance` contract. No dependencies were added.
 
-## Fallback behavior
+## Browser support
 
-Current desktop Chrome or Edge with microphone permission is the demo target. If microphone access or audio playback is unavailable, the practice flow provides typed input. If live voice is unavailable, use mock voice mode. Public FAQ links require an HTTPS URL and confirmation of the extracted source snapshot; private or authenticated links, PDF notes, and DOCX notes are outside the MVP.
+Current desktop Chrome or Edge with microphone permission is the demo target. The live practice flow requires microphone access; if it is unavailable, enable permission and retry the call. If live voice is unavailable, use mock voice mode. Public FAQ links require an HTTPS URL and confirmation of the extracted source snapshot; private or authenticated links, PDF notes, and DOCX notes are outside the MVP.

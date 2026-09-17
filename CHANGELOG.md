@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Make live practice voice-only, start microphone capture from `Join voice call`, and remove the unsupported typed-turn protocol path.
+- Schedule AssemblyAI PCM customer-audio chunks on one playback timeline and resample browser microphone capture to 24 kHz for clearer cross-browser audio.
+- Replace the persistent start-microphone action with Mute/Unmute after a call joins, with a recoverable permission-denied retry state.
+
 - Bind the browser `fetch` receiver before minting a temporary AssemblyAI token, allowing Firefox and Chromium to start live practice calls.
 - Use relation-anchored factual evidence in coaching evaluation, tying universal claims to their required condition and treating scoped `not all` as ambiguous.
 - Improve evaluation of distinct-topic coordinated factual claims so a supported fact cannot hide another fact's contradiction, and acknowledge partial factual coverage without relying on rounded scores.
