@@ -39,6 +39,12 @@ const OPPOSITE_PAIRS = [
   ["available", "unavailable"],
 ] as const;
 const NEGATORS = new Set(["not", "never", "no", "cannot", "cant"]);
+const LEADING_NEGATORS = new Set(["never", "no"]);
+const CLAUSE_SUBJECTS = new Set(["i", "we", "you", "they", "he", "she", "it", "there"]);
+const FINITE_PREDICATES = new Set([
+  "am", "is", "are", "was", "were", "can", "cannot", "cant", "will", "would",
+  "could", "should", "may", "might", "must", "do", "does", "did", "have", "has", "had",
+]);
 
 export const normalizeFactTokens = (text: string): string[] =>
   text.toLowerCase()
@@ -105,11 +111,43 @@ export const compileFactMatchSpecs = (facts: ReferenceFact[]): Map<string, FactM
 const positionsOf = (tokens: string[], terms: string[]): number[] =>
   terms.flatMap((term) => tokens.flatMap((token, index) => token === term ? [index] : []));
 
-const clauseSegments = (text: string): string[] =>
-  text
-    .split(/[.!?;]+|,\s+(?=(?:and|but|while|however)\b)/i)
-    .map((segment) => segment.trim())
+const clauseSegments = (text: string, allSpecs: FactMatchSpec[]): string[] => {
+  const subjects = new Set(allSpecs.flatMap((spec) => spec.subjectTerms));
+  const relations = new Set(allSpecs.flatMap((spec) => spec.relationTerms));
+  const isIndependent = (value: string): boolean => {
+    const tokens = normalizeFactTokens(value);
+    const finitePredicate = tokens.findIndex((token) => FINITE_PREDICATES.has(token));
+    const hasLexicalSubject = finitePredicate > 0 && tokens
+      .slice(0, finitePredicate)
+      .some((token) => !FUNCTION_WORDS.has(token) && !NEGATORS.has(token));
+    if (hasLexicalSubject) return true;
+
+    const relationPredicate = tokens.findIndex((token) => relations.has(token));
+    return relationPredicate > 0 && tokens
+      .slice(0, relationPredicate)
+      .some((token) => CLAUSE_SUBJECTS.has(token) || subjects.has(token));
+  };
+
+  return text
+    .split(/[.!?;]+|\b(?:but|while|however)\b/i)
+    .flatMap((contrastSegment) => {
+      const commaParts = contrastSegment.split(",");
+      const segments: string[] = [];
+      let current = commaParts.shift()?.trim() ?? "";
+      for (const part of commaParts) {
+        const candidate = part.trim();
+        if (isIndependent(current) && isIndependent(candidate)) {
+          if (current) segments.push(current);
+          current = candidate;
+        } else {
+          current = `${current} ${candidate}`.trim();
+        }
+      }
+      if (current) segments.push(current);
+      return segments;
+    })
     .filter(Boolean);
+};
 
 const claimWindowsFor = (
   spec: FactMatchSpec,
@@ -125,7 +163,7 @@ const claimWindowsFor = (
     );
   }
 
-  return clauseSegments(statement.text).flatMap((segment) => {
+  return clauseSegments(statement.text, allSpecs).flatMap((segment) => {
     const tokens = normalizeFactTokens(segment);
     const ownAnchors = unique(positionsOf(tokens, spec.relationTerms))
       .sort((left, right) => left - right);
@@ -153,10 +191,14 @@ const claimWindowsFor = (
         : hasEverySubject
           ? Math.min(...subjectPositions)
           : Math.max(...subjectPositions);
-      const start = subjectStart > previousDifferentAnchor + 1 &&
-        NEGATORS.has(tokens[subjectStart - 1])
-        ? subjectStart - 1
-        : subjectStart;
+      const leadingNegators = positionsOf(
+        tokens.slice(previousDifferentAnchor + 1, subjectStart),
+        [...LEADING_NEGATORS],
+      );
+      const leadingNegator = leadingNegators.length === 0 ? -1 : Math.max(...leadingNegators);
+      const start = leadingNegator === -1
+        ? subjectStart
+        : previousDifferentAnchor + 1 + leadingNegator;
 
       return {
         tokens: tokens.slice(start, nextDifferentAnchor),
@@ -168,10 +210,14 @@ const claimWindowsFor = (
 };
 
 const hasScopedNegation = (tokens: string[], spec: FactMatchSpec): boolean =>
-  tokens.some((token, index) => NEGATORS.has(token) &&
-    tokens.slice(index + 1, index + 5).some((candidate) =>
+  tokens.some((token, index) => {
+    if (!NEGATORS.has(token)) return false;
+    const firstSubject = tokens.findIndex((candidate) => spec.subjectTerms.includes(candidate));
+    const leadsSubject = LEADING_NEGATORS.has(token) && firstSubject > index;
+    return leadsSubject || tokens.slice(index + 1, index + 5).some((candidate) =>
       spec.relationTerms.includes(candidate) || spec.conditionTerms.includes(candidate),
-    ));
+    );
+  });
 
 const assessWindow = (
   spec: FactMatchSpec,
@@ -199,11 +245,11 @@ const assessWindow = (
     (spec.requiredTerms.includes(opposite) && window.tokens.includes(expected)),
   );
   const expectedConditions = spec.conditionTerms.filter((term) => !NEGATORS.has(term));
-  const missingExpectedCondition = expectedConditions.some((term) => !window.tokens.includes(term));
   const removedCondition = expectedConditions.length > 0 && (
     window.tokens.includes("always") ||
     window.tokens.includes("regardless") ||
-    (window.tokens.includes("all") && missingExpectedCondition)
+    (window.tokens.includes("all") &&
+      expectedConditions.every((term) => !window.tokens.includes(term)))
   );
   const expectsNegation = spec.requiredTerms.some((term) => NEGATORS.has(term));
   const unexpectedNegation = !expectsNegation && hasScopedNegation(window.tokens, spec);

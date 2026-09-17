@@ -115,10 +115,27 @@ describe("matchReferenceFacts", () => {
     expect(result.unsupportedClaims).toEqual([text]);
   });
 
+  it.each([
+    "No exchanges or refunds are available within 30 days for unopened items.",
+    "No customer refunds are available within 30 days for unopened items.",
+    "Under no circumstances are refunds available within 30 days for unopened items.",
+  ])("retains negation scope through pre-subject modifiers: %s", (text) => {
+    const result = matchReferenceFacts([eligibility], [{ text, isQuestion: false }]);
+    expect(result.supportedFactIds.size).toBe(0);
+    expect(result.unsupportedClaims).toEqual([text]);
+  });
+
   it("does not mistake all restricted items for removal of the restriction", () => {
     const text = "Refunds are available within 30 days for all unopened items.";
     const result = matchReferenceFacts([eligibility], [{ text, isQuestion: false }]);
     expect(result.supportedFactIds.has(eligibility.id)).toBe(true);
+    expect(result.unsupportedClaims).toEqual([]);
+  });
+
+  it("treats a preserved item restriction with an omitted time limit as ambiguous", () => {
+    const text = "Refunds are available for all unopened items.";
+    const result = matchReferenceFacts([eligibility], [{ text, isQuestion: false }]);
+    expect(result.supportedFactIds.size).toBe(0);
     expect(result.unsupportedClaims).toEqual([]);
   });
 
@@ -136,6 +153,24 @@ describe("matchReferenceFacts", () => {
     const text = "Refunds are available within 30 days for unopened items, and I can check the order in 2 minutes.";
     const result = matchReferenceFacts([eligibility], [{ text, isQuestion: false }]);
     expect(result.supportedFactIds.has(eligibility.id)).toBe(true);
+    expect(result.unsupportedClaims).toEqual([]);
+  });
+
+  it.each([
+    "Refunds are available within 30 days for unopened items while I can check the order in 2 minutes.",
+    "Refunds are available within 30 days for unopened items but I can check the order in 2 minutes.",
+    "Refunds are available within 30 days for unopened items, I can check the order in 2 minutes.",
+    "Refunds are available within 30 days for unopened items, the support team can check the order in 2 minutes.",
+  ])("isolates an independent clause without relying on comma-and: %s", (text) => {
+    const result = matchReferenceFacts([eligibility], [{ text, isQuestion: false }]);
+    expect(result.supportedFactIds.has(eligibility.id)).toBe(true);
+    expect(result.unsupportedClaims).toEqual([]);
+  });
+
+  it("preserves valid comma-coordinated same-subject facts", () => {
+    const text = "Refunds are available within 30 days for unopened items, refunds are processed within 5 business days.";
+    const result = matchReferenceFacts([eligibility, processing], [{ text, isQuestion: false }]);
+    expect([...result.supportedFactIds]).toEqual(expect.arrayContaining([eligibility.id, processing.id]));
     expect(result.unsupportedClaims).toEqual([]);
   });
 

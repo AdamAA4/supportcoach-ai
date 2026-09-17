@@ -26,7 +26,11 @@ The initial implementation made 19/20 tests pass. The remaining same-subject/sam
 
 The initial Task 2 implementation reached GREEN at 22/22 cases. Independent review then identified three scope defects. Regression tests were added first and reproduced all three together: exit code 1, 22 passed, and 3 failed. The failures showed a leading `no` was discarded before the subject, a restricted `all unopened items` phrase was treated as universalization, and a numeric detail in a later comma-coordinated clause contaminated the policy claim.
 
-The review fixes retain a leading negator as claim context, treat `all` as condition removal only when a required condition is absent, and split at punctuation or comma-coordinated independent-clause boundaries while continuing to avoid splitting on bare `and`. The final focused run is GREEN: exit code 0, one test file passed, and 26/26 tests passed.
+The first review fixes retained an immediately leading negator as claim context, treated `all` as condition removal only when a required condition was absent, and split at punctuation or comma-coordinated independent-clause boundaries while continuing to avoid splitting on bare `and`. That focused run reached 26/26 GREEN.
+
+A second independent review exposed remaining generalization gaps in those three areas. Tests were again added before production changes. The first corrective RED run had 27 passing and 7 failing cases: three modified-subject negation forms, three contrast/comma clause forms, and one partially preserved condition. The generalized implementation then reached 34/34 GREEN. A further noun-subject comma clause was added to verify the boundary did not depend on pronouns; it failed alone at 34/35 before the grammatical subject/predicate check was widened, then passed in the final 35/35 run.
+
+The second corrective implementation carries clause-leading `no` or `never` from the clause boundary through intervening modifiers to the fact subject. It recognizes hard punctuation and contrast markers directly, and treats a comma as a claim boundary only when both sides contain independent-clause evidence. Quantified `all` now represents condition removal only when every expected condition is absent; preserving one restriction while omitting another remains an ambiguous miss.
 
 ## Covered boundaries
 
@@ -37,9 +41,12 @@ The review fixes retain a leading negator as claim context, treat `all` as condi
 - Conjunction-required and duplicate/subset facts remain strict.
 - Negative contractions, opposite opened/unopened conditions, unconditional promises, and scoped negation.
 - Leading negation before a fact subject remains inside its claim scope.
+- Leading negation remains scoped through coordinated nouns, modifiers, and `under no circumstances` phrasing.
 - Restricted quantification such as `all unopened items` remains supported, while removal of the restriction remains conflicting.
+- Preserving an item restriction while omitting a separate time restriction remains missed rather than unsupported.
 - Questions, incomplete claims, unrelated reassurance, and unrelated extra numbers.
 - Numeric details in a later independent clause cannot contaminate a correct fact.
+- Contrast clauses and comma-separated independent clauses are isolated without splitting noun-list continuations or valid coordinated same-subject facts.
 - No-relation and same-relation fallbacks remain conservative.
 - Unsupported statement evidence is deduplicated by its original text.
 
@@ -47,7 +54,7 @@ The review fixes retain a leading negator as claim context, treat `all` as condi
 
 | Command/check | Observed result |
 | --- | --- |
-| `npx vitest run src/evaluation/structured-fact-matcher.test.ts` | Exit 0; 1 file and 26/26 tests passed. |
+| `npx vitest run src/evaluation/structured-fact-matcher.test.ts` | Exit 0; 1 file and 35/35 tests passed. |
 | `npm run typecheck` | Exit 0; `tsc --noEmit` reported no diagnostics. |
 | `node .superpowers/sdd/task-5-secret-scan.cjs` | Exit 0; zero credential patterns, browser canary/server-key findings, or tracked private environment files. |
 | Changed-file logging/environment scan | No logging, environment access, credentials, private keys, network, or persistence code. |
