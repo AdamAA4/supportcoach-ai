@@ -155,13 +155,16 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
       socket.onmessage = (event) => { if (this.isCurrent(generation)) this.handleMessage(event); };
       socket.onerror = () => {
         if (!this.isCurrent(generation)) return;
-        this.fail("network", "The live voice connection failed.");
-        reject(new Error("Voice socket failed."));
+        // Browsers intentionally hide WebSocket handshake details here. Wait for
+        // close so the user receives its safe numeric close code instead.
+        logEvent("socket-error");
       };
-      socket.onclose = () => {
+      socket.onclose = (event) => {
         if (!this.isCurrent(generation)) return;
-        this.fail("network", "The live voice connection closed unexpectedly.");
-        reject(new Error("Voice socket closed."));
+        const code = Number.isInteger(event.code) ? event.code : 0;
+        const message = `The live voice connection closed before it was ready (code ${code}).`;
+        this.fail("network", message);
+        reject(new Error(message));
       };
     }).catch(() => {
       if (!this.isCurrent(generation)) return;
@@ -308,7 +311,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
         this.emit(message.status === "interrupted" ? { type: "interrupted" } : { type: "customer-turn-ended" });
         return;
       case "session.error":
-        this.fail("protocol", "The live voice service rejected the session.");
+        this.fail("protocol", `The live voice service rejected the session (${typeof message.code === "string" ? message.code : "unknown"}).`);
         return;
       case "session.ended":
         this.fail("network", "The live voice session ended. Start a new practice call.");

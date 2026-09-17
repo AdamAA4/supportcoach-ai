@@ -162,6 +162,22 @@ describe("AssemblyAI voice agent", () => {
     stop.mockRestore();
   });
 
+  it("keeps the browser WebSocket close code in the recoverable connection error", async () => {
+    FakeWebSocket.instances = [];
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ token: "temporary-token" }), { status: 200 })));
+    const events: VoiceAgentEvent[] = [];
+    const agent = new AssemblyAiVoiceAgent({ WebSocket: FakeWebSocket as unknown as VoiceSocketConstructor });
+
+    const connecting = agent.connect({ scenario, facts: [], onEvent: (event) => events.push(event) });
+    await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
+    FakeWebSocket.instances[0].onclose?.({ code: 1006 } as CloseEvent);
+    await connecting;
+
+    expect(events).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "error", code: "network", message: "The live voice connection closed before it was ready (code 1006)." }),
+    ]));
+  });
+
   it("closes the socket and microphone tracks exactly once across repeated fatal cleanup", async () => {
     FakeWebSocket.instances = [];
     const track = { stop: vi.fn() };

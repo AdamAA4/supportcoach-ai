@@ -38,6 +38,8 @@ Set `NEXT_PUBLIC_VOICE_MODE=live` with a valid server-side `ASSEMBLYAI_API_KEY` 
 
 Live mute disables microphone tracks and pauses audio-frame transmission; unmute reuses the same capture graph. Permission denial keeps the live session available for typed replies. Remote session termination closes capture resources and shows the existing retry state. `src/voice/assemblyai-voice-agent.ts` owns connection/capture lifetime, and `src/voice/audio-player.ts` owns ordered playback and interruption cancellation.
 
+If a live call cannot connect, the call screen now reports the provider session-error code or the browser WebSocket close code. Record that code when debugging; it contains no API key or transcript content.
+
 ## Practice setup and demo path
 
 The trainee starts each practice session by pasting a company FAQ or policy, or importing one public HTTPS page once and confirming its sanitized preview. They can also paste experience notes, or add them as a plain-text or Markdown file. Factual scores use confirmed FAQ/policy facts only. Experience notes remain available as practice guidance; personal coaching notes can shape the next exercise but cannot establish a factual pass.

@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Normalized source facts, scenario definitions, transcript/report contracts, and validation for grounded practice sessions.
 - Source setup screen that requires FAQ/policy preview confirmation before a trainee can start a simulated customer call.
 
+### Changed
+
+- Preserve safe AssemblyAI session-error codes and browser WebSocket close codes in the recoverable live-call error, rather than replacing them with a generic connection message.
+
 ### Fixed
 
 - Use relation-anchored factual evidence in coaching evaluation, tying universal claims to their required condition and treating scoped `not all` as ambiguous.
