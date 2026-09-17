@@ -7,7 +7,7 @@ export default function Home() {
     <div className="mx-auto w-full max-w-3xl px-5 py-6 sm:py-10">
       <header className="flex items-center justify-between border-b border-line pb-5">
         <span className="text-base font-bold tracking-tight text-ink">SupportCoach AI</span>
-        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">Session tape</span>
+        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-muted">Practice workspace</span>
       </header>
       <main className="settle-in pb-16 pt-16 sm:pb-24 sm:pt-24">
         <h1 className={`${displayTitle} text-[2.4rem] leading-[1.05] sm:text-6xl`}>

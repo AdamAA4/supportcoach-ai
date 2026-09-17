@@ -12,7 +12,7 @@ const scenarios = [
 ];
 
 const scenarioTile =
-  "block h-full cursor-pointer rounded-xl border bg-shell p-4 text-left transition-all duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-line-strong peer-checked:border-amber peer-focus-visible:ring-2 peer-focus-visible:ring-ink";
+  "block h-full cursor-pointer rounded-xl border border-line bg-panel-2 p-4 text-left transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-accent-bright peer-checked:border-accent peer-focus-visible:ring-2 peer-focus-visible:ring-accent";
 
 export function ScenarioPicker({ value, onChange }: ScenarioPickerProps) {
   return (
@@ -30,10 +30,10 @@ export function ScenarioPicker({ value, onChange }: ScenarioPickerProps) {
                 checked={selected}
                 onChange={() => onChange(scenario.id)}
               />
-              <span className={`${scenarioTile} ${selected ? "border-amber" : "border-line"}`}>
+              <span className={`${scenarioTile} ${selected ? "border-accent" : "border-line"}`}>
                 <span className="flex items-center justify-between gap-3">
                   <span className="text-sm font-bold text-ink">{scenario.label}</span>
-                  <span aria-hidden="true" className={`lamp inline-block size-2.5 rounded-full ${selected ? "bg-amber" : "bg-line-strong"}`} />
+                  <span aria-hidden="true" className={`lamp inline-block size-2.5 rounded-full ${selected ? "bg-accent" : "bg-line-strong"}`} />
                 </span>
                 <span className="mt-1.5 block text-sm leading-relaxed text-ink-muted">{scenario.description}</span>
               </span>

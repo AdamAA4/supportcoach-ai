@@ -11,7 +11,7 @@ export default function SetupPage() {
           You are the voice responder; the customer is simulated from this source.
         </p>
       </header>
-      <div className="settle-in mt-9 rounded-2xl bg-shell p-1.5 ring-1 ring-line">
+      <div className="settle-in mt-9 rounded-2xl bg-shell p-1.5 shadow-card">
         <div className="rounded-xl bg-panel px-5 py-6 sm:px-8 sm:py-8">
           <SourceSetupForm />
         </div>

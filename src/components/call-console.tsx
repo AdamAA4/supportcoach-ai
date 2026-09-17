@@ -118,11 +118,11 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
       </header>
       <div className="mt-8 grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)] lg:gap-6">
         <div className="space-y-5">
-          <section aria-label="Call controls" className="rounded-2xl bg-shell p-1.5 ring-1 ring-line">
+          <section aria-label="Call controls" className="rounded-2xl bg-shell p-1.5 shadow-card">
             <div className="rounded-xl bg-panel">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
-                <span className="inline-block rounded-md bg-tape px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-tape-ink">{context.sourceLabel}</span>
-                <span className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 font-mono text-xs font-semibold capitalize ${state === "error" ? "bg-danger-bg text-danger-ink" : callLive ? "bg-ok-bg text-ok-ink" : "bg-panel-2 text-ink-muted"}`}>
+                <span className="inline-block rounded-full bg-tape px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-tape-ink">{context.sourceLabel}</span>
+                <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold capitalize ${state === "error" ? "bg-danger-bg text-danger-ink" : callLive ? "bg-ok-bg text-ok-ink" : "bg-panel-2 text-ink-muted"}`}>
                   <StatusLamp tone={callStateTone(state)} pulse={callLive} />
                   {state.replace("-", " ")}
                 </span>
@@ -145,7 +145,7 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
               )}
               <div className="flex flex-wrap gap-2.5 px-5 py-5 sm:px-6">
                 {state === "idle" && <button type="button" onClick={() => void joinVoiceCall()} className={btnPrimary}><MicIcon className="size-4" />Join voice call</button>}
-                {state === "connecting" && <button type="button" disabled className={`${btnPrimary} opacity-70`}><span aria-hidden="true" className="rec-pulse inline-block size-2 rounded-full bg-amber-ink/70" />Connecting microphone…</button>}
+                {state === "connecting" && <button type="button" disabled className={`${btnPrimary} opacity-70`}><span aria-hidden="true" className="rec-pulse inline-block size-2 rounded-full bg-white/80" />Connecting microphone…</button>}
                 {(microphone === "recording" || microphone === "muted") && (
                   <button type="button" onClick={() => void mute()} disabled={state === "ended" || state === "error"} className={btnSecondary}>
                     {microphone === "muted" ? <MicOffIcon className="size-4" /> : <MicIcon className="size-4" />}

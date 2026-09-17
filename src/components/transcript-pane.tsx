@@ -9,12 +9,12 @@ const speakerLabel: Record<TranscriptTurn["speaker"], string> = {
 
 export function TranscriptPane({ turns, live = false }: { turns: TranscriptTurn[]; live?: boolean }) {
   return (
-    <section aria-labelledby="transcript-heading" className="rounded-2xl bg-shell p-1.5 ring-1 ring-line">
+    <section aria-labelledby="transcript-heading" className="rounded-2xl bg-shell p-1.5 shadow-card">
       <div className="rounded-xl bg-panel p-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 id="transcript-heading" className="text-lg font-bold tracking-tight text-ink">Live transcript</h2>
+          <h2 id="transcript-heading" className="font-display text-lg font-bold tracking-tight text-ink">Live transcript</h2>
           {live && (
-            <span className="inline-flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-danger">
+            <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-danger">
               <span aria-hidden="true" className="rec-pulse inline-block size-2 rounded-full bg-danger" />
               Rec
             </span>
@@ -24,12 +24,12 @@ export function TranscriptPane({ turns, live = false }: { turns: TranscriptTurn[
           {turns.length ? turns.map((turn, index) => {
             const isCustomer = turn.speaker === "customer";
             return (
-              <li key={turn.id} className={`grid grid-cols-[3.25rem_1fr] gap-x-3 py-3.5 sm:grid-cols-[4rem_1fr] sm:gap-x-4 ${index > 0 ? "border-t border-line" : ""}`}>
-                <time className="pt-0.5 text-right font-mono text-[11.5px] text-ink-muted" dateTime={turn.startedAt}>
+              <li key={turn.id} className={`grid grid-cols-[3.75rem_1fr] gap-x-3 py-3.5 sm:grid-cols-[4.5rem_1fr] sm:gap-x-4 ${index > 0 ? "border-t border-line" : ""}`}>
+                <time className="pt-0.5 text-right text-xs tabular-nums text-ink-muted" dateTime={turn.startedAt}>
                   {new Date(turn.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                 </time>
                 <div>
-                  <p className={`font-mono text-[11px] font-bold uppercase tracking-[0.14em] ${isCustomer ? "text-warn" : "text-ok"}`}>{speakerLabel[turn.speaker]}</p>
+                  <p className={`text-[11px] font-bold uppercase tracking-[0.14em] ${isCustomer ? "text-warn" : "text-ok"}`}>{speakerLabel[turn.speaker]}</p>
                   <p className="mt-1 text-[15px] leading-relaxed text-ink">{turn.text}</p>
                 </div>
               </li>

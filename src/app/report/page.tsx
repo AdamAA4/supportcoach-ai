@@ -34,7 +34,7 @@ export default function ReportPage() {
         <CoachingReport report={practice.report} onClear={clear} />
       ) : (
         <main className="mx-auto grid w-full max-w-2xl place-items-center px-5 py-16 sm:py-24">
-          <div className="settle-in w-full rounded-2xl bg-shell p-1.5 ring-1 ring-line">
+          <div className="settle-in w-full rounded-2xl bg-shell p-1.5 shadow-card">
             <div className="rounded-xl bg-panel p-6 sm:p-8">
               <h1 className={`${displayTitle} text-3xl leading-[1.15] sm:text-4xl`}>No saved coaching report</h1>
               <p className="mt-5 leading-relaxed text-ink-soft">

@@ -13,8 +13,8 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `40572b7`
-- Generated: 2026-09-17T22:20:20.473Z
+- Current commit: `a51e1ac`
+- Generated: 2026-09-17T22:42:09.004Z
 - Uncommitted files excluding this handoff: 
 
 ```text
@@ -28,24 +28,34 @@ M .impeccable/review/desktop-call-live.png
  M .impeccable/review/mobile-home.png
  M .impeccable/review/mobile-report.png
  M .impeccable/review/mobile-setup.png
- M BUGS.md
  M CHANGELOG.md
  M DESIGN.md
+ M src/app/call/page.tsx
  M src/app/globals.css
  M src/app/icon.svg
  M src/app/layout.tsx
  M src/app/page.tsx
+ M src/app/report/page.tsx
+ M src/app/setup/page.tsx
+ M src/components/call-console.tsx
+ M src/components/coaching-report.tsx
+ M src/components/reference-panel.tsx
+ M src/components/scenario-picker.tsx
+ M src/components/source-preview.tsx
+ M src/components/source-setup-form.tsx
+ M src/components/transcript-pane.tsx
+ M src/components/ui.tsx
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
 
-Full UI redesign of the home, source setup, practice call, and coaching report screens in the "Rehearsal Studio" visual direction, chosen by the product lead on 2026-09-17 from three presented options (emil-design-eng, design-taste-frontend, and impeccable skills; decision tool used). Styling-only: no product flow, voice-agent, evaluation, API, or storage changes.
+Full UI redesign of the home, source setup, practice call, and coaching report screens. Final world: "Maison Rose," ported from the product lead's cosmet project (Downloads/cosmet) and pinned by the product lead on 2026-09-17 — blush canvas (#fbf3f0), white cards with rose-tinted shadows, plum ink, single rose accent (#b0586a), Fraunces + DM Sans via `next/font`, cream session sheet reserved for confirmed source. An earlier same-day "Rehearsal Studio" dark direction, plus a brightening pass on it, was replaced by this user-pinned direction before shipping; the home page's "or typed fallback" clause was also removed with approval. Styling-only: no product flow, voice-agent, evaluation, API, or storage changes.
 
 - New world recorded in DESIGN.md; product truth in PRODUCT.md; direction brief and review evidence under `.impeccable/`.
-- `src/app/globals.css`: Tailwind v4 `@theme` studio tokens (charcoal/cream/amber/tape palette, lamps, banners), themed browser surfaces (selection, caret, scrollbars, focus), reduced-motion support.
-- `src/app/layout.tsx`: Bricolage Grotesque + Geist Mono via `next/font` (no new dependency).
-- New `src/components/ui.tsx` (button/input/lamp/authored-SVG primitives) and `src/app/icon.svg` favicon.
-- Pages and components rebuilt in the world: console island with signal lamps and pinned status strings, timecoded transcript tracks with live REC, cream session-sheet reference panel, score cards with mono numerals and segment meters, segmented source control, scenario cards.
+- `src/app/globals.css`: Tailwind v4 `@theme` Maison Rose tokens (blush/white/plum/rose/tape palette, status banners, rose-tinted shadows, Cosmet radii), themed browser surfaces (selection, caret, scrollbars, focus), reduced-motion support.
+- `src/app/layout.tsx`: Fraunces + DM Sans via `next/font` (no new dependency).
+- New `src/components/ui.tsx` (pill button/input/lamp/authored-SVG primitives) and `src/app/icon.svg` favicon.
+- Pages and components rebuilt in the world: console island with signal lamps and pinned status strings, timecoded transcript tracks with live REC, cream session-sheet reference panel, score cards with Fraunces numerals and rose segment meters, segmented source control, scenario cards.
 
 Follow-up round (same day, product-lead feedback): the palette was brightened (canvas #211d1a → #322c26, lighter panels/lines/signal colors, same world and AA contrast), the home page's "or typed fallback" clause was removed with approval so copy matches the voice-only rule, and the mobile headline scale was tuned for 320px viewports. DESIGN.md and review screenshots re-captured to match.
 
@@ -70,5 +80,5 @@ Follow-up round (same day, product-lead feedback): the palette was brightened (c
 
 - Approved scope was UI redesign only; behavior, routes, API contracts, and environment-variable handling are unchanged and must stay that way.
 - Preserve the voice-only practice flow (no typed-response practice), the FAQ/notes grounding flow, server-only API secrets, and all test-pinned strings in `src/components/call-console.test.tsx` (including "Microphone: On — speak naturally") and `src/components/coaching-report.test.tsx`.
-- Follow DESIGN.md for any future UI work: charcoal/cream/amber world, cream session sheet only for confirmed source material, mono only for measured data, no kickers above headings, no fake data visuals.
+- Follow DESIGN.md for any future UI work: the Maison Rose world (blush/white/plum/rose), cream session sheet only for confirmed source material, Fraunces for display, one rose accent, no kickers above headings, no fake data visuals.
 - Run `npm run handoff` before handing back, and commit completed work with its handoff together.

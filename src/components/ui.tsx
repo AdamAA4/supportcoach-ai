@@ -1,35 +1,36 @@
 import React from "react";
 
-/* Shared visual primitives for the Rehearsal Studio UI. Styling only — no behavior. */
+/* Shared visual primitives for the Maison Rose UI (ported from the cosmet project). Styling only — no behavior. */
 
 export const displayTitle =
-  "font-sans font-bold tracking-[-0.025em] text-balance text-ink";
+  "font-display font-extrabold tracking-[-0.01em] text-balance text-ink";
 
 export const panelLabel =
   "text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted";
 
-export const dataMono = "font-mono tabular-nums";
+export const dataMono = "tabular-nums";
 
 export const btnPrimary =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber px-5 text-sm font-bold text-amber-ink transition-all duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-amber-strong active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-accent px-5 text-sm font-bold text-accent-ink shadow-soft transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-accent-strong active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40";
 
 export const btnSecondary =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line bg-transparent px-4 text-sm font-semibold text-ink transition-all duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-line-strong hover:bg-panel-2 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-line bg-surface px-4 text-sm font-semibold text-ink shadow-soft transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-accent-bright active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40";
 
 export const btnDanger =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-danger/40 bg-transparent px-4 text-sm font-semibold text-danger transition-all duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-danger hover:bg-danger/10 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-danger/40 bg-surface px-4 text-sm font-semibold text-danger transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-danger hover:bg-danger/5 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40";
 
 export const inputBase =
-  "block w-full rounded-lg border border-line bg-shell px-3.5 py-2.5 text-base text-ink transition-colors duration-150 placeholder:text-ink-faint hover:border-line-strong focus:border-amber focus:outline-none";
+  "block w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-base text-ink transition-colors duration-200 placeholder:text-ink-faint hover:border-line-strong focus:border-accent focus:outline-none";
 
 export const fieldLabel = "block text-sm font-semibold text-ink";
 
-export type LampTone = "ok" | "warn" | "danger" | "neutral";
+export type LampTone = "ok" | "warn" | "danger" | "neutral" | "accent";
 
 const lampTone: Record<LampTone, string> = {
   ok: "bg-ok",
   warn: "bg-warn",
   danger: "bg-danger",
+  accent: "bg-accent",
   neutral: "bg-line-strong",
 };
 
@@ -37,13 +38,9 @@ export function StatusLamp({ tone = "neutral", pulse = false }: { tone?: LampTon
   return (
     <span
       aria-hidden="true"
-      className={`lamp inline-block size-2.5 shrink-0 rounded-full ${toneDot(tone, pulse)}`}
+      className={`lamp inline-block size-2.5 shrink-0 rounded-full ${lampTone[tone]} ${pulse ? "rec-pulse lamp-live" : ""}`}
     />
   );
-}
-
-function toneDot(tone: LampTone, pulse: boolean): string {
-  return `${lampTone[tone]} ${pulse ? "rec-pulse lamp-live" : ""}`;
 }
 
 type IconProps = React.SVGProps<SVGSVGElement>;

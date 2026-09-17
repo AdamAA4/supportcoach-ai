@@ -166,11 +166,11 @@ export function SourceSetupForm() {
         />
         <textarea value={notes} onChange={(event) => { setNotes(event.target.value); invalidateSetup(); }} rows={3} className={`${inputBase} leading-relaxed`} placeholder="Paste a coaching note" />
         <div className="flex flex-wrap gap-3">
-          <select value={noteKind} onChange={(event) => { setNoteKind(event.target.value as ExperienceNote["kind"]); invalidateSetup(); }} className="rounded-lg border border-line bg-shell px-3 py-2.5 text-base text-ink transition-colors duration-150 hover:border-line-strong focus:border-amber focus:outline-none">
+          <select value={noteKind} onChange={(event) => { setNoteKind(event.target.value as ExperienceNote["kind"]); invalidateSetup(); }} className="rounded-xl border border-line bg-surface px-3 py-2.5 text-base text-ink transition-colors duration-200 hover:border-line-strong focus:border-accent focus:outline-none">
             <option value="personal-coaching-note">Personal coaching note</option>
             <option value="approved-practice-advice">Approved practice advice</option>
           </select>
-          <select value={noteFormat} onChange={(event) => { setNoteFormat(event.target.value as ExperienceNoteFormat); invalidateSetup(); }} className="rounded-lg border border-line bg-shell px-3 py-2.5 text-base text-ink transition-colors duration-150 hover:border-line-strong focus:border-amber focus:outline-none" aria-label="Experience note format">
+          <select value={noteFormat} onChange={(event) => { setNoteFormat(event.target.value as ExperienceNoteFormat); invalidateSetup(); }} className="rounded-xl border border-line bg-surface px-3 py-2.5 text-base text-ink transition-colors duration-200 hover:border-line-strong focus:border-accent focus:outline-none" aria-label="Experience note format">
             <option value="plain-text">Plain text</option>
             <option value="markdown">Markdown</option>
           </select>
@@ -181,7 +181,7 @@ export function SourceSetupForm() {
       <div className="flex flex-wrap items-center gap-4 border-t border-line pt-6">
         <button type="submit" disabled={!confirmed} className={btnPrimary}>
           Start practice call
-          <span className="flex size-6 items-center justify-center rounded-full bg-amber-ink/15">
+          <span className="flex size-6 items-center justify-center rounded-full bg-white/25">
             <ArrowRightIcon className="size-3.5" />
           </span>
         </button>
