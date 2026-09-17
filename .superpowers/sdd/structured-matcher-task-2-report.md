@@ -24,7 +24,9 @@ produced the expected RED result: exit code 1, 18 failed matcher cases, and `Typ
 
 The initial implementation made 19/20 tests pass. The remaining same-subject/same-relation multi-value example exposed an inherently ambiguous full-statement fallback. The test was corrected to the approved conservative contract—missed fact and no invented unsupported claim—and the implementation now suppresses both credit and conflict when the fallback contains the expected value plus another fact's value. Negative-fact contraction coverage and the required one-correct/two-conflicting-values case were then added before their final production refinements.
 
-The final focused run is GREEN: exit code 0, one test file passed, and 22/22 tests passed.
+The initial Task 2 implementation reached GREEN at 22/22 cases. Independent review then identified three scope defects. Regression tests were added first and reproduced all three together: exit code 1, 22 passed, and 3 failed. The failures showed a leading `no` was discarded before the subject, a restricted `all unopened items` phrase was treated as universalization, and a numeric detail in a later comma-coordinated clause contaminated the policy claim.
+
+The review fixes retain a leading negator as claim context, treat `all` as condition removal only when a required condition is absent, and split at punctuation or comma-coordinated independent-clause boundaries while continuing to avoid splitting on bare `and`. The final focused run is GREEN: exit code 0, one test file passed, and 26/26 tests passed.
 
 ## Covered boundaries
 
@@ -34,7 +36,10 @@ The final focused run is GREEN: exit code 0, one test file passed, and 22/22 tes
 - Separate statements do not contaminate each other's numeric evidence.
 - Conjunction-required and duplicate/subset facts remain strict.
 - Negative contractions, opposite opened/unopened conditions, unconditional promises, and scoped negation.
+- Leading negation before a fact subject remains inside its claim scope.
+- Restricted quantification such as `all unopened items` remains supported, while removal of the restriction remains conflicting.
 - Questions, incomplete claims, unrelated reassurance, and unrelated extra numbers.
+- Numeric details in a later independent clause cannot contaminate a correct fact.
 - No-relation and same-relation fallbacks remain conservative.
 - Unsupported statement evidence is deduplicated by its original text.
 
@@ -42,7 +47,7 @@ The final focused run is GREEN: exit code 0, one test file passed, and 22/22 tes
 
 | Command/check | Observed result |
 | --- | --- |
-| `npx vitest run src/evaluation/structured-fact-matcher.test.ts` | Exit 0; 1 file and 22/22 tests passed. |
+| `npx vitest run src/evaluation/structured-fact-matcher.test.ts` | Exit 0; 1 file and 26/26 tests passed. |
 | `npm run typecheck` | Exit 0; `tsc --noEmit` reported no diagnostics. |
 | `node .superpowers/sdd/task-5-secret-scan.cjs` | Exit 0; zero credential patterns, browser canary/server-key findings, or tracked private environment files. |
 | Changed-file logging/environment scan | No logging, environment access, credentials, private keys, network, or persistence code. |
@@ -50,7 +55,7 @@ The final focused run is GREEN: exit code 0, one test file passed, and 22/22 tes
 
 ## Self-review
 
-- Claim isolation: relation anchors owned by another fact bound each candidate window, so an extra value after that boundary cannot contaminate the current fact.
+- Claim isolation: relation anchors owned by another fact and defensible punctuation/coordinated-clause boundaries constrain each candidate window, so an extra value in another claim cannot contaminate the current fact.
 - Conjunction safety: claim windows do not split on `and`; required subject and answer terms stay together.
 - Conflict threshold: a relevant window must contain an explicit mismatched number, opposite condition, removed condition, or scoped polarity conflict. Incomplete and ambiguous claims remain missed.
 - Negative facts: normalized contractions preserve `not` as a required condition, while the same scoped negation contradicts an affirmative fact.

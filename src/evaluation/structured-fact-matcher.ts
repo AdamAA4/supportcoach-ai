@@ -105,12 +105,17 @@ export const compileFactMatchSpecs = (facts: ReferenceFact[]): Map<string, FactM
 const positionsOf = (tokens: string[], terms: string[]): number[] =>
   terms.flatMap((term) => tokens.flatMap((token, index) => token === term ? [index] : []));
 
+const clauseSegments = (text: string): string[] =>
+  text
+    .split(/[.!?;]+|,\s+(?=(?:and|but|while|however)\b)/i)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
 const claimWindowsFor = (
   spec: FactMatchSpec,
   allSpecs: FactMatchSpec[],
   statement: { text: string; isQuestion: boolean },
 ): TokenWindow[] => {
-  const tokens = normalizeFactTokens(statement.text);
   const allRelations = unique(allSpecs.flatMap((candidate) => candidate.relationTerms));
   const anchorOwners = new Map<string, FactMatchSpec[]>();
   for (const relation of allRelations) {
@@ -119,37 +124,46 @@ const claimWindowsFor = (
       allSpecs.filter((candidate) => candidate.relationTerms.includes(relation)),
     );
   }
-  const ownAnchors = unique(positionsOf(tokens, spec.relationTerms)).sort((left, right) => left - right);
 
-  if (ownAnchors.length === 0) {
-    return [{ tokens, originalText: statement.text, isQuestion: statement.isQuestion }];
-  }
+  return clauseSegments(statement.text).flatMap((segment) => {
+    const tokens = normalizeFactTokens(segment);
+    const ownAnchors = unique(positionsOf(tokens, spec.relationTerms))
+      .sort((left, right) => left - right);
 
-  return ownAnchors.map((anchor) => {
-    const previousDifferentAnchor = positionsOf(tokens, allRelations)
-      .filter((position) => position < anchor && !(anchorOwners.get(tokens[position]) ?? []).includes(spec))
-      .sort((left, right) => right - left)[0] ?? -1;
-    const nextDifferentAnchor = positionsOf(tokens, allRelations)
-      .filter((position) => position > anchor && !(anchorOwners.get(tokens[position]) ?? []).includes(spec))
-      .sort((left, right) => left - right)[0] ?? tokens.length;
-    const subjectPositions = positionsOf(
-      tokens.slice(previousDifferentAnchor + 1, anchor + 1),
-      spec.subjectTerms,
-    ).map((position) => position + previousDifferentAnchor + 1);
-    const hasEverySubject = spec.subjectTerms.every((term) =>
-      tokens.slice(previousDifferentAnchor + 1, anchor + 1).includes(term),
-    );
-    const start = subjectPositions.length === 0
-      ? previousDifferentAnchor + 1
-      : hasEverySubject
-        ? Math.min(...subjectPositions)
-        : Math.max(...subjectPositions);
+    if (ownAnchors.length === 0) {
+      return [{ tokens, originalText: statement.text, isQuestion: statement.isQuestion }];
+    }
 
-    return {
-      tokens: tokens.slice(start, nextDifferentAnchor),
-      originalText: statement.text,
-      isQuestion: statement.isQuestion,
-    };
+    return ownAnchors.map((anchor) => {
+      const previousDifferentAnchor = positionsOf(tokens, allRelations)
+        .filter((position) => position < anchor && !(anchorOwners.get(tokens[position]) ?? []).includes(spec))
+        .sort((left, right) => right - left)[0] ?? -1;
+      const nextDifferentAnchor = positionsOf(tokens, allRelations)
+        .filter((position) => position > anchor && !(anchorOwners.get(tokens[position]) ?? []).includes(spec))
+        .sort((left, right) => left - right)[0] ?? tokens.length;
+      const subjectPositions = positionsOf(
+        tokens.slice(previousDifferentAnchor + 1, anchor + 1),
+        spec.subjectTerms,
+      ).map((position) => position + previousDifferentAnchor + 1);
+      const hasEverySubject = spec.subjectTerms.every((term) =>
+        tokens.slice(previousDifferentAnchor + 1, anchor + 1).includes(term),
+      );
+      const subjectStart = subjectPositions.length === 0
+        ? previousDifferentAnchor + 1
+        : hasEverySubject
+          ? Math.min(...subjectPositions)
+          : Math.max(...subjectPositions);
+      const start = subjectStart > previousDifferentAnchor + 1 &&
+        NEGATORS.has(tokens[subjectStart - 1])
+        ? subjectStart - 1
+        : subjectStart;
+
+      return {
+        tokens: tokens.slice(start, nextDifferentAnchor),
+        originalText: statement.text,
+        isQuestion: statement.isQuestion,
+      };
+    });
   });
 };
 
@@ -184,8 +198,13 @@ const assessWindow = (
     (spec.requiredTerms.includes(expected) && window.tokens.includes(opposite)) ||
     (spec.requiredTerms.includes(opposite) && window.tokens.includes(expected)),
   );
-  const removedCondition = spec.conditionTerms.length > 0 &&
-    window.tokens.some((term) => ["always", "regardless", "all"].includes(term));
+  const expectedConditions = spec.conditionTerms.filter((term) => !NEGATORS.has(term));
+  const missingExpectedCondition = expectedConditions.some((term) => !window.tokens.includes(term));
+  const removedCondition = expectedConditions.length > 0 && (
+    window.tokens.includes("always") ||
+    window.tokens.includes("regardless") ||
+    (window.tokens.includes("all") && missingExpectedCondition)
+  );
   const expectsNegation = spec.requiredTerms.some((term) => NEGATORS.has(term));
   const unexpectedNegation = !expectsNegation && hasScopedNegation(window.tokens, spec);
   const removedNegation = expectsNegation &&

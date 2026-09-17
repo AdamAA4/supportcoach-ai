@@ -101,10 +101,25 @@ describe("matchReferenceFacts", () => {
     "Refunds aren't available within 30 days for unopened items.",
     "Refunds are available within 30 days for opened items.",
     "Refunds are always available for all items.",
+    "Refunds are available for all items.",
   ])("flags an explicit condition conflict: %s", (text) => {
     const result = matchReferenceFacts([eligibility], [{ text, isQuestion: false }]);
     expect(result.supportedFactIds.size).toBe(0);
     expect(result.unsupportedClaims).toEqual([text]);
+  });
+
+  it("retains a leading negator in the fact-local claim window", () => {
+    const text = "No refunds are available within 30 days for unopened items.";
+    const result = matchReferenceFacts([eligibility], [{ text, isQuestion: false }]);
+    expect(result.supportedFactIds.size).toBe(0);
+    expect(result.unsupportedClaims).toEqual([text]);
+  });
+
+  it("does not mistake all restricted items for removal of the restriction", () => {
+    const text = "Refunds are available within 30 days for all unopened items.";
+    const result = matchReferenceFacts([eligibility], [{ text, isQuestion: false }]);
+    expect(result.supportedFactIds.has(eligibility.id)).toBe(true);
+    expect(result.unsupportedClaims).toEqual([]);
   });
 
   it("keeps an extra number in a separate statement out of a supported fact", () => {
@@ -113,6 +128,13 @@ describe("matchReferenceFacts", () => {
       { text: eligibility.answer, isQuestion: false },
       { text: reassurance, isQuestion: false },
     ]);
+    expect(result.supportedFactIds.has(eligibility.id)).toBe(true);
+    expect(result.unsupportedClaims).toEqual([]);
+  });
+
+  it("keeps an unrelated numeric detail in a later independent clause out of the fact", () => {
+    const text = "Refunds are available within 30 days for unopened items, and I can check the order in 2 minutes.";
+    const result = matchReferenceFacts([eligibility], [{ text, isQuestion: false }]);
     expect(result.supportedFactIds.has(eligibility.id)).toBe(true);
     expect(result.unsupportedClaims).toEqual([]);
   });
