@@ -14,6 +14,22 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). Run the engineering checks with `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
 
+## Vercel deployment
+
+Vercel is the recommended host for this Next.js app. This checkout does not currently have a Git remote, so use one of these paths:
+
+1. **Recommended: GitHub + Vercel.** Create a GitHub repository, push the `supportcoach-mvp` branch, then import that repository in [Vercel](https://vercel.com/new). Vercel detects Next.js automatically.
+2. **Direct Vercel deployment.** Sign in with `npx vercel login`, then run `npx vercel` from this folder. This creates a Vercel project without first creating a GitHub repository.
+
+Before a Preview or Production deployment, add these Environment Variables in the Vercel project settings:
+
+```env
+ASSEMBLYAI_API_KEY=your_AssemblyAI_key
+NEXT_PUBLIC_VOICE_MODE=live
+```
+
+`ASSEMBLYAI_API_KEY` is a server-only secret. Add it for Preview and Production, never as a `NEXT_PUBLIC_` value, and never commit it. Redeploy after saving the variables. Test the deployed app with a short FAQ, one typed fallback response, and one microphone call in desktop Chrome or Edge.
+
 ## Voice modes
 
 `NEXT_PUBLIC_VOICE_MODE=mock` is the default and needs no API key. It supports the hackathon demo with simulated voice behavior.
