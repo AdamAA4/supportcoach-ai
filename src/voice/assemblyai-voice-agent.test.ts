@@ -139,6 +139,23 @@ describe("AssemblyAI voice agent", () => {
     expect(update.session.system_prompt).toContain("never a real customer support assistant");
   });
 
+  it("keeps the browser fetch receiver when minting a temporary token", async () => {
+    FakeWebSocket.instances = [];
+    const request = vi.fn(function (this: unknown) {
+      if (this !== globalThis) return Promise.reject(new TypeError("Illegal invocation"));
+      return Promise.resolve(new Response(JSON.stringify({ token: "temporary-token" }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", request);
+    const agent = new AssemblyAiVoiceAgent({ WebSocket: FakeWebSocket as unknown as VoiceSocketConstructor });
+
+    const connecting = agent.connect({ scenario, facts: [], onEvent: () => {} });
+    await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
+    FakeWebSocket.instances[0].open();
+    await connecting;
+
+    expect(request).toHaveBeenCalledWith("/api/voice-token", expect.objectContaining({ cache: "no-store" }));
+  });
+
   it("forwards mocked WebSocket customer audio to AudioPlayer and flushes playback on an interruption", async () => {
     FakeWebSocket.instances = [];
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ token: "temporary-token" }), { status: 200 })));

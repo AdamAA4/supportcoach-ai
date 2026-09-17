@@ -90,7 +90,10 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
   private muteGain?: GainNode;
 
   constructor(dependencies: AssemblyAiVoiceAgentDependencies = {}) {
-    this.request = dependencies.fetch ?? fetch;
+    // Browser fetch is a Window method in Firefox and Chromium. Keep its global
+    // receiver when the adapter invokes it later, or token minting fails before
+    // any request reaches the server.
+    this.request = dependencies.fetch ?? globalThis.fetch.bind(globalThis);
     this.Socket = dependencies.WebSocket ?? WebSocket;
     this.mediaDevices = dependencies.mediaDevices ?? (typeof navigator === "undefined" ? undefined : navigator.mediaDevices);
     this.AudioContext = dependencies.AudioContext ?? (typeof window === "undefined" ? undefined : window.AudioContext);
