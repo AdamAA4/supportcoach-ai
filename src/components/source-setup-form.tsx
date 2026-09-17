@@ -9,9 +9,13 @@ import { type ExperienceNote } from "../domain/reference-source";
 import type { ExperienceNoteFormat } from "../domain/practice-pack";
 import { saveCurrentPracticeSession } from "../domain/practice-session";
 import { ScenarioPicker } from "./scenario-picker";
+import { AlertIcon, ArrowRightIcon, btnPrimary, btnSecondary, CheckIcon, fieldLabel, inputBase } from "./ui";
 
 type SourceKind = "pasted-text" | "public-https-link";
 type ImportedSource = { canonicalUrl: string; extractedText: string; contentHash: string };
+
+const channelTile =
+  "flex min-h-10 cursor-pointer items-center justify-center rounded-lg px-4 text-sm font-semibold text-ink-muted transition-all duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] peer-checked:bg-panel-2 peer-checked:text-ink peer-hover:text-ink-soft peer-focus-visible:ring-2 peer-focus-visible:ring-ink";
 
 export function SourceSetupForm() {
   const router = useRouter();
@@ -113,26 +117,38 @@ export function SourceSetupForm() {
     router.push("/call");
   };
 
-  const fieldError = (field: keyof FieldErrors) => errors[field]?.map((error) => <p key={error} className="mt-1 text-sm text-rose-700">{error}</p>);
+  const fieldError = (field: keyof FieldErrors) => errors[field]?.map((error) => (
+    <p key={error} className="mt-2 flex items-start gap-1.5 text-sm text-danger-ink">
+      <AlertIcon className="mt-0.5 size-3.5 shrink-0" />
+      {error}
+    </p>
+  ));
 
   return (
-    <form onSubmit={submit} className="space-y-6" noValidate>
-      <label className="block font-medium text-slate-900">Company name
-        <input value={companyName} onChange={(event) => { setCompanyName(event.target.value); invalidateSetup(); }} className="mt-2 block w-full rounded-md border border-slate-300 px-3 py-2" />
+    <form onSubmit={submit} className="space-y-7" noValidate>
+      <label className="block">
+        <span className={fieldLabel}>Company name</span>
+        <input value={companyName} onChange={(event) => { setCompanyName(event.target.value); invalidateSetup(); }} className={`${inputBase} mt-2`} />
         {fieldError("companyName")}
       </label>
       <fieldset className="space-y-3">
-        <legend className="font-medium text-slate-900">FAQ or policy source</legend>
-        <div className="flex gap-4 text-sm">
-          <label><input type="radio" checked={sourceKind === "pasted-text"} onChange={() => { setSourceKind("pasted-text"); invalidateSetup(); }} /> Paste text</label>
-          <label><input type="radio" checked={sourceKind === "public-https-link"} onChange={() => { setSourceKind("public-https-link"); invalidateSetup(); }} /> Public HTTPS link</label>
+        <legend className={fieldLabel}>FAQ or policy source</legend>
+        <div className="inline-grid w-full grid-cols-2 gap-1 rounded-xl bg-shell p-1 sm:w-auto">
+          <label>
+            <input type="radio" className="peer sr-only" checked={sourceKind === "pasted-text"} onChange={() => { setSourceKind("pasted-text"); invalidateSetup(); }} />
+            <span className={channelTile}>Paste text</span>
+          </label>
+          <label>
+            <input type="radio" className="peer sr-only" checked={sourceKind === "public-https-link"} onChange={() => { setSourceKind("public-https-link"); invalidateSetup(); }} />
+            <span className={channelTile}>Public HTTPS link</span>
+          </label>
         </div>
         {sourceKind === "pasted-text" ? (
-          <textarea value={sourceValue} onChange={(event) => updateSource(event.target.value)} rows={7} className="w-full rounded-md border border-slate-300 p-3" aria-label="FAQ or policy text" />
+          <textarea value={sourceValue} onChange={(event) => updateSource(event.target.value)} rows={7} className={`${inputBase} leading-relaxed`} aria-label="FAQ or policy text" />
         ) : (
           <>
-            <input value={sourceValue} onChange={(event) => updateSource(event.target.value)} placeholder="https://company.example/faq" className="block w-full rounded-md border border-slate-300 px-3 py-2" aria-label="FAQ or policy URL" />
-            <button type="button" onClick={() => void importPublicSource()} disabled={!sourceValue.trim() || importing} className="mt-3 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50">{importing ? "Importing source…" : "Import source"}</button>
+            <input value={sourceValue} onChange={(event) => updateSource(event.target.value)} placeholder="https://company.example/faq" className={inputBase} aria-label="FAQ or policy URL" />
+            <button type="button" onClick={() => void importPublicSource()} disabled={!sourceValue.trim() || importing} className={`${btnSecondary} mt-3`}>{importing ? "Importing source…" : "Import source"}</button>
           </>
         )}
         {fieldError("source")}
@@ -141,22 +157,41 @@ export function SourceSetupForm() {
       <ScenarioPicker value={scenarioId} onChange={(value) => { setScenarioId(value); invalidateSetup(); }} />
       {fieldError("scenario")}
       <fieldset className="space-y-3">
-        <legend className="font-medium text-slate-900">Optional experience notes</legend>
-        <input type="file" accept="text/plain,text/markdown,.txt,.md" onChange={readNoteFile} className="block text-sm" />
-        <textarea value={notes} onChange={(event) => { setNotes(event.target.value); invalidateSetup(); }} rows={3} className="w-full rounded-md border border-slate-300 p-3" placeholder="Paste a coaching note" />
-        <select value={noteKind} onChange={(event) => { setNoteKind(event.target.value as ExperienceNote["kind"]); invalidateSetup(); }} className="rounded-md border border-slate-300 px-3 py-2">
-          <option value="personal-coaching-note">Personal coaching note</option>
-          <option value="approved-practice-advice">Approved practice advice</option>
-        </select>
-        <select value={noteFormat} onChange={(event) => { setNoteFormat(event.target.value as ExperienceNoteFormat); invalidateSetup(); }} className="rounded-md border border-slate-300 px-3 py-2" aria-label="Experience note format">
-          <option value="plain-text">Plain text</option>
-          <option value="markdown">Markdown</option>
-        </select>
+        <legend className={fieldLabel}>Optional experience notes</legend>
+        <input
+          type="file"
+          accept="text/plain,text/markdown,.txt,.md"
+          onChange={readNoteFile}
+          className="block w-full text-sm text-ink-muted file:mr-3 file:cursor-pointer file:rounded-lg file:border file:border-line file:bg-transparent file:px-3.5 file:py-2 file:text-sm file:font-semibold file:text-ink transition-colors duration-150 hover:file:border-line-strong"
+        />
+        <textarea value={notes} onChange={(event) => { setNotes(event.target.value); invalidateSetup(); }} rows={3} className={`${inputBase} leading-relaxed`} placeholder="Paste a coaching note" />
+        <div className="flex flex-wrap gap-3">
+          <select value={noteKind} onChange={(event) => { setNoteKind(event.target.value as ExperienceNote["kind"]); invalidateSetup(); }} className="rounded-lg border border-line bg-shell px-3 py-2.5 text-base text-ink transition-colors duration-150 hover:border-line-strong focus:border-amber focus:outline-none">
+            <option value="personal-coaching-note">Personal coaching note</option>
+            <option value="approved-practice-advice">Approved practice advice</option>
+          </select>
+          <select value={noteFormat} onChange={(event) => { setNoteFormat(event.target.value as ExperienceNoteFormat); invalidateSetup(); }} className="rounded-lg border border-line bg-shell px-3 py-2.5 text-base text-ink transition-colors duration-150 hover:border-line-strong focus:border-amber focus:outline-none" aria-label="Experience note format">
+            <option value="plain-text">Plain text</option>
+            <option value="markdown">Markdown</option>
+          </select>
+        </div>
         {fieldError("notes")}
       </fieldset>
       {fieldError("facts")}
-      <button type="submit" disabled={!confirmed} className="rounded-md bg-indigo-600 px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Start practice call</button>
-      {ready && <p role="status" className="text-sm font-medium text-emerald-700">Source confirmed. This session is ready for the trainee to answer the simulated customer by voice.</p>}
+      <div className="flex flex-wrap items-center gap-4 border-t border-line pt-6">
+        <button type="submit" disabled={!confirmed} className={btnPrimary}>
+          Start practice call
+          <span className="flex size-6 items-center justify-center rounded-full bg-amber-ink/15">
+            <ArrowRightIcon className="size-3.5" />
+          </span>
+        </button>
+        {ready && (
+          <p role="status" className="flex items-center gap-2 text-sm font-semibold text-ok-ink">
+            <CheckIcon className="size-4 shrink-0" />
+            Source confirmed. This session is ready for the trainee to answer the simulated customer by voice.
+          </p>
+        )}
+      </div>
     </form>
   );
 }

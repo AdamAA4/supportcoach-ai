@@ -10,6 +10,7 @@ import { AssemblyAiVoiceAgent, createConfiguredVoiceAgent } from "../voice/assem
 import { reduceCallState, type CallState, type VoiceAgent, type VoiceAgentEvent } from "../voice/voice-agent";
 import { ReferencePanel } from "./reference-panel";
 import { TranscriptPane } from "./transcript-pane";
+import { btnDanger, btnPrimary, btnSecondary, displayTitle, EndCallIcon, MicIcon, MicOffIcon, StatusLamp, type LampTone } from "./ui";
 
 type CallConsoleProps = { context: PracticeContext; createAgent?: () => VoiceAgent; onCallEnded?: (transcript: TranscriptTurn[]) => void };
 type MicrophoneStatus = "not-started" | "recording" | "muted";
@@ -19,6 +20,10 @@ type FixturePlaybackAwareVoiceAgent = VoiceAgent & { completeCustomerAudioPlayba
 const now = () => new Date().toISOString();
 const transcriptTurn = (speaker: TranscriptTurn["speaker"], text: string, source: TranscriptTurn["source"]): TranscriptTurn => ({ id: `${speaker}-${crypto.randomUUID()}`, speaker, text, source, startedAt: now(), endedAt: now() });
 const createConfiguredAgent = (): VoiceAgent => createConfiguredVoiceAgent();
+
+const callStateTone = (state: CallState): LampTone =>
+  state === "error" ? "danger" : state === "idle" || state === "ended" ? "neutral" : "ok";
+const callStateLive = (state: CallState): boolean => state !== "idle" && state !== "ended" && state !== "error";
 
 export function CallConsole({ context, createAgent = createConfiguredAgent, onCallEnded }: CallConsoleProps) {
   const agent = useRef<VoiceAgent | undefined>(undefined);
@@ -104,5 +109,57 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
     }
   };
   const displayTurns = [...turns, ...(partialCustomer ? [transcriptTurn("customer", partialCustomer, "mock-transcript")] : []), ...(partialTrainee ? [transcriptTurn("trainee", partialTrainee, "live-transcript")] : [])];
-  return <main className="max-w-6xl"><p className="text-sm font-semibold uppercase tracking-wide text-indigo-700">Practice call</p><h1 className="mt-2 text-3xl font-bold text-slate-950">{context.scenario.title}</h1><p className="mt-2 text-slate-700">Join the voice call, then answer the AI simulated customer from the confirmed session reference.</p><div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)]"><div className="space-y-6"><section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" aria-label="Call controls"><p className="font-semibold text-slate-950">Call status: <span className="capitalize">{state.replace("-", " ")}</span></p><p className="mt-2 text-sm text-slate-700">Microphone: {microphone === "recording" ? "On — speak naturally" : microphone === "muted" ? "Muted" : "Not connected"}</p><p className="mt-1 text-sm text-slate-700">Customer audio: {customerAudioActive ? "Speaking" : customerAudioAvailability === "text-only" ? "Unavailable" : "Ready"}</p>{error && <div role={state === "error" ? "alert" : "status"} className="mt-4 rounded-md bg-rose-50 p-3 text-rose-800">{error}{state === "error" && <button type="button" onClick={() => void joinVoiceCall(true)} className="ml-3 underline">Retry voice call</button>}</div>}<div className="mt-4 flex flex-wrap gap-3">{state === "idle" && <button type="button" onClick={() => void joinVoiceCall()} className="rounded-md bg-indigo-600 px-4 py-2 font-medium text-white">Join voice call</button>}{state === "connecting" && <button type="button" disabled className="rounded-md bg-indigo-600 px-4 py-2 font-medium text-white opacity-50">Connecting microphone…</button>}{(microphone === "recording" || microphone === "muted") && <button type="button" onClick={() => void mute()} disabled={state === "ended" || state === "error"} className="rounded-md border border-slate-300 px-4 py-2">{microphone === "muted" ? "Unmute" : "Mute"}</button>}{state !== "idle" && <button type="button" onClick={() => void end()} disabled={state === "ended"} className="rounded-md border border-rose-300 px-4 py-2 text-rose-800">End call</button>}</div></section><TranscriptPane turns={displayTurns} /></div><ReferencePanel context={context} /></div></main>;
+  const callLive = callStateLive(state);
+  return (
+    <div className="settle-in">
+      <header>
+        <h1 className={`${displayTitle} text-3xl leading-[1.1] sm:text-4xl`}>{context.scenario.title}</h1>
+        <p className="mt-4 max-w-2xl leading-relaxed text-ink-soft">Join the voice call, then answer the AI simulated customer from the confirmed session reference.</p>
+      </header>
+      <div className="mt-8 grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)] lg:gap-6">
+        <div className="space-y-5">
+          <section aria-label="Call controls" className="rounded-2xl bg-shell p-1.5 ring-1 ring-line">
+            <div className="rounded-xl bg-panel">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
+                <span className="inline-block rounded-md bg-tape px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-tape-ink">{context.sourceLabel}</span>
+                <span className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 font-mono text-xs font-semibold capitalize ${state === "error" ? "bg-danger-bg text-danger-ink" : callLive ? "bg-ok-bg text-ok-ink" : "bg-panel-2 text-ink-muted"}`}>
+                  <StatusLamp tone={callStateTone(state)} pulse={callLive} />
+                  {state.replace("-", " ")}
+                </span>
+              </div>
+              <div className="space-y-2.5 px-5 pb-1 pt-4 sm:px-6">
+                <p className="flex items-center gap-2.5 text-sm text-ink-soft">
+                  <StatusLamp tone={microphone === "recording" ? "ok" : microphone === "muted" ? "warn" : "neutral"} pulse={microphone === "recording"} />
+                  <span>Microphone: {microphone === "recording" ? "On — speak naturally" : microphone === "muted" ? "Muted" : "Not connected"}</span>
+                </p>
+                <p className="flex items-center gap-2.5 text-sm text-ink-soft">
+                  <StatusLamp tone={customerAudioActive ? "ok" : customerAudioAvailability === "text-only" ? "danger" : "warn"} pulse={customerAudioActive} />
+                  <span>Customer audio: {customerAudioActive ? "Speaking" : customerAudioAvailability === "text-only" ? "Unavailable" : "Ready"}</span>
+                </p>
+              </div>
+              {error && (
+                <div role={state === "error" ? "alert" : "status"} className="mx-5 mt-4 rounded-lg border border-danger/40 bg-danger-bg px-3.5 py-3 text-sm text-danger-ink sm:mx-6">
+                  {error}
+                  {state === "error" && <button type="button" onClick={() => void joinVoiceCall(true)} className="ml-3 font-bold underline underline-offset-2 transition-opacity duration-150 hover:opacity-80">Retry voice call</button>}
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2.5 px-5 py-5 sm:px-6">
+                {state === "idle" && <button type="button" onClick={() => void joinVoiceCall()} className={btnPrimary}><MicIcon className="size-4" />Join voice call</button>}
+                {state === "connecting" && <button type="button" disabled className={`${btnPrimary} opacity-70`}><span aria-hidden="true" className="rec-pulse inline-block size-2 rounded-full bg-amber-ink/70" />Connecting microphone…</button>}
+                {(microphone === "recording" || microphone === "muted") && (
+                  <button type="button" onClick={() => void mute()} disabled={state === "ended" || state === "error"} className={btnSecondary}>
+                    {microphone === "muted" ? <MicOffIcon className="size-4" /> : <MicIcon className="size-4" />}
+                    {microphone === "muted" ? "Unmute" : "Mute"}
+                  </button>
+                )}
+                {state !== "idle" && <button type="button" onClick={() => void end()} disabled={state === "ended"} className={btnDanger}><EndCallIcon className="size-4" />End call</button>}
+              </div>
+            </div>
+          </section>
+          <TranscriptPane turns={displayTurns} live={callLive} />
+        </div>
+        <ReferencePanel context={context} />
+      </div>
+    </div>
+  );
 }

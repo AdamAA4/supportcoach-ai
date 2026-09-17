@@ -1,0 +1,18 @@
+{
+  "capturedAt": "2026-09-17",
+  "tool": "Playwright (chromium) against `npx next start -p 3100` production build",
+  "generator": "tmp-screenshots/capture-review.mjs (static states), tmp-screenshots/capture-live.mjs (live call states, with --use-fake-ui-for-media-stream --use-fake-device-for-media-stream)",
+  "seededContent": "Northwind Telecom / pasted 4-question delivery-and-refund FAQ / late-delivery scenario; report seeded by POSTing a scripted 4-turn transcript to /api/evaluate from the page itself; live captures joined a real mock-voice-mode call (NEXT_PUBLIC_VOICE_MODE=mock) with a fake microphone",
+  "rasters": [
+    { "file": "desktop-home.png", "url": "/", "viewport": "1440x900", "dpr": 1 },
+    { "file": "desktop-setup.png", "url": "/setup (filled, unfocused)", "viewport": "1440x900", "dpr": 1 },
+    { "file": "desktop-call.png", "url": "/call (session loaded, idle)", "viewport": "1440x900", "dpr": 1 },
+    { "file": "desktop-report.png", "url": "/report (seeded evaluation)", "viewport": "1440x900", "dpr": 1 },
+    { "file": "desktop-call-live.png", "url": "/call (joined, mic live, REC on)", "viewport": "1440x900", "dpr": 1 },
+    { "file": "mobile-home.png", "url": "/", "viewport": "390x844", "dpr": 2 },
+    { "file": "mobile-setup.png", "url": "/setup (filled)", "viewport": "390x844", "dpr": 2 },
+    { "file": "mobile-call.png", "url": "/call (idle)", "viewport": "390x844", "dpr": 2 },
+    { "file": "mobile-report.png", "url": "/report (seeded)", "viewport": "390x844", "dpr": 2 },
+    { "file": "mobile-call-live.png", "url": "/call (joined, mic live)", "viewport": "390x844", "dpr": 2 }
+  ]
+}

@@ -1,5 +1,27 @@
 import Link from "next/link";
 
+import { ArrowRightIcon, btnPrimary, displayTitle } from "../components/ui";
+
 export default function Home() {
-  return <main className="max-w-3xl"><p className="text-sm font-semibold uppercase tracking-wide text-indigo-700">SupportCoach AI</p><h1 className="mt-2 text-4xl font-bold text-slate-950">Practice support conversations with an AI customer</h1><p className="mt-4 text-lg text-slate-700">Ground every simulated call in a confirmed FAQ or policy source, then practice your response by voice or typed fallback.</p><Link href="/setup" className="mt-7 inline-block rounded-md bg-indigo-600 px-5 py-3 font-semibold text-white">Set up a practice call</Link></main>;
+  return (
+    <div className="mx-auto w-full max-w-3xl px-5 py-6 sm:py-10">
+      <header className="flex items-center justify-between border-b border-line pb-5">
+        <span className="text-base font-bold tracking-tight text-ink">SupportCoach AI</span>
+        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">Session tape</span>
+      </header>
+      <main className="settle-in pb-16 pt-16 sm:pb-24 sm:pt-24">
+        <h1 className={`${displayTitle} text-[2.6rem] leading-[1.05] sm:text-6xl`}>
+          Practice support conversations with an AI customer
+        </h1>
+        <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
+          Ground every simulated call in a confirmed FAQ or policy source, then practice your response by voice or
+          typed fallback.
+        </p>
+        <Link href="/setup" className={`${btnPrimary} mt-9`}>
+          Set up a practice call
+          <ArrowRightIcon className="size-4" />
+        </Link>
+      </main>
+    </div>
+  );
 }

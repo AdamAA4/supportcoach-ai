@@ -10,6 +10,7 @@ import { validatePracticeContext, type PracticeContext } from "../../domain/vali
 import type { TranscriptTurn } from "../../domain/transcript";
 import { equalData, isCoachingReport } from "../../evaluation/validation";
 import { saveCompletedPractice } from "../../storage/local-practice-store";
+import { btnPrimary, displayTitle } from "../../components/ui";
 
 export default function CallPage() {
   const router = useRouter();
@@ -54,7 +55,51 @@ export default function CallPage() {
     }
   };
 
-  if (!ready) return <main><p>Loading practice session…</p></main>;
-  if (!context) return <main className="max-w-2xl"><p className="text-sm font-semibold uppercase tracking-wide text-indigo-700">Practice call</p><h1 className="mt-2 text-3xl font-bold text-slate-950">Confirm a source before starting</h1><p className="mt-3 text-slate-700">This call needs the current session&apos;s confirmed FAQ or policy snapshot and notes. Set up a new practice session to continue.</p><Link href="/setup" className="mt-5 inline-block rounded-md bg-indigo-600 px-4 py-2 font-medium text-white">Go to source setup</Link></main>;
-  return <>{evaluating && <p role="status" className="mb-4 rounded-md bg-indigo-50 p-3 text-indigo-800">Preparing your coaching report…</p>}{reportError && <div role="alert" className="mb-4 rounded-md bg-rose-50 p-3 text-rose-800">{reportError}<button type="button" onClick={() => { if (completedTurns.current) void evaluate(completedTurns.current); }} className="ml-3 underline">Retry report</button></div>}<CallConsole context={context} onCallEnded={(transcript) => void evaluate(transcript)} /></>;
+  if (!ready)
+    return (
+      <main className="grid min-h-dvh place-items-center px-5">
+        <p role="status" className="flex items-center gap-2.5 text-sm font-semibold text-ink-soft">
+          <span aria-hidden="true" className="rec-pulse inline-block size-2.5 rounded-full bg-warn" />
+          Loading practice session…
+        </p>
+      </main>
+    );
+  if (!context)
+    return (
+      <main className="mx-auto grid w-full max-w-2xl place-items-center px-5 py-16 sm:py-24">
+        <div className="settle-in w-full rounded-2xl bg-shell p-1.5 ring-1 ring-line">
+          <div className="rounded-xl bg-panel p-6 sm:p-8">
+            <h1 className={`${displayTitle} text-3xl leading-[1.15] sm:text-4xl`}>Confirm a source before starting</h1>
+            <p className="mt-5 leading-relaxed text-ink-soft">
+              This call needs the current session&apos;s confirmed FAQ or policy snapshot and notes. Set up a new
+              practice session to continue.
+            </p>
+            <Link href="/setup" className={`${btnPrimary} mt-7`}>Go to source setup</Link>
+          </div>
+        </div>
+      </main>
+    );
+  return (
+    <main className="mx-auto w-full max-w-6xl px-5 py-8 sm:py-12">
+      {evaluating && (
+        <p role="status" className="settle-in mb-4 flex items-center gap-2.5 rounded-lg border border-line bg-warn-bg px-4 py-3 text-sm font-semibold text-warn-ink">
+          <span aria-hidden="true" className="rec-pulse inline-block size-2.5 rounded-full bg-warn" />
+          Preparing your coaching report…
+        </p>
+      )}
+      {reportError && (
+        <div role="alert" className="mb-4 rounded-lg border border-danger/40 bg-danger-bg px-4 py-3 text-sm text-danger-ink">
+          {reportError}
+          <button
+            type="button"
+            onClick={() => { if (completedTurns.current) void evaluate(completedTurns.current); }}
+            className="ml-3 font-bold underline underline-offset-2 transition-opacity duration-150 hover:opacity-80"
+          >
+            Retry report
+          </button>
+        </div>
+      )}
+      <CallConsole context={context} onCallEnded={(transcript) => void evaluate(transcript)} />
+    </main>
+  );
 }

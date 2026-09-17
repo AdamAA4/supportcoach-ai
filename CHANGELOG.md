@@ -9,7 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Product and design records: PRODUCT.md (product truth), DESIGN.md (Rehearsal Studio design system), and `.impeccable/` direction brief and review evidence (screenshots with provenance) from the 2026-09-17 design round.
+- Shared visual primitives module (`src/components/ui.tsx`) with studio button, input, signal-lamp, and authored SVG icon styles used across all screens.
+- Branded app icon (amber voice-bar mark on charcoal) served as the site favicon.
 - Model-owned `HANDOFF.md` protocol and `npm run handoff` command for safe transitions between coding tools.
+
+### Changed
+
+- Full visual redesign of the home, source setup, practice call, and coaching report screens in the "Rehearsal Studio" direction, chosen by the product lead from three presented options: warm charcoal ground (#211d1a), cream ink (#f2ead8), amber primary (#e8a33d), green/amber/red signal lamps, and one cream "session sheet" surface reserved for confirmed source material.
+- Typography via bundled `next/font` fonts (no new dependency): Bricolage Grotesque for display and UI, Geist Mono reserved for measured data (timecodes, hashes, scores, status values) with tabular numerals.
+- Practice call screen rebuilt as a double-bezel console island: cream source chip, live signal lamps for call/microphone/customer-audio states (pulsing when live), amber transport buttons, and a timecoded transcript track list with a red REC pulse while the call is live; the session reference renders as the sticky cream sheet.
+- Coaching report rebuilt as studio session notes: monospace tabular score numerals with three-segment amber meters, staggered card entrances, amber next-exercise panel, and a chevron transcript disclosure.
+- Source setup form restyled with a segmented paste/link channel control, selectable scenario cards with amber lamp markers, the cream extracted-source sheet with CONFIRMED stamp styling, and dark themed inputs, file input, and selects.
+- Motion and states per design engineering review: 150-200ms custom ease-out transitions, 0.97 press feedback, themed browser surfaces (amber selection and caret, themed scrollbars and focus rings), 16px form controls and 44px touch targets for Android Chrome, and full `prefers-reduced-motion` support.
+- Call-screen composition recorded as accepted deviation (2026-09-17, finish review): the console island sits in the wider left grid column with the session sheet opening at the same y on desktop, rather than spanning both columns; all first-viewport elements remain visible without scroll.
 
 - Vercel production deployment at https://supportcoach-ai-ten.vercel.app with live voice configuration stored for Production and Preview.
 - Deterministic coaching evaluation with four explained scores, confirmed-source fact checks, two strengths, missed facts, unsupported claims, one next exercise, and the exact completed transcript.
