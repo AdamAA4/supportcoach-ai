@@ -14,6 +14,10 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). Run the engineering checks with `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
 
+## Agent handoff
+
+When moving between coding tools, the outgoing coding model runs `npm run handoff`, writes the model-owned notes in [HANDOFF.md](HANDOFF.md), then commits and pushes the completed work and handoff together. The command captures the current branch, commit, and changed files; it does not overwrite the model's written notes.
+
 ## Vercel deployment
 
 Vercel is the recommended host for this Next.js app. This checkout does not currently have a Git remote, so use one of these paths:
