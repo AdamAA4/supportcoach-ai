@@ -10,7 +10,7 @@ import { AssemblyAiVoiceAgent, createConfiguredVoiceAgent } from "../voice/assem
 import { reduceCallState, type CallState, type VoiceAgent, type VoiceAgentEvent } from "../voice/voice-agent";
 import { ReferencePanel } from "./reference-panel";
 import { TranscriptPane } from "./transcript-pane";
-import { btnDanger, btnPrimary, btnSecondary, displayTitle, EndCallIcon, MicIcon, MicOffIcon, StatusLamp, type LampTone } from "./ui";
+import { BackLink, btnDanger, btnPrimary, btnSecondary, displayTitle, EndCallIcon, MicIcon, MicOffIcon, StatusLamp, type LampTone } from "./ui";
 
 type CallConsoleProps = { context: PracticeContext; createAgent?: () => VoiceAgent; onCallEnded?: (transcript: TranscriptTurn[]) => void };
 type MicrophoneStatus = "not-started" | "recording" | "muted";
@@ -113,6 +113,9 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
   return (
     <div className="settle-in">
       <header>
+        <div className="mb-6">
+          <BackLink href="/setup" label="Source setup" />
+        </div>
         <h1 className={`${displayTitle} text-3xl leading-[1.1] sm:text-4xl`}>{context.scenario.title}</h1>
         <p className="mt-4 max-w-2xl leading-relaxed text-ink-soft">Join the voice call, then answer the AI simulated customer from the confirmed session reference.</p>
       </header>

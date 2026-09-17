@@ -73,7 +73,7 @@ describe("public HTTPS import boundary", () => {
     expect(checkServerIdentity).toHaveBeenCalledWith("example.com", {});
     expect(lookup).toHaveBeenCalledTimes(1);
     expect(fetch).not.toHaveBeenCalled();
-    expect(await response.json()).toMatchObject({ canonicalUrl: "https://example.com/policy", extractedText: "Refunds Within 30 days.", contentHash: expect.stringMatching(/^sha256:[a-f0-9]{64}$/) });
+    expect(await response.json()).toMatchObject({ canonicalUrl: "https://example.com/policy", extractedText: "Refunds\nWithin 30 days.", contentHash: expect.stringMatching(/^sha256:[a-f0-9]{64}$/) });
   });
 
   it("accepts public IPv6 without a DNS lookup", async () => {

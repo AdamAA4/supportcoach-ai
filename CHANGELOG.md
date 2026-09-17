@@ -36,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Practice call screen rebuilt as a double-bezel console island: cream source chip, live signal lamps for call/microphone/customer-audio states (pulsing when live), rose transport buttons, and a timecoded transcript track list with a red REC pulse while the call is live; the session reference renders as the sticky cream sheet.
 - Coaching report rebuilt as coaching records: Fraunces serif score numerals with three-segment rose meters, staggered card entrances, warm next-exercise panel, and a chevron transcript disclosure.
 - Source setup form restyled with a segmented paste/link channel control, selectable scenario cards with rose lamp markers, the cream extracted-source sheet with CONFIRMED stamp styling, and themed inputs, file input, and selects at 16px (no Android focus zoom).
+- Back navigation added to the setup, call, and report screens (Home on setup and report; Source setup on the call screen).
+- Session reference facts list is collapsed by default to three entries with a "Show all facts" toggle and a fact count.
 - Import body cap raised from 200 KB to 2 MB (product lead request): pages up to 2 MB now import cleanly, and oversized pages are rejected with their measured size and the recovery step. The extracted-text cap (200 KB) is unchanged.
 - Motion and states per design engineering review: 200-400ms custom ease-out transitions, 0.97 press feedback, themed browser surfaces (rose selection and caret, themed scrollbars and focus rings), 44px touch targets for Android Chrome, and full `prefers-reduced-motion` support.
 - Palette brightened across the app on product-lead feedback, keeping WCAG AA contrast.
@@ -44,6 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- FAQ import now preserves paragraph structure from imported pages: block-level tags (p, li, headings, table rows, and similar) become line breaks before text extraction, so each page section is extracted as its own reference fact. Previously the whole page collapsed into one page-length "Reference detail" blob, which made factual accuracy score 0 on imported pages because no trainee answer could match it.
+- Next exercise quotes at most 180 characters of the missed-fact answer, keeping the suggestion readable when a fact answer is long.
 - Source-channel segmented control: the selected option is now clearly visible as a white pill with soft shadow and ink text on the cream track (the Maison Rose port had collapsed the checked state into the track background).
 - Oversized-page import error now names the recovery: "This page is 4.6 MB, over the 2 MB import limit. Open the page, copy the FAQ or policy text, and paste it instead." (was "The reference source must be 200 KB or smaller.").
 - Remove the home page's "or typed fallback" clause so the copy matches the voice-only practice rule, and tune the mobile headline scale for 320px viewports (product lead approved on 2026-09-17).

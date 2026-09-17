@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 
 /* Shared visual primitives for the Maison Rose UI (ported from the cosmet project). Styling only — no behavior. */
 
@@ -123,5 +124,25 @@ export function ChevronDownIcon(props: IconProps) {
     <Svg {...props}>
       <path d="M5 9l7 7 7-7" />
     </Svg>
+  );
+}
+
+export function ChevronLeftIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M15 5l-7 7 7 7" />
+    </Svg>
+  );
+}
+
+export function BackLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 py-2 text-sm font-semibold text-ink-muted shadow-soft transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-accent-bright hover:text-ink active:scale-[0.97]"
+    >
+      <ChevronLeftIcon className="size-4" />
+      {label}
+    </Link>
   );
 }

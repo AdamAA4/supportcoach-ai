@@ -13,11 +13,26 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `8deb805`
-- Generated: 2026-09-17T23:10:59.302Z
-- Uncommitted files excluding this handoff: none
+- Current commit: `9bc80b5`
+- Generated: 2026-09-17T23:42:45.309Z
+- Uncommitted files excluding this handoff: 
 
-
+```text
+M .impeccable/review/desktop-call.png
+ M .impeccable/review/desktop-report.png
+ M .impeccable/review/mobile-call.png
+ M .impeccable/review/mobile-report.png
+ M BUGS.md
+ M CHANGELOG.md
+ M src/app/api/reference-import/route.test.ts
+ M src/app/api/reference-import/route.ts
+ M src/app/setup/page.tsx
+ M src/components/call-console.tsx
+ M src/components/coaching-report.tsx
+ M src/components/reference-panel.tsx
+ M src/components/ui.tsx
+ M src/evaluation/deterministic-evaluator.ts
+```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
 
@@ -45,16 +60,18 @@ Follow-up round 3 (2026-09-18, product-lead request): the import body cap was ra
 - Impeccable finish review (fresh subagent): first verdict `fix`; after placeholder/danger contrast token fixes, live-state captures (mock voice mode, fake mic), DESIGN.md, and provenance, the verdict pass resolved every item; the final documentation amendment (console-composition deviation recorded in the brief and CHANGELOG) flipped it to ship.
 - Visual evidence: `.impeccable/review/*.png` (desktop 1440x900, mobile 390x844 at 2x) with `provenance.json`; capture scripts preserved at `.impeccable/review/scripts/`.
 
+Follow-up round 4 (2026-09-18, product-lead feedback): imported pages now preserve paragraph structure — the HTML cleaner converts block-level tags to line breaks before extraction, so imports produce per-section reference facts instead of one page-length blob (the root cause of factual accuracy scoring 0 on imports). Next exercise quotes at most 180 characters of the missed-fact answer, and the report clamps the display with a Show-full toggle. Back navigation added (Home on setup/report, Source setup on the call screen), and the session-sheet facts list collapses to three entries with a Show-all toggle.
+
 ## Remaining work or known issues
 
 - Live AssemblyAI path was verified in mock voice mode only (joined call, lamps, REC); a smoke test with a real `ASSEMBLYAI_API_KEY` on a physical Android Chrome device is the recommended next check.
+- Imported pages that render their FAQ client-side (JavaScript-only accordions) still cannot be read by the server-side importer; pasting the text remains the recovery. The deterministic matcher also stays conservative on paraphrases.
 - The native file-input label ("Choose File") is unthemed browser copy, accepted in the finish review; revisit if it bothers anyone.
-- The seeded report screenshot shows factual accuracy 0 with matching answers: that is the deterministic evaluator's documented paraphrase limitation, not a UI defect.
-- The Mimosa pre-commit hook reported a partial scan (dependency-source and callgraph limits) on the redesign commit; re-run a full security audit when convenient.
+- The Mimosa pre-commit hook reported a partial scan (dependency-source and callgraph limits) on recent commits; re-run a full security audit when convenient.
 
 ## Instructions for the next agent
 
-- Approved scope was UI redesign only; behavior, routes, API contracts, and environment-variable handling are unchanged and must stay that way.
+- Approved scope was the UI redesign plus the product lead's follow-up fixes (navigation, extraction structure, next-exercise clamp, import cap); beyond that, behavior, routes, API contracts, and environment-variable handling must stay as they are.
 - Preserve the voice-only practice flow (no typed-response practice), the FAQ/notes grounding flow, server-only API secrets, and all test-pinned strings in `src/components/call-console.test.tsx` (including "Microphone: On — speak naturally") and `src/components/coaching-report.test.tsx`.
 - Follow DESIGN.md for any future UI work: the Maison Rose world (blush/white/plum/rose), cream session sheet only for confirmed source material, Fraunces for display, one rose accent, no kickers above headings, no fake data visuals.
 - Run `npm run handoff` before handing back, and commit completed work with its handoff together.

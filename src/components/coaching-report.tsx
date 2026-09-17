@@ -1,10 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import type { CoachingReport as Report } from "../domain/report";
 import { TranscriptPane } from "./transcript-pane";
-import { btnDanger, btnPrimary, ChevronDownIcon } from "./ui";
+import { BackLink, btnDanger, btnPrimary, ChevronDownIcon } from "./ui";
+
+const EXERCISE_LIMIT = 320;
 
 const dimensions = [
   { key: "factualAccuracy", label: "Factual accuracy", explanation: "How many confirmed reference answers you stated with their conditions. Conflicting claims reduce this score." },
@@ -31,8 +33,13 @@ function FeedbackList({ title, items, empty }: { title: string; items: string[];
 }
 
 export function CoachingReport({ report, onClear }: { report: Report; onClear: () => void }) {
+  const [exerciseExpanded, setExerciseExpanded] = useState(false);
+  const exerciseLong = report.nextExercise.length > EXERCISE_LIMIT;
   return (
-    <main className="mx-auto w-full max-w-6xl px-5 py-10 sm:py-14">
+    <main className="mx-auto w-full max-w-6xl px-5 py-8 sm:py-12">
+      <div className="mb-8">
+        <BackLink href="/" label="Home" />
+      </div>
       <div className="space-y-5 sm:space-y-6">
         <header className="settle-in">
           <h1 className="font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-balance text-ink sm:text-[2.75rem]">
@@ -67,7 +74,18 @@ export function CoachingReport({ report, onClear }: { report: Report; onClear: (
         </div>
         <section className="rounded-2xl border border-warn/30 bg-warn-bg p-5">
           <h2 className="font-display text-lg font-bold tracking-tight text-warn-ink">Next exercise</h2>
-          <p className="mt-3 break-words leading-relaxed text-ink-soft">{report.nextExercise}</p>
+          <p className="mt-3 break-words leading-relaxed text-ink-soft">
+            {exerciseLong && !exerciseExpanded ? `${report.nextExercise.slice(0, EXERCISE_LIMIT).trimEnd()}...` : report.nextExercise}
+          </p>
+          {exerciseLong && (
+            <button
+              type="button"
+              onClick={() => setExerciseExpanded(!exerciseExpanded)}
+              className="mt-3 text-sm font-bold text-warn-ink underline underline-offset-2 transition-opacity duration-200 hover:opacity-80"
+            >
+              {exerciseExpanded ? "Show less" : "Show full exercise"}
+            </button>
+          )}
         </section>
         <details className="group rounded-2xl border border-line bg-panel p-5 shadow-card">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-bold text-ink [&::-webkit-details-marker]:hidden">

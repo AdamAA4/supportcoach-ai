@@ -4,6 +4,8 @@ Last updated: 2026-09-17
 
 | Severity | Issue | Notes |
 | --- | --- | --- |
+| --- | Resolved factual accuracy scoring 0 on imported pages | The HTML cleaner collapsed entire pages into a single line, so imports became one page-length "Reference detail" blob that no trainee answer could match. Block-level tags now preserve paragraph structure (2026-09-18); per-section facts make lexical matching possible. |
+| --- | Resolved unreadable next exercise on long fact answers | The suggestion quoted the full missed-fact answer. It now quotes at most 180 characters (evaluator) and the report clamps display with a Show-full toggle (2026-09-18). |
 | --- | Resolved home page "typed fallback" copy | The home screen advertised a typed-response option that live practice deliberately does not have. The clause was removed on 2026-09-17 with the product lead's approval; the copy now reads "practice your response by voice." |
 | --- | Resolved Android Chrome speaker output | Provider PCM streaming, native 24 kHz Chromium playback, and live transcript deltas were verified on a physical phone by the product lead on 2026-09-17. |
 | --- | Resolved customer audio fragmentation | PCM reply chunks now share one scheduled playback timeline, and microphone capture uses the browser default sample rate before resampling to 24 kHz for the provider. |
