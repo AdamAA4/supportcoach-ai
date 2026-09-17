@@ -45,6 +45,14 @@ describe("deterministic evaluation", () => {
     expect(report.unsupportedClaims).toEqual([]);
     expect(report.scores.factualAccuracy).toBe(3);
   });
+  it.each([
+    ["Not all refunds are available within 30 days for unopened items.", 0, []],
+    ["Refunds are available within 30 days for unopened items, the support team checks the order in 2 minutes.", 3, []],
+  ])("uses fact-local evidence rather than the old lexical topic window: %s", async (answer, factualAccuracy, unsupportedClaims) => {
+    const report = await evaluate([turn(answer)]);
+    expect(report.scores.factualAccuracy).toBe(factualAccuracy);
+    expect(report.unsupportedClaims).toEqual(unsupportedClaims);
+  });
   it("keeps different confirmed numeric answers from contradicting one another", async () => {
     const second = { ...context.facts[0], id: "processing", answer: "Refund processing takes 5 business days.", keywords: ["refund", "processing", "days"] };
     const report = await new DeterministicEvaluator(context.sourceProvenance).evaluate({ ...context, facts: [...context.facts, second], scenario: { ...context.scenario, factIds: [...context.scenario.factIds, second.id] }, transcript: [turn(context.facts[0].answer), turn(second.answer)] });
