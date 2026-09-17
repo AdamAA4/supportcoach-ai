@@ -13,7 +13,7 @@ export type FactualMatchResult = {
   unsupportedClaims: string[];
 };
 
-type TokenWindow = {
+type EvidenceSpan = {
   tokens: string[];
   originalText: string;
   isQuestion: boolean;
@@ -39,12 +39,6 @@ const OPPOSITE_PAIRS = [
   ["available", "unavailable"],
 ] as const;
 const NEGATORS = new Set(["not", "never", "no", "cannot", "cant"]);
-const LEADING_NEGATORS = new Set(["never", "no"]);
-const CLAUSE_SUBJECTS = new Set(["i", "we", "you", "they", "he", "she", "it", "there"]);
-const FINITE_PREDICATES = new Set([
-  "am", "is", "are", "was", "were", "can", "cannot", "cant", "will", "would",
-  "could", "should", "may", "might", "must", "do", "does", "did", "have", "has", "had",
-]);
 
 export const normalizeFactTokens = (text: string): string[] =>
   text.toLowerCase()
@@ -111,73 +105,31 @@ export const compileFactMatchSpecs = (facts: ReferenceFact[]): Map<string, FactM
 const positionsOf = (tokens: string[], terms: string[]): number[] =>
   terms.flatMap((term) => tokens.flatMap((token, index) => token === term ? [index] : []));
 
-const clauseSegments = (text: string, allSpecs: FactMatchSpec[]): string[] => {
-  const subjects = new Set(allSpecs.flatMap((spec) => spec.subjectTerms));
-  const relations = new Set(allSpecs.flatMap((spec) => spec.relationTerms));
-  const isIndependent = (value: string): boolean => {
-    const tokens = normalizeFactTokens(value);
-    const finitePredicate = tokens.findIndex((token) => FINITE_PREDICATES.has(token));
-    const hasLexicalSubject = finitePredicate > 0 && tokens
-      .slice(0, finitePredicate)
-      .some((token) => !FUNCTION_WORDS.has(token) && !NEGATORS.has(token));
-    if (hasLexicalSubject) return true;
-
-    const relationPredicate = tokens.findIndex((token) => relations.has(token));
-    return relationPredicate > 0 && tokens
-      .slice(0, relationPredicate)
-      .some((token) => CLAUSE_SUBJECTS.has(token) || subjects.has(token));
-  };
-
-  return text
-    .split(/[.!?;]+|\b(?:but|while|however)\b/i)
-    .flatMap((contrastSegment) => {
-      const commaParts = contrastSegment.split(",");
-      const segments: string[] = [];
-      let current = commaParts.shift()?.trim() ?? "";
-      for (const part of commaParts) {
-        const candidate = part.trim();
-        if (isIndependent(current) && isIndependent(candidate)) {
-          if (current) segments.push(current);
-          current = candidate;
-        } else {
-          current = `${current} ${candidate}`.trim();
-        }
-      }
-      if (current) segments.push(current);
-      return segments;
-    })
-    .filter(Boolean);
-};
-
-const claimWindowsFor = (
+const relationAnchoredSpans = (
   spec: FactMatchSpec,
   allSpecs: FactMatchSpec[],
   statement: { text: string; isQuestion: boolean },
-): TokenWindow[] => {
-  const allRelations = unique(allSpecs.flatMap((candidate) => candidate.relationTerms));
-  const anchorOwners = new Map<string, FactMatchSpec[]>();
-  for (const relation of allRelations) {
-    anchorOwners.set(
-      relation,
-      allSpecs.filter((candidate) => candidate.relationTerms.includes(relation)),
-    );
+): EvidenceSpan[] => {
+  if (spec.relationTerms.length === 0) {
+    return [{ ...statement, originalText: statement.text, tokens: normalizeFactTokens(statement.text) }];
   }
 
-  return clauseSegments(statement.text, allSpecs).flatMap((segment) => {
+  const differentRelations = unique(allSpecs.flatMap((candidate) => candidate.relationTerms))
+    .filter((term) => !spec.relationTerms.includes(term));
+
+  // Punctuation is an evidence boundary, not an attempt to parse independent
+  // English clauses. Never split bare conjunctions: they can belong to subjects.
+  return statement.text.split(/[,.!?;:]+|\b(?:but|while|however)\b/i).flatMap((segment) => {
     const tokens = normalizeFactTokens(segment);
     const ownAnchors = unique(positionsOf(tokens, spec.relationTerms))
       .sort((left, right) => left - right);
 
-    if (ownAnchors.length === 0) {
-      return [{ tokens, originalText: statement.text, isQuestion: statement.isQuestion }];
-    }
-
     return ownAnchors.map((anchor) => {
-      const previousDifferentAnchor = positionsOf(tokens, allRelations)
-        .filter((position) => position < anchor && !(anchorOwners.get(tokens[position]) ?? []).includes(spec))
+      const previousDifferentAnchor = positionsOf(tokens, differentRelations)
+        .filter((position) => position < anchor)
         .sort((left, right) => right - left)[0] ?? -1;
-      const nextDifferentAnchor = positionsOf(tokens, allRelations)
-        .filter((position) => position > anchor && !(anchorOwners.get(tokens[position]) ?? []).includes(spec))
+      const nextDifferentAnchor = positionsOf(tokens, differentRelations)
+        .filter((position) => position > anchor)
         .sort((left, right) => left - right)[0] ?? tokens.length;
       const subjectPositions = positionsOf(
         tokens.slice(previousDifferentAnchor + 1, anchor + 1),
@@ -193,7 +145,7 @@ const claimWindowsFor = (
           : Math.max(...subjectPositions);
       const leadingNegators = positionsOf(
         tokens.slice(previousDifferentAnchor + 1, subjectStart),
-        [...LEADING_NEGATORS],
+        [...NEGATORS],
       );
       const leadingNegator = leadingNegators.length === 0 ? -1 : Math.max(...leadingNegators);
       const start = leadingNegator === -1
@@ -212,16 +164,37 @@ const claimWindowsFor = (
 const hasScopedNegation = (tokens: string[], spec: FactMatchSpec): boolean =>
   tokens.some((token, index) => {
     if (!NEGATORS.has(token)) return false;
+    if (token === "not" && tokens[index + 1] === "all") return false;
     const firstSubject = tokens.findIndex((candidate) => spec.subjectTerms.includes(candidate));
-    const leadsSubject = LEADING_NEGATORS.has(token) && firstSubject > index;
+    const leadsSubject = firstSubject > index;
     return leadsSubject || tokens.slice(index + 1, index + 5).some((candidate) =>
       spec.relationTerms.includes(candidate) || spec.conditionTerms.includes(candidate),
     );
   });
 
-const assessWindow = (
+const hasRemovedCondition = (tokens: string[], spec: FactMatchSpec): boolean =>
+  spec.conditionTerms.some((condition) => {
+    // Required terms preserve source order. A condition followed by a lexical
+    // head ("unopened items") can be explicitly replaced by "all items".
+    // Temporal bounds such as "within 30 days" are not noun restrictions.
+    const head = spec.requiredTerms[spec.requiredTerms.indexOf(condition) + 1];
+    if (!head || /^\d+$/.test(head) || CONDITION_WORDS.has(head) ||
+      VALUE_UNITS.has(head) || NEGATORS.has(condition)) return false;
+
+    return tokens.some((token, index) => {
+      if (token !== "all" || tokens[index - 1] === "not") return false;
+      const headOffset = tokens.slice(index + 1).indexOf(head);
+      if (headOffset === -1) return false;
+      const modifiers = tokens.slice(index + 1, index + 1 + headOffset);
+      return !modifiers.includes(condition) && modifiers.every((term) =>
+        !FUNCTION_WORDS.has(term) && !NEGATORS.has(term) && !/^\d+$/.test(term),
+      );
+    });
+  });
+
+const assessSpan = (
   spec: FactMatchSpec,
-  window: TokenWindow,
+  window: EvidenceSpan,
 ): { supported: boolean; conflict: boolean } => {
   if (window.isQuestion) return { supported: false, conflict: false };
 
@@ -244,12 +217,9 @@ const assessWindow = (
     (spec.requiredTerms.includes(expected) && window.tokens.includes(opposite)) ||
     (spec.requiredTerms.includes(opposite) && window.tokens.includes(expected)),
   );
-  const expectedConditions = spec.conditionTerms.filter((term) => !NEGATORS.has(term));
-  const removedCondition = expectedConditions.length > 0 && (
-    window.tokens.includes("always") ||
-    window.tokens.includes("regardless") ||
-    (window.tokens.includes("all") &&
-      expectedConditions.every((term) => !window.tokens.includes(term)))
+  const removedCondition = hasRemovedCondition(window.tokens, spec);
+  const ambiguousNegation = window.tokens.some((token, index) =>
+    token === "not" && window.tokens[index + 1] === "all",
   );
   const expectsNegation = spec.requiredTerms.some((term) => NEGATORS.has(term));
   const unexpectedNegation = !expectsNegation && hasScopedNegation(window.tokens, spec);
@@ -260,7 +230,7 @@ const assessWindow = (
       .every((term) => window.tokens.includes(term));
   const conflict = conflictingNumber || oppositeCondition || removedCondition ||
     unexpectedNegation || removedNegation;
-  const supported = !conflict && !ambiguousFallbackValues &&
+  const supported = !conflict && !ambiguousFallbackValues && !ambiguousNegation &&
     spec.requiredTerms.every((term) => window.tokens.includes(term));
 
   return { supported, conflict };
@@ -279,8 +249,8 @@ export const matchReferenceFacts = (
     const spec = specs.get(fact.id);
     if (!spec) continue;
     for (const statement of statements) {
-      for (const window of claimWindowsFor(spec, allSpecs, statement)) {
-        const result = assessWindow(spec, window);
+      for (const window of relationAnchoredSpans(spec, allSpecs, statement)) {
+        const result = assessSpan(spec, window);
         if (result.supported) supportedFactIds.add(fact.id);
         if (result.conflict) unsupportedClaims.add(statement.text);
       }

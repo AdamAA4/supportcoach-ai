@@ -53,6 +53,17 @@ describe("matchReferenceFacts", () => {
   const processing = fact("processing", "Refunds are processed within 5 business days");
 
   it.each([
+    ["Refunds are available within 30 days for all items.", false, true],
+    ["Refunds are available within 30 days for unopened items regardless of payment method.", true, false],
+    ["Not all refunds are available within 30 days for unopened items.", false, false],
+    ["Refunds are available within 30 days for unopened items, the support team checks the order in 2 minutes.", true, false],
+  ])("anchors condition, polarity, and numeric evidence to the relation: %s", (text, supported, conflict) => {
+    const result = matchReferenceFacts([eligibility], [{ text, isQuestion: false }]);
+    expect(result.supportedFactIds).toEqual(new Set(supported ? [eligibility.id] : []));
+    expect(result.unsupportedClaims).toEqual(conflict ? [text] : []);
+  });
+
+  it.each([
     "Refunds are available within 30 days for unopened items and refunds are processed within 5 business days.",
     "Refunds are processed within 5 business days and refunds are available within 30 days for unopened items.",
   ])("supports two correct same-subject claims: %s", (text) => {

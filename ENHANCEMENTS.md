@@ -1,12 +1,14 @@
 # Enhancements
 
-Last updated: 2026-09-16
+Last updated: 2026-09-17
 
 Task 5 review fixes are recorded in the changelog; they do not change the approved enhancement priorities below.
 
 Completed: Task 6 coaching evaluation, report, and local persistence. There was no matching open backlog item; existing priorities are unchanged.
 
 Task 6 evaluator review fixes were completed on 2026-09-16; they correct approved behavior and do not change the enhancement priorities below.
+
+The relation-anchored matcher correction (2026-09-17) restores approved evaluation behavior; it is not a new enhancement or backlog priority. Evaluator integration remains pending in BUGS.md.
 
 Completed: follow-up Task 6 review fixes for distinct-topic coordinated facts and honest partial-coverage strengths (2026-09-16). The remaining same-topic coordinated-fact issue is tracked in BUGS.md. No new feature or backlog priority was introduced.
 
