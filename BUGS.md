@@ -4,6 +4,7 @@ Last updated: 2026-09-17
 
 | Severity | Issue | Notes |
 | --- | --- | --- |
+| --- | Resolved home page "typed fallback" copy | The home screen advertised a typed-response option that live practice deliberately does not have. The clause was removed on 2026-09-17 with the product lead's approval; the copy now reads "practice your response by voice." |
 | --- | Resolved Android Chrome speaker output | Provider PCM streaming, native 24 kHz Chromium playback, and live transcript deltas were verified on a physical phone by the product lead on 2026-09-17. |
 | --- | Resolved customer audio fragmentation | PCM reply chunks now share one scheduled playback timeline, and microphone capture uses the browser default sample rate before resampling to 24 kHz for the provider. |
 | --- | Resolved duplicate microphone start control | Voice practice begins with one `Join voice call` action; active calls show only Mute/Unmute and End call. |

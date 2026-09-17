@@ -10,12 +10,11 @@ export default function Home() {
         <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">Session tape</span>
       </header>
       <main className="settle-in pb-16 pt-16 sm:pb-24 sm:pt-24">
-        <h1 className={`${displayTitle} text-[2.6rem] leading-[1.05] sm:text-6xl`}>
+        <h1 className={`${displayTitle} text-[2.4rem] leading-[1.05] sm:text-6xl`}>
           Practice support conversations with an AI customer
         </h1>
         <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
-          Ground every simulated call in a confirmed FAQ or policy source, then practice your response by voice or
-          typed fallback.
+          Ground every simulated call in a confirmed FAQ or policy source, then practice your response by voice.
         </p>
         <Link href="/setup" className={`${btnPrimary} mt-9`}>
           Set up a practice call

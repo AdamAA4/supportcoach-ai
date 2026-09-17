@@ -4,11 +4,11 @@ World: **Rehearsal Studio** (locked by the product lead 2026-09-17 from a three-
 
 ## Tokens (src/app/globals.css, Tailwind v4 @theme)
 
-- Ground: canvas `#211d1a`; inset shell `#1b1815`; panels `#2a2521` / raised `#332d27`; hairlines `#453d35` / `#5f5449`.
-- Ink: `#f2ead8` primary, `#cfc2aa` soft, `#a89b83` muted (small meta), `#93876f` faint (placeholders/disabled only).
-- Primary: amber `#e8a33d` (hover `#f0b355`) with ink `#241c10`; success `#7fb069`; warn `#d9a04a`; danger `#e07a65`.
+- Ground (brightened 2026-09-17 on product-lead feedback): canvas `#322c26`; inset shell `#2a251f`; panels `#3a342c` / raised `#464034`; hairlines `#574e43` / `#6e6355`.
+- Ink: `#f2ead8` primary, `#d6cab3` soft, `#b8ab93` muted (small meta), `#9d9078` faint (placeholders/disabled only).
+- Primary: amber `#f0ae4a` (hover `#f6bd62`) with ink `#241c10`; success `#85b872`; warn `#e3ab55`; danger `#e8896f`.
 - Session sheet (cream, confirmed source only): `#efe6d0` ground, `#2b241c` ink, `#6b5f4c` muted, `#c9bda2` rules; fact cards `#f6efe0`; confirmed stamp `#3d6b4a`.
-- Tinted banners: danger `#382620`/`#f0a897`, ok `#263122`/`#a9cf97`, warn `#362d1c`/`#e3c27e`.
+- Tinted banners: danger `#46302a`/`#f4b3a2`, ok `#32402f`/`#b1d49f`, warn `#463b26`/`#e8c987`.
 - Type: Bricolage Grotesque (display + UI; bold headings, tracking floor -0.025em) + Geist Mono strictly for measured data (timecodes, hashes, scores, status pills, stamps) with `tabular-nums`.
 - Radii: panels 16px (`rounded-2xl`), inner cores/inputs/buttons 12px/10px (`rounded-xl`/`rounded-lg`); badges square-ish (`rounded-md`). Elevation: 1px ring only (`ring-1 ring-line`); no drop shadows; the `lamp-live` glow is a state signal, not depth.
 

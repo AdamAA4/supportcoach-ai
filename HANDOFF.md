@@ -13,31 +13,28 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `b709211`
-- Generated: 2026-09-17T22:06:35.294Z
+- Current commit: `40572b7`
+- Generated: 2026-09-17T22:20:20.473Z
 - Uncommitted files excluding this handoff: 
 
 ```text
-M CHANGELOG.md
- M ENHANCEMENTS.md
- M src/app/call/page.tsx
+M .impeccable/review/desktop-call-live.png
+ M .impeccable/review/desktop-call.png
+ M .impeccable/review/desktop-home.png
+ M .impeccable/review/desktop-report.png
+ M .impeccable/review/desktop-setup.png
+ M .impeccable/review/mobile-call-live.png
+ M .impeccable/review/mobile-call.png
+ M .impeccable/review/mobile-home.png
+ M .impeccable/review/mobile-report.png
+ M .impeccable/review/mobile-setup.png
+ M BUGS.md
+ M CHANGELOG.md
+ M DESIGN.md
  M src/app/globals.css
+ M src/app/icon.svg
  M src/app/layout.tsx
  M src/app/page.tsx
- M src/app/report/page.tsx
- M src/app/setup/page.tsx
- M src/components/call-console.tsx
- M src/components/coaching-report.tsx
- M src/components/reference-panel.tsx
- M src/components/scenario-picker.tsx
- M src/components/source-preview.tsx
- M src/components/source-setup-form.tsx
- M src/components/transcript-pane.tsx
-?? .impeccable/
-?? DESIGN.md
-?? PRODUCT.md
-?? src/app/icon.svg
-?? src/components/ui.tsx
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
@@ -49,6 +46,8 @@ Full UI redesign of the home, source setup, practice call, and coaching report s
 - `src/app/layout.tsx`: Bricolage Grotesque + Geist Mono via `next/font` (no new dependency).
 - New `src/components/ui.tsx` (button/input/lamp/authored-SVG primitives) and `src/app/icon.svg` favicon.
 - Pages and components rebuilt in the world: console island with signal lamps and pinned status strings, timecoded transcript tracks with live REC, cream session-sheet reference panel, score cards with mono numerals and segment meters, segmented source control, scenario cards.
+
+Follow-up round (same day, product-lead feedback): the palette was brightened (canvas #211d1a → #322c26, lighter panels/lines/signal colors, same world and AA contrast), the home page's "or typed fallback" clause was removed with approval so copy matches the voice-only rule, and the mobile headline scale was tuned for 320px viewports. DESIGN.md and review screenshots re-captured to match.
 
 ## Checks run
 
@@ -63,9 +62,9 @@ Full UI redesign of the home, source setup, practice call, and coaching report s
 ## Remaining work or known issues
 
 - Live AssemblyAI path was verified in mock voice mode only (joined call, lamps, REC); a smoke test with a real `ASSEMBLYAI_API_KEY` on a physical Android Chrome device is the recommended next check.
-- Home page copy still says "typed fallback" although live practice is voice-only; wording change is a product-lead decision (tracked in BUGS.md).
 - The native file-input label ("Choose File") is unthemed browser copy, accepted in the finish review; revisit if it bothers anyone.
 - The seeded report screenshot shows factual accuracy 0 with matching answers: that is the deterministic evaluator's documented paraphrase limitation, not a UI defect.
+- The Mimosa pre-commit hook reported a partial scan (dependency-source and callgraph limits) on the redesign commit; re-run a full security audit when convenient.
 
 ## Instructions for the next agent
 
