@@ -11,7 +11,8 @@ export class AudioPlayer {
 
   async prepare(): Promise<void> {
     if (typeof window === "undefined" || !("AudioContext" in window)) return;
-    this.context ??= new AudioContext();
+    const chromium = /(?:Chrome|Chromium|EdgA|Brave)\//.test(navigator.userAgent) && !/CriOS\//.test(navigator.userAgent);
+    this.context ??= chromium ? new AudioContext({ sampleRate: 24_000 }) : new AudioContext();
     if (this.context.state !== "running" && typeof this.context.resume === "function") await this.context.resume();
     this.playbackTime = Math.max(this.playbackTime, this.context.currentTime ?? 0);
   }

@@ -145,7 +145,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
               system_prompt: promptFor(input.scenario, input.facts),
               greeting: input.scenario.openingLine,
               input: { format: { encoding: "audio/pcm" }, turn_detection: { interrupt_response: true } },
-              output: { voice: "alba", format: { encoding: "audio/pcm" } },
+              output: { voice: "alba", format: { encoding: "audio/pcm" }, volume: 100 },
             },
           });
           logEvent("socket-open");

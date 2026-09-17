@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Render customer and trainee transcript deltas while they arrive instead of waiting for a turn to finish.
+- Use a native 24 kHz playback context on Chromium browsers and explicitly request full voice-agent output volume.
+
 - Replace the mobile live-microphone `ScriptProcessorNode` path with an AudioWorklet that resamples PCM capture before sending each voice frame, preventing the observed post-opening-turn audio stall on Android Chrome.
 
 - Make live practice voice-only, start microphone capture from `Join voice call`, and remove the unsupported typed-turn protocol path.
