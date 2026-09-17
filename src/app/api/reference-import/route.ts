@@ -18,7 +18,7 @@ const failure = (kind: ImportFailure) => {
   const payload = kind === "invalid"
     ? { status: 400, code: "invalid_reference_url", message: "Enter a public HTTPS URL." }
     : kind === "too-large"
-      ? { status: 413, code: "reference_too_large", message: "The reference source must be 200 KB or smaller." }
+      ? { status: 413, code: "reference_too_large", message: "This page is larger than 200 KB. Copy the FAQ or policy text and paste it instead." }
       : { status: 502, code: "reference_unavailable", message: "The reference source could not be imported." };
   return NextResponse.json({ error: { code: payload.code, message: payload.message } }, { status: payload.status });
 };

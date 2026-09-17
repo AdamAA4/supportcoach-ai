@@ -15,7 +15,7 @@ type SourceKind = "pasted-text" | "public-https-link";
 type ImportedSource = { canonicalUrl: string; extractedText: string; contentHash: string };
 
 const channelTile =
-  "flex min-h-10 cursor-pointer items-center justify-center rounded-lg px-4 text-sm font-semibold text-ink-muted transition-all duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] peer-checked:bg-panel-2 peer-checked:text-ink peer-hover:text-ink-soft peer-focus-visible:ring-2 peer-focus-visible:ring-ink";
+  "flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-ink-muted transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] peer-checked:bg-surface peer-checked:text-ink peer-checked:shadow-soft peer-hover:text-ink-soft peer-focus-visible:ring-2 peer-focus-visible:ring-accent";
 
 export function SourceSetupForm() {
   const router = useRouter();
@@ -133,7 +133,7 @@ export function SourceSetupForm() {
       </label>
       <fieldset className="space-y-3">
         <legend className={fieldLabel}>FAQ or policy source</legend>
-        <div className="inline-grid w-full grid-cols-2 gap-1 rounded-xl bg-shell p-1 sm:w-auto">
+        <div className="inline-grid w-full grid-cols-2 gap-1 rounded-full bg-shell p-1 sm:w-auto">
           <label>
             <input type="radio" className="peer sr-only" checked={sourceKind === "pasted-text"} onChange={() => { setSourceKind("pasted-text"); invalidateSetup(); }} />
             <span className={channelTile}>Paste text</span>

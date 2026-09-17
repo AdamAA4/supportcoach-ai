@@ -13,43 +13,21 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `a51e1ac`
-- Generated: 2026-09-17T22:42:09.004Z
+- Current commit: `6743198`
+- Generated: 2026-09-17T22:53:16.055Z
 - Uncommitted files excluding this handoff: 
 
 ```text
-M .impeccable/review/desktop-call-live.png
- M .impeccable/review/desktop-call.png
- M .impeccable/review/desktop-home.png
- M .impeccable/review/desktop-report.png
- M .impeccable/review/desktop-setup.png
- M .impeccable/review/mobile-call-live.png
- M .impeccable/review/mobile-call.png
- M .impeccable/review/mobile-home.png
- M .impeccable/review/mobile-report.png
- M .impeccable/review/mobile-setup.png
- M CHANGELOG.md
- M DESIGN.md
- M src/app/call/page.tsx
- M src/app/globals.css
- M src/app/icon.svg
- M src/app/layout.tsx
- M src/app/page.tsx
- M src/app/report/page.tsx
- M src/app/setup/page.tsx
- M src/components/call-console.tsx
- M src/components/coaching-report.tsx
- M src/components/reference-panel.tsx
- M src/components/scenario-picker.tsx
- M src/components/source-preview.tsx
+M CHANGELOG.md
+ M src/app/api/reference-import/route.ts
  M src/components/source-setup-form.tsx
- M src/components/transcript-pane.tsx
- M src/components/ui.tsx
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
 
 Full UI redesign of the home, source setup, practice call, and coaching report screens. Final world: "Maison Rose," ported from the product lead's cosmet project (Downloads/cosmet) and pinned by the product lead on 2026-09-17 — blush canvas (#fbf3f0), white cards with rose-tinted shadows, plum ink, single rose accent (#b0586a), Fraunces + DM Sans via `next/font`, cream session sheet reserved for confirmed source. An earlier same-day "Rehearsal Studio" dark direction, plus a brightening pass on it, was replaced by this user-pinned direction before shipping; the home page's "or typed fallback" clause was also removed with approval. Styling-only: no product flow, voice-agent, evaluation, API, or storage changes.
+
+Follow-up round 2 (same day, product-lead feedback): the source-channel segmented control's selected state was made clearly visible (white pill with soft shadow on the cream track — the Maison Rose port had collapsed it into the track background), and the oversized-page import error now names the recovery ("This page is larger than 200 KB. Copy the FAQ or policy text and paste it instead."). The 200 KB import cap itself is an approved control and stays.
 
 - New world recorded in DESIGN.md; product truth in PRODUCT.md; direction brief and review evidence under `.impeccable/`.
 - `src/app/globals.css`: Tailwind v4 `@theme` Maison Rose tokens (blush/white/plum/rose/tape palette, status banners, rose-tinted shadows, Cosmet radii), themed browser surfaces (selection, caret, scrollbars, focus), reduced-motion support.

@@ -43,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Source-channel segmented control: the selected option is now clearly visible as a white pill with soft shadow and ink text on the cream track (the Maison Rose port had collapsed the checked state into the track background).
+- Oversized-page import error now names the recovery: "This page is larger than 200 KB. Copy the FAQ or policy text and paste it instead." (was "The reference source must be 200 KB or smaller.").
 - Remove the home page's "or typed fallback" clause so the copy matches the voice-only practice rule, and tune the mobile headline scale for 320px viewports (product lead approved on 2026-09-17).
 
 - Verify live customer audio and live transcript behavior on a physical Android Chrome device.
