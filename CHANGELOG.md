@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Verify live customer audio and live transcript behavior on a physical Android Chrome device.
+
 - Render customer and trainee transcript deltas while they arrive instead of waiting for a turn to finish.
 - Use a native 24 kHz playback context on Chromium browsers and explicitly request full voice-agent output volume.
 

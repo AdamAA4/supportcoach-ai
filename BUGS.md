@@ -4,7 +4,7 @@ Last updated: 2026-09-17
 
 | Severity | Issue | Notes |
 | --- | --- | --- |
-| ⭐⭐ | Android Chrome speaker output requires final device verification | The provider has been verified to stream valid 24 kHz PCM and transcript events. The player now uses a native 24 kHz Chromium context and the UI renders transcript deltas immediately. Physical Android speaker output remains to be verified after deployment. |
+| --- | Resolved Android Chrome speaker output | Provider PCM streaming, native 24 kHz Chromium playback, and live transcript deltas were verified on a physical phone by the product lead on 2026-09-17. |
 | --- | Resolved customer audio fragmentation | PCM reply chunks now share one scheduled playback timeline, and microphone capture uses the browser default sample rate before resampling to 24 kHz for the provider. |
 | --- | Resolved duplicate microphone start control | Voice practice begins with one `Join voice call` action; active calls show only Mute/Unmute and End call. |
 | --- | Resolved unsupported live text turns | The live call UI is voice-only and no longer sends unsupported text-turn protocol events. |
