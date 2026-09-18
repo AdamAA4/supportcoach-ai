@@ -147,7 +147,7 @@ export function SourceSetupForm() {
           <textarea value={sourceValue} onChange={(event) => updateSource(event.target.value)} rows={7} className={`${inputBase} leading-relaxed`} aria-label="FAQ or policy text" />
         ) : (
           <>
-            <input value={sourceValue} onChange={(event) => updateSource(event.target.value)} placeholder="https://company.example/faq" className={inputBase} aria-label="FAQ or policy URL" />
+            <input value={sourceValue} onChange={(event) => updateSource(event.target.value)} placeholder="https://company.example/faq" type="url" inputMode="url" className={inputBase} aria-label="FAQ or policy URL" />
             <button type="button" onClick={() => void importPublicSource()} disabled={!sourceValue.trim() || importing} className={`${btnSecondary} mt-3`}>{importing ? "Importing source…" : "Import source"}</button>
           </>
         )}

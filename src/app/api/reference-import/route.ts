@@ -8,6 +8,7 @@ import { checkServerIdentity } from "node:tls";
 import { NextResponse } from "next/server";
 
 import { extractFaqContent } from "./extract-faq";
+import { clientKeyOf, createRateLimiter, rateLimitingEnabled } from "../../../lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -118,7 +119,17 @@ const retrieve = (url: URL, address: string, signal: AbortSignal): Promise<{ htm
   request.end();
 });
 
+const importRateLimiter = createRateLimiter(60_000, 10);
+const tooManyRequests = (retryAfterSeconds: number) => NextResponse.json(
+  { error: { code: "rate_limited", message: "Too many import requests. Try again shortly." } },
+  { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } },
+);
+
 export async function POST(request: Request) {
+  if (rateLimitingEnabled()) {
+    const decision = importRateLimiter(clientKeyOf(request));
+    if (!decision.allowed) return tooManyRequests(decision.retryAfterSeconds);
+  }
   let sourceUrl: URL | undefined;
   try {
     const body: unknown = await request.json();

@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ArrowRightIcon, btnPrimary, displayTitle } from "../components/ui";
+
+export const metadata: Metadata = {
+  title: "Practice support conversations with an AI customer",
+  description: "Ground every simulated call in a confirmed FAQ or policy source, then practice your response by voice and get a four-score coaching report.",
+};
 
 export default function Home() {
   return (

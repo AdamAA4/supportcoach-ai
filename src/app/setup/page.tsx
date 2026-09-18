@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { SourceSetupForm } from "../../components/source-setup-form";
 import { BackLink, displayTitle } from "../../components/ui";
+
+export const metadata: Metadata = {
+  title: "Set up a practice call",
+  description: "Add your company FAQ or policy, confirm the extracted facts, and choose a customer scenario for a voice practice call.",
+};
 
 export default function SetupPage() {
   return (

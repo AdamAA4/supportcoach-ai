@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Launch-hardening round (2026-09-18, product-lead checklist): privacy policy and terms of use pages, a custom 404 page with calls to action, a site footer with navigation and a persistent "Set up a practice call" CTA, sitemap.xml and robots.txt (API, call, and report excluded from crawling), per-page meta titles and descriptions with Open Graph and Twitter card metadata plus a generated 1200x630 social preview image, a dismissible storage-disclosure notice (the site sets no cookies and runs no cross-site tracking), cookieless Vercel Analytics, Strict-Transport-Security and hardening headers via next.config.mjs, and per-IP rate limiting on the public reference-import (10/min) and voice-token (30/min) endpoints with unit-tested fixed-window limiter and 429 responses.
+- Site-launch audits recorded in `.impeccable/review/`: internal link check (16 references, zero broken), WCAG contrast audit (18 token pairs, all >= 4.5:1), and page-load metrics against the production build (TTFB 7-56ms, first contentful paint 124-432ms, HTML 4-5KB).
+
+### Changed
+
+- FAQ-import URL field uses type="url" with a URL keyboard on mobile; server-side validation is unchanged.
+
+### Added
+
 - Product and design records: PRODUCT.md (product truth), DESIGN.md (Rehearsal Studio design system), and `.impeccable/` direction brief and review evidence (screenshots with provenance) from the 2026-09-17 design round.
 - Shared visual primitives module (`src/components/ui.tsx`) with studio button, input, signal-lamp, and authored SVG icon styles used across all screens.
 - Branded app icon (amber voice-bar mark on charcoal) served as the site favicon.

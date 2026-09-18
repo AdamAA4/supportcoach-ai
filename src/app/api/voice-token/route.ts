@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
+import { clientKeyOf, createRateLimiter, rateLimitingEnabled } from "../../../lib/rate-limit";
 
 export const runtime = "nodejs";
+
+const tokenRateLimiter = createRateLimiter(60_000, 30);
 
 const serviceUnavailable = () => NextResponse.json(
   { error: { code: "voice_unconfigured", message: "Voice service is not configured." } },
@@ -12,7 +15,16 @@ const upstreamFailure = () => NextResponse.json(
   { status: 502 },
 );
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (rateLimitingEnabled()) {
+    const decision = tokenRateLimiter(clientKeyOf(request));
+    if (!decision.allowed) {
+      return NextResponse.json(
+        { error: { code: "rate_limited", message: "Too many voice session requests. Try again shortly." } },
+        { status: 429, headers: { "Retry-After": String(decision.retryAfterSeconds) } },
+      );
+    }
+  }
   const key = process.env.ASSEMBLYAI_API_KEY;
   if (!key) return serviceUnavailable();
 

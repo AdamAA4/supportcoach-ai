@@ -46,7 +46,7 @@ describe("voice-token route", () => {
     const request = vi.fn();
     vi.stubGlobal("fetch", request);
 
-    const response = await getVoiceToken();
+    const response = await getVoiceToken(new Request("http://localhost/api/voice-token"));
 
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({ error: { code: "voice_unconfigured", message: "Voice service is not configured." } });
@@ -58,7 +58,7 @@ describe("voice-token route", () => {
     const request = vi.fn().mockResolvedValue(new Response(JSON.stringify({ token: "temporary-token" }), { status: 200 }));
     vi.stubGlobal("fetch", request);
 
-    const response = await getVoiceToken();
+    const response = await getVoiceToken(new Request("http://localhost/api/voice-token"));
 
     expect(request).toHaveBeenCalledWith(
       "https://agents.assemblyai.com/v1/token?expires_in_seconds=300",
@@ -73,7 +73,7 @@ describe("voice-token route", () => {
     vi.stubEnv("ASSEMBLYAI_API_KEY", "permanent-secret");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("provider detail", { status: 401 })));
 
-    const response = await getVoiceToken();
+    const response = await getVoiceToken(new Request("http://localhost/api/voice-token"));
 
     expect(response.status).toBe(502);
     await expect(response.json()).resolves.toEqual({ error: { code: "voice_unavailable", message: "Voice service is temporarily unavailable." } });
