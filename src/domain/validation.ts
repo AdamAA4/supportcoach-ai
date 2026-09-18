@@ -1,5 +1,6 @@
 import { createScenarioDefinition } from "../data/seed-packs";
 import { validatePracticePack, type PracticeScenario, type ScenarioDefinition, type SessionSource } from "./practice-pack";
+import { deriveScenarios } from "./derived-scenarios";
 import {
   createSourceProvenance,
   getSourceText,
@@ -91,7 +92,18 @@ export const validatePracticeContext = ({
     source: context.source,
     scenario: context.scenario.id as PracticeScenario,
   });
-  if (!packValidation.ok) addPracticePackErrors(errors, packValidation.issues);
+  // A confirmed source with no derivable drill gets one clear scenario
+  // error instead of the generic pack message plus a fact-mismatch error.
+  const noPracticeDrills = context.source.confirmation === "confirmed" &&
+    context.sourceText.trim().length > 0 &&
+    deriveScenarios(context.facts).length === 0;
+  const issues = packValidation.ok
+    ? []
+    : packValidation.issues.filter((issue) => !(noPracticeDrills && issue === "Choose a supported practice scenario."));
+  if (issues.length > 0) addPracticePackErrors(errors, issues);
+  if (noPracticeDrills) {
+    addError(errors, "scenario", "This source has no complete FAQ sections to practice yet. Add a question with a full answer and try again.");
+  }
 
   for (const note of context.notes) {
     if (!note.text.trim()) continue;
@@ -122,7 +134,7 @@ export const validatePracticeContext = ({
     seenFactIds.add(fact.id);
   }
 
-  if (context.scenario.factIds.some((factId) => !context.facts.some((fact) => fact.id === factId))) {
+  if (!noPracticeDrills && context.scenario.factIds.some((factId) => !context.facts.some((fact) => fact.id === factId))) {
     addError(errors, "scenario", "The selected scenario refers to a fact that is not available in this source.");
   }
   if (noteFileSizeBytes !== undefined && noteFileSizeBytes > 200 * 1024) {

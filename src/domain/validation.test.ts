@@ -54,6 +54,22 @@ describe("practice context validation", () => {
     });
   });
 
+  it("requires at least one complete FAQ section before practice can start", () => {
+    const context = normalizePracticeContext({
+      source: { kind: "pasted-text", text: "Reachable support line only.", confirmation: "confirmed" },
+      sourceLabel: "Northstar Shop",
+      notes: [],
+      scenarioId: "",
+    });
+
+    expect(validatePracticeContext({ companyName: "Northstar Shop", context })).toMatchObject({
+      ok: false,
+      errors: {
+        scenario: ["This source has no complete FAQ sections to practice yet. Add a question with a full answer and try again."],
+      },
+    });
+  });
+
   it("rejects malformed and non-HTTPS reference URLs", () => {
     const context = normalizePracticeContext({
       source: { kind: "public-https-link", url: "ftp://example.com/faq", confirmation: "pending" },

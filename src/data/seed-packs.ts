@@ -38,14 +38,28 @@ export const createScenarioDefinition = (
     const derived = findDerivedScenario(facts, scenarioId);
     if (derived) return derived;
   }
-  const isBuiltin = scenarioId in archetypes;
-  const archetype = isBuiltin ? archetypes[scenarioId as keyof typeof archetypes] : archetypes["late-delivery"];
+  // Legacy ids still resolve so previously stored sessions stay valid.
+  const archetype = archetypes[scenarioId as keyof typeof archetypes];
+  if (!archetype) {
+    // Unresolved selection (empty or stale): an honest placeholder with no
+    // facts, which setup validation rejects instead of silently swapping
+    // in an unrelated drill.
+    return {
+      id: scenarioId,
+      title: "Choose a practice drill",
+      customerPersona: "",
+      openingLine: "",
+      goals: [],
+      factIds: [],
+      difficulty: "beginner",
+    };
+  }
   const relevantFacts = facts.filter((fact) =>
     archetype.terms.some((term) => fact.keywords.includes(term)),
   );
 
   return {
-    id: isBuiltin ? scenarioId : "late-delivery",
+    id: scenarioId,
     title: archetype.title,
     customerPersona: archetype.customerPersona,
     openingLine: archetype.openingLine,

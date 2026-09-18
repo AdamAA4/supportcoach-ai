@@ -13,27 +13,19 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `ca71a34`
-- Generated: 2026-09-18T13:39:02.577Z
+- Current commit: `b37095e`
+- Generated: 2026-09-18T14:26:52.856Z
 - Uncommitted files excluding this handoff: 
 
 ```text
-M CHANGELOG.md
+M .impeccable/review/mobile-setup-derived.png
+ M CHANGELOG.md
  M README.md
  M src/components/scenario-picker.tsx
  M src/components/source-setup-form.tsx
  M src/data/seed-packs.ts
- M src/domain/practice-pack.ts
+ M src/domain/validation.test.ts
  M src/domain/validation.ts
- M src/evaluation/structured-fact-matcher.test.ts
- M src/evaluation/structured-fact-matcher.ts
- M src/evaluation/validation.ts
-?? .impeccable/review/desktop-call-derived.png
-?? .impeccable/review/desktop-setup-derived.png
-?? .impeccable/review/mobile-call-derived.png
-?? .impeccable/review/mobile-setup-derived.png
-?? src/domain/derived-scenarios.test.ts
-?? src/domain/derived-scenarios.ts
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
@@ -65,6 +57,8 @@ Follow-up round 3 (2026-09-18, product-lead request): the import body cap was ra
 Follow-up round 4 (2026-09-18, product-lead feedback): imported pages now preserve paragraph structure — the HTML cleaner converts block-level tags to line breaks before extraction, so imports produce per-section reference facts instead of one page-length blob (the root cause of factual accuracy scoring 0 on imports). Next exercise quotes at most 180 characters of the missed-fact answer, and the report clamps the display with a Show-full toggle. Back navigation added (Home on setup/report, Source setup on the call screen), and the session-sheet facts list collapses to three entries with a Show-all toggle.
 
 Follow-up round 5 (2026-09-18, product-lead feedback): the fact matcher's evidence windows no longer start in front of a fact's own subject when a sibling fact uses the same word as a relation (for example "delivery" shared across delivery facts). A trainee answer that states a confirmed fact verbatim is now credited instead of missed; regression test added. Structured FAQ extraction also landed this round (JSON-LD, details/summary, definition lists, heading sections, duplicate removal) with import stats, and a grounded customer question plan now drives both voice modes.
+
+Follow-up round 8 (2026-09-18, product-lead decisions): built-in drills removed from the setup screen — scenarios are now always derived from the confirmed source's own sections; a confirmed source with no complete FAQ sections gets the scenario error "This source has no complete FAQ sections to practice yet. Add a question with a full answer and try again." (validation gating; unresolved ids now build an honest empty-facts placeholder in createScenarioDefinition instead of silently falling back to a legacy archetype). Legacy late-delivery/refund-eligibility ids remain valid in validators so previously saved sessions restore. Bug fix from product-lead video: selecting a drill no longer calls invalidateSetup — clicking a suggested drill after confirming an imported link used to reset the source to unconfirmed, dropping its snapshot, wiping facts, and making every suggestion disappear. Verified in-browser: after confirm + drill click, "Source confirmed" persists and all 4 suggestions remain; built-in drills absent; the derived scenario carries into the call.
 
 Follow-up round 7 (2026-09-18, product-lead approved design): FAQ-derived practice scenarios. Substantive FAQ sections each become a suggested drill under a "From your FAQ" group in the setup picker (persona, natural opening line, the section's facts; related sections group when headings share two-plus significant words; thin/placeholder/contact sections never suggested; capped at six; deterministic content-hashed `derived-*` ids). The two built-in drills remain below as fallbacks. Contract widened: `PracticeScenario` now accepts `derived-*` ids (practice-pack `isSupportedScenarioId`, seed-packs `createScenarioDefinition(string)`, domain + evaluation validators), and the form auto-selects the first suggestion when the source changes. The fact matcher now pools required-term coverage across a fact's own comma-separated clauses within one statement (questions/ambiguity/conflicts never pool), so multi-clause verbatim answers score; regression tests added in derived-scenarios.test.ts and structured-fact-matcher.test.ts.
 

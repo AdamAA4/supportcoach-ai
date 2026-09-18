@@ -26,7 +26,7 @@ export function SourceSetupForm() {
   const [previewText, setPreviewText] = useState("");
   const [importedSource, setImportedSource] = useState<ImportedSource>();
   const [importing, setImporting] = useState(false);
-  const [scenarioId, setScenarioId] = useState<string>("late-delivery");
+  const [scenarioId, setScenarioId] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [noteKind, setNoteKind] = useState<ExperienceNote["kind"]>("personal-coaching-note");
   const [noteFormat, setNoteFormat] = useState<ExperienceNoteFormat>("plain-text");
@@ -47,16 +47,15 @@ export function SourceSetupForm() {
     scenarioId,
   }), [companyName, confirmed, importedSource, noteFormat, noteKind, notes, scenarioId, sourceKind, sourceValue]);
 
-  // Practice drills suggested by the confirmed content itself; when the
+  // Practice drills are suggested by the confirmed content itself; when the
   // source changes and the selected drill no longer resolves, fall back to
-  // the first suggestion (or the built-in default).
+  // the first suggestion. Selecting a drill never invalidates the source:
+  // for imported links an unconfirmed source carries no snapshot, which
+  // would wipe the facts and hide every suggestion again.
   const derived = useMemo(() => deriveScenarios(context.facts), [context.facts]);
-  const validScenarioIds = useMemo(
-    () => [...derived.map((scenario) => scenario.id), "late-delivery", "refund-eligibility"],
-    [derived],
-  );
+  const validScenarioIds = useMemo(() => derived.map((scenario) => scenario.id), [derived]);
   useEffect(() => {
-    if (!validScenarioIds.includes(scenarioId)) setScenarioId(validScenarioIds[0]);
+    if (validScenarioIds.length > 0 && !validScenarioIds.includes(scenarioId)) setScenarioId(validScenarioIds[0]);
   }, [validScenarioIds, scenarioId]);
 
   const invalidateSetup = () => {
@@ -167,7 +166,7 @@ export function SourceSetupForm() {
         {fieldError("source")}
       </fieldset>
       <SourcePreview sourceText={sourceText} confirmed={confirmed} canConfirm={sourceKind === "pasted-text" || Boolean(importedSource)} onConfirm={() => setConfirmed(true)} />
-      <ScenarioPicker facts={context.facts} derived={derived} value={scenarioId} onChange={(value) => { setScenarioId(value); invalidateSetup(); }} />
+      <ScenarioPicker facts={context.facts} derived={derived} value={scenarioId} onChange={setScenarioId} />
       {fieldError("scenario")}
       <fieldset className="space-y-3">
         <legend className={fieldLabel}>Optional experience notes</legend>
