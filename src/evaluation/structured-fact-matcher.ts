@@ -200,14 +200,14 @@ const hasRemovedCondition = (tokens: string[], spec: FactMatchSpec): boolean =>
 const assessSpan = (
   spec: FactMatchSpec,
   window: EvidenceSpan,
-): { supported: boolean; conflict: boolean } => {
-  if (window.isQuestion) return { supported: false, conflict: false };
+): { relevant: boolean; ambiguous: boolean; supported: boolean; conflict: boolean } => {
+  if (window.isQuestion) return { relevant: false, ambiguous: false, supported: false, conflict: false };
 
   const subjectRelevant = spec.subjectTerms.every((term) => window.tokens.includes(term));
   const relationRelevant = spec.relationTerms.length === 0 ||
     spec.relationTerms.some((term) => window.tokens.includes(term));
   const relevant = subjectRelevant && relationRelevant;
-  if (!relevant) return { supported: false, conflict: false };
+  if (!relevant) return { relevant: false, ambiguous: false, supported: false, conflict: false };
 
   const expectedNumbers = spec.valueTerms.filter((term) => /^\d+$/.test(term));
   const actualNumbers = window.tokens.filter((term) => /^\d+$/.test(term));
@@ -235,10 +235,11 @@ const assessSpan = (
       .every((term) => window.tokens.includes(term));
   const conflict = conflictingNumber || oppositeCondition || removedCondition ||
     unexpectedNegation || removedNegation;
-  const supported = !conflict && !ambiguousFallbackValues && !ambiguousNegation &&
+  const ambiguous = ambiguousFallbackValues || ambiguousNegation;
+  const supported = !conflict && !ambiguous &&
     spec.requiredTerms.every((term) => window.tokens.includes(term));
 
-  return { supported, conflict };
+  return { relevant, ambiguous, supported, conflict };
 };
 
 export const matchReferenceFacts = (
@@ -254,11 +255,31 @@ export const matchReferenceFacts = (
     const spec = specs.get(fact.id);
     if (!spec) continue;
     for (const statement of statements) {
-      for (const window of relationAnchoredSpans(spec, allSpecs, statement)) {
-        const result = assessSpan(spec, window);
-        if (result.supported) supportedFactIds.add(fact.id);
-        if (result.conflict) unsupportedClaims.add(statement.text);
+      // A single statement may split one fact's evidence across punctuation
+      // (subject in the first clause, terms in later ones). Windows anchored
+      // on this fact's relations pool their tokens for required-term
+      // coverage; conflicts stay clause-local and veto pooled support.
+      const windows = relationAnchoredSpans(spec, allSpecs, statement)
+        .map((window) => ({ window, result: assessSpan(spec, window) }));
+      let supported = windows.some(({ result }) => result.supported);
+      let conflict = false;
+      if (!supported) {
+        // Windows anchored on this fact's own relation terms pool their
+        // tokens so a multi-clause answer (subject in the first clause,
+        // terms in later ones) still covers its required terms. Questions,
+        // ambiguity, or conflict in any window keep it out of the pool.
+        const usable = windows.filter(({ window, result }) =>
+          !window.isQuestion && !result.ambiguous && !result.conflict);
+        conflict = windows.some(({ result }) => result.conflict);
+        const pooled = new Set<string>();
+        for (const { window } of usable) for (const token of window.tokens) pooled.add(token);
+        supported = !conflict && pooled.size > 0 &&
+          spec.requiredTerms.every((term) => pooled.has(term));
+      } else {
+        conflict = windows.some(({ result }) => result.conflict);
       }
+      if (supported) supportedFactIds.add(fact.id);
+      if (conflict) unsupportedClaims.add(statement.text);
     }
   }
 

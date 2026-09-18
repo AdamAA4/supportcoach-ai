@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import React, { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { SourcePreview } from "./source-preview";
 import { normalizePracticeContext, validatePracticeContext, type FieldErrors } from "../domain/validation";
 import { type ExperienceNote } from "../domain/reference-source";
 import type { ExperienceNoteFormat } from "../domain/practice-pack";
+import { deriveScenarios } from "../domain/derived-scenarios";
 import { saveCurrentPracticeSession } from "../domain/practice-session";
 import { ScenarioPicker } from "./scenario-picker";
 import { AlertIcon, ArrowRightIcon, btnPrimary, btnSecondary, CheckIcon, fieldLabel, inputBase } from "./ui";
@@ -25,7 +26,7 @@ export function SourceSetupForm() {
   const [previewText, setPreviewText] = useState("");
   const [importedSource, setImportedSource] = useState<ImportedSource>();
   const [importing, setImporting] = useState(false);
-  const [scenarioId, setScenarioId] = useState<"late-delivery" | "refund-eligibility">("late-delivery");
+  const [scenarioId, setScenarioId] = useState<string>("late-delivery");
   const [notes, setNotes] = useState("");
   const [noteKind, setNoteKind] = useState<ExperienceNote["kind"]>("personal-coaching-note");
   const [noteFormat, setNoteFormat] = useState<ExperienceNoteFormat>("plain-text");
@@ -45,6 +46,18 @@ export function SourceSetupForm() {
     notes: notes.trim() ? [{ id: "session-note", text: notes, format: noteFormat, kind: noteKind }] : [],
     scenarioId,
   }), [companyName, confirmed, importedSource, noteFormat, noteKind, notes, scenarioId, sourceKind, sourceValue]);
+
+  // Practice drills suggested by the confirmed content itself; when the
+  // source changes and the selected drill no longer resolves, fall back to
+  // the first suggestion (or the built-in default).
+  const derived = useMemo(() => deriveScenarios(context.facts), [context.facts]);
+  const validScenarioIds = useMemo(
+    () => [...derived.map((scenario) => scenario.id), "late-delivery", "refund-eligibility"],
+    [derived],
+  );
+  useEffect(() => {
+    if (!validScenarioIds.includes(scenarioId)) setScenarioId(validScenarioIds[0]);
+  }, [validScenarioIds, scenarioId]);
 
   const invalidateSetup = () => {
     setConfirmed(false);
@@ -154,7 +167,7 @@ export function SourceSetupForm() {
         {fieldError("source")}
       </fieldset>
       <SourcePreview sourceText={sourceText} confirmed={confirmed} canConfirm={sourceKind === "pasted-text" || Boolean(importedSource)} onConfirm={() => setConfirmed(true)} />
-      <ScenarioPicker value={scenarioId} onChange={(value) => { setScenarioId(value); invalidateSetup(); }} />
+      <ScenarioPicker facts={context.facts} derived={derived} value={scenarioId} onChange={(value) => { setScenarioId(value); invalidateSetup(); }} />
       {fieldError("scenario")}
       <fieldset className="space-y-3">
         <legend className={fieldLabel}>Optional experience notes</legend>

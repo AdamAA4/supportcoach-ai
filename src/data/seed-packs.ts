@@ -1,5 +1,6 @@
 import type { ScenarioDefinition } from "../domain/practice-pack";
 import type { ReferenceFact } from "../domain/reference-source";
+import { findDerivedScenario } from "../domain/derived-scenarios";
 
 const archetypes = {
   "late-delivery": {
@@ -28,16 +29,23 @@ export const FALLBACK_REFERENCE_FACTS: ReferenceFact[] = [
 ];
 
 export const createScenarioDefinition = (
-  scenarioId: "late-delivery" | "refund-eligibility",
+  scenarioId: string,
   facts: ReferenceFact[],
 ): ScenarioDefinition => {
-  const archetype = archetypes[scenarioId];
+  // Content-derived ids resolve against the fact list; derivation is
+  // deterministic, so a stored session rebuilds the same scenario.
+  if (scenarioId.startsWith("derived-")) {
+    const derived = findDerivedScenario(facts, scenarioId);
+    if (derived) return derived;
+  }
+  const isBuiltin = scenarioId in archetypes;
+  const archetype = isBuiltin ? archetypes[scenarioId as keyof typeof archetypes] : archetypes["late-delivery"];
   const relevantFacts = facts.filter((fact) =>
     archetype.terms.some((term) => fact.keywords.includes(term)),
   );
 
   return {
-    id: scenarioId,
+    id: isBuiltin ? scenarioId : "late-delivery",
     title: archetype.title,
     customerPersona: archetype.customerPersona,
     openingLine: archetype.openingLine,

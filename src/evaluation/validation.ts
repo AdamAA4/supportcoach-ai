@@ -23,7 +23,7 @@ export const isPracticeContext = (value: unknown): value is PracticeContext => {
     if (!text(source.url) || !isRecord(source.snapshot) || !text(source.snapshot.extractedText) || source.snapshot.extractedText.length > 200 * 1024 || !text(source.snapshot.contentHash)) return false;
     try { if (new URL(source.url).protocol !== "https:") return false; } catch { return false; }
   } else return false;
-  if (value.scenario.id !== "late-delivery" && value.scenario.id !== "refund-eligibility") return false;
+  if (typeof value.scenario.id !== "string" || (value.scenario.id !== "late-delivery" && value.scenario.id !== "refund-eligibility" && !value.scenario.id.startsWith("derived-"))) return false;
   if (value.notes.length > 100 || !value.notes.every((note) => isRecord(note) && text(note.id) && text(note.text) && note.text.length <= 200 * 1024 && (note.format === "plain-text" || note.format === "markdown") && (note.kind === "personal-coaching-note" || note.kind === "approved-practice-advice"))) return false;
   const candidate = value as unknown as PracticeContext;
   const normalized = normalizePracticeContext({ source: candidate.source, sourceLabel: candidate.sourceLabel, notes: candidate.notes, scenarioId: value.scenario.id });

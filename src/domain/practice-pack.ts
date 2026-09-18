@@ -1,6 +1,14 @@
 export const PRACTICE_SCENARIOS = ["late-delivery", "refund-eligibility"] as const;
 
-export type PracticeScenario = (typeof PRACTICE_SCENARIOS)[number];
+export type BuiltinScenario = (typeof PRACTICE_SCENARIOS)[number];
+
+/** Scenario ids derived from confirmed FAQ content at runtime (`derived-<hash>`). */
+export type DerivedScenarioId = `derived-${string}`;
+
+export type PracticeScenario = BuiltinScenario | DerivedScenarioId;
+
+export const isSupportedScenarioId = (value: string): value is PracticeScenario =>
+  (PRACTICE_SCENARIOS as readonly string[]).includes(value) || value.startsWith("derived-");
 
 export const SCORE_DIMENSIONS = [
   "factual-accuracy",
@@ -123,7 +131,7 @@ export const validatePracticePack = (input: PracticePack): PracticePackValidatio
     );
   }
 
-  if (!PRACTICE_SCENARIOS.includes(input.scenario)) {
+  if (!isSupportedScenarioId(input.scenario)) {
     issues.push("Choose a supported practice scenario.");
   }
 

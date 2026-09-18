@@ -82,6 +82,14 @@ describe("matchReferenceFacts", () => {
     expect(result.unsupportedClaims).toEqual([text]);
   });
 
+  it("covers required terms pooled across the fact's own comma-separated clauses", () => {
+    const affiliate = fact("affiliate", "To register as an affiliate, submit the application form from your dashboard and provide your payout details");
+    const text = "To register as an affiliate, submit the application form from your dashboard and provide your payout details.";
+    const result = matchReferenceFacts([affiliate], [{ text, isQuestion: false }]);
+    expect(result.supportedFactIds.has(affiliate.id)).toBe(true);
+    expect(result.unsupportedClaims).toEqual([]);
+  });
+
   it("does not cut a fact's own subject when a sibling fact uses the same word as a relation", () => {
     const delivery = fact("delivery", "Standard delivery takes 3 to 5 business days from dispatch");
     const late = fact("late", "Check the tracking link first. If the delivery window has passed, contact support and we will escalate the order to the carrier.");

@@ -13,37 +13,27 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `794e2b4`
-- Generated: 2026-09-18T10:57:50.892Z
+- Current commit: `ca71a34`
+- Generated: 2026-09-18T13:39:02.577Z
 - Uncommitted files excluding this handoff: 
 
 ```text
 M CHANGELOG.md
- M package-lock.json
- M package.json
- M src/app/api/reference-import/route.ts
- M src/app/api/voice-token/route.ts
- M src/app/layout.tsx
- M src/app/page.tsx
- M src/app/setup/page.tsx
+ M README.md
+ M src/components/scenario-picker.tsx
  M src/components/source-setup-form.tsx
- M src/voice/assemblyai-voice-agent.test.ts
-?? .impeccable/review/mobile-404.png
-?? .impeccable/review/mobile-home-footer.png
-?? .impeccable/review/mobile-privacy.png
-?? .impeccable/review/mobile-terms.png
-?? next.config.mjs
-?? public/og-image.png
-?? src/app/call/layout.tsx
-?? src/app/not-found.tsx
-?? src/app/privacy/
-?? src/app/report/layout.tsx
-?? src/app/robots.ts
-?? src/app/sitemap.ts
-?? src/app/terms/
-?? src/components/site-footer.tsx
-?? src/components/storage-notice.tsx
-?? src/lib/
+ M src/data/seed-packs.ts
+ M src/domain/practice-pack.ts
+ M src/domain/validation.ts
+ M src/evaluation/structured-fact-matcher.test.ts
+ M src/evaluation/structured-fact-matcher.ts
+ M src/evaluation/validation.ts
+?? .impeccable/review/desktop-call-derived.png
+?? .impeccable/review/desktop-setup-derived.png
+?? .impeccable/review/mobile-call-derived.png
+?? .impeccable/review/mobile-setup-derived.png
+?? src/domain/derived-scenarios.test.ts
+?? src/domain/derived-scenarios.ts
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
@@ -75,6 +65,8 @@ Follow-up round 3 (2026-09-18, product-lead request): the import body cap was ra
 Follow-up round 4 (2026-09-18, product-lead feedback): imported pages now preserve paragraph structure — the HTML cleaner converts block-level tags to line breaks before extraction, so imports produce per-section reference facts instead of one page-length blob (the root cause of factual accuracy scoring 0 on imports). Next exercise quotes at most 180 characters of the missed-fact answer, and the report clamps the display with a Show-full toggle. Back navigation added (Home on setup/report, Source setup on the call screen), and the session-sheet facts list collapses to three entries with a Show-all toggle.
 
 Follow-up round 5 (2026-09-18, product-lead feedback): the fact matcher's evidence windows no longer start in front of a fact's own subject when a sibling fact uses the same word as a relation (for example "delivery" shared across delivery facts). A trainee answer that states a confirmed fact verbatim is now credited instead of missed; regression test added. Structured FAQ extraction also landed this round (JSON-LD, details/summary, definition lists, heading sections, duplicate removal) with import stats, and a grounded customer question plan now drives both voice modes.
+
+Follow-up round 7 (2026-09-18, product-lead approved design): FAQ-derived practice scenarios. Substantive FAQ sections each become a suggested drill under a "From your FAQ" group in the setup picker (persona, natural opening line, the section's facts; related sections group when headings share two-plus significant words; thin/placeholder/contact sections never suggested; capped at six; deterministic content-hashed `derived-*` ids). The two built-in drills remain below as fallbacks. Contract widened: `PracticeScenario` now accepts `derived-*` ids (practice-pack `isSupportedScenarioId`, seed-packs `createScenarioDefinition(string)`, domain + evaluation validators), and the form auto-selects the first suggestion when the source changes. The fact matcher now pools required-term coverage across a fact's own comma-separated clauses within one statement (questions/ambiguity/conflicts never pool), so multi-clause verbatim answers score; regression tests added in derived-scenarios.test.ts and structured-fact-matcher.test.ts.
 
 Follow-up round 6 (2026-09-18, product-lead 20-item launch checklist): privacy policy and terms pages, custom 404, site footer with CTA, per-page metadata with OG/Twitter cards and a generated 1200x630 social preview (public/og-image.png, 75KB), sitemap.xml + robots.txt (api/call/report disallowed), HSTS and hardening headers in the new next.config.mjs, per-IP fixed-window rate limits on reference-import (10/min) and voice-token (30/min) with 429 + Retry-After (bypassed under vitest; limiter unit-tested in src/lib/rate-limit.test.ts), a dismissible storage-disclosure notice (the site sets no cookies), and cookieless Vercel Analytics (@vercel/analytics 1.6.1 — installed with --legacy-peer-deps because its optional Svelte peer chain conflicts with the project's vite 7; @testing-library/dom was reinstalled explicitly afterward). Audits: 16 internal link references with zero broken, 18 WCAG contrast pairs all >= 4.5:1, page-load metrics TTFB 7-56ms / FCP 124-432ms / HTML 4-5KB against the production build; secrets confirmed server-only (empty .env.example, key never client-shipped); no <img> elements exist so alt-text is N/A; favicon already shipped as app/icon.svg. Items already satisfied before this round: secrets off frontend, form validation, mobile-first layout, favicon, image compression (only the OG image ships, already small).
 

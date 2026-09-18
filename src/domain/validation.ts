@@ -27,7 +27,7 @@ type NormalizeInput = {
   source: SessionSource;
   sourceLabel: string;
   notes: ExperienceNote[];
-  scenarioId: "late-delivery" | "refund-eligibility";
+  scenarioId: string;
 };
 
 export const normalizePracticeContext = (input: NormalizeInput): PracticeContext => {
