@@ -63,6 +63,17 @@ describe("deriveScenarios", () => {
     const scenarios = deriveScenarios(withNote);
     expect(scenarios.every((scenario) => scenario.factIds.every((id) => !id.startsWith("note-")))).toBe(true);
   });
+
+  it("never suggests newsletter or FAQ-banner furniture sections", () => {
+    const furniture = [
+      ...tradingFaq,
+      fact("source-fact-nl", "Subscribe to our newsletter", "Send copyright 2025 Equity Edge Ltd All rights reserved for the newsletter subscription."),
+      fact("source-fact-faq", "Frequently Asked Questions", "General trading rules evaluation questions funded traders instant accounts and more in one long blob of text."),
+    ];
+    const titles = deriveScenarios(furniture).map((scenario) => scenario.title);
+    expect(titles.some((title) => /newsletter/i.test(title))).toBe(false);
+    expect(titles.some((title) => /frequently asked/i.test(title))).toBe(false);
+  });
 });
 
 describe("derived scenarios end to end", () => {

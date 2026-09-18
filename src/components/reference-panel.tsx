@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import type { PracticeContext } from "../domain/validation";
+import { ExpandableText } from "./expandable-text";
 
 const PREVIEW_FACTS = 3;
 
@@ -44,7 +45,7 @@ export function ReferencePanel({ context }: { context: PracticeContext }) {
           {(factsExpanded ? context.facts : visibleFacts).map((fact) => (
             <li key={fact.id} className="rounded-xl border border-line bg-panel p-3">
               <p className="font-bold text-tape-ink">{fact.question}</p>
-              <p className="mt-1 text-tape-ink/85">{fact.answer}</p>
+              <ExpandableText text={fact.answer} className="mt-1 text-tape-ink/85" />
             </li>
           ))}
         </ul>

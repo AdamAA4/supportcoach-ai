@@ -34,7 +34,7 @@ export default function CallPage() {
     if (!transcript.some((turn) => turn.speaker === "trainee")) {
       // An empty call is not a scored call: evaluation would return all-zero
       // scores for a transcript with no trainee response.
-      setReportError("This call ended before you spoke, so there is nothing to score. Start a new practice call to try again.");
+      setReportError("No answers were recorded in this call, so there is nothing to score. Start a new practice call and answer the customer before ending.");
       setCanRetryReport(false);
       return;
     }
@@ -96,7 +96,7 @@ export default function CallPage() {
         </p>
       )}
       {reportError && (
-        <div role="alert" className="mb-4 rounded-lg border border-danger-ink/20 bg-danger px-4 py-3 text-sm text-danger-ink">
+        <div role="alert" className="mb-4 rounded-lg border border-danger/30 bg-danger-bg px-4 py-3 text-sm font-medium leading-relaxed text-danger-ink">
           {reportError}
           {canRetryReport && (
             <button

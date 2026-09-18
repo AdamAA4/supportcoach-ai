@@ -18,12 +18,17 @@ const decodeEntities = (text: string): string => text
   .replace(/&quot;/gi, '"')
   .replace(/&#39;/gi, "'");
 
+// Block-level closers become line breaks so paragraph structure survives
+// inside each extracted answer; inline tags collapse to spaces.
 const blockText = (html: string): string => decodeEntities(
   html
+    .replace(/<\/(p|div|li|h[1-6]|tr|section|article|blockquote|dd|dt|table|ul|ol|main|figure|figcaption)>/gi, "\n")
+    .replace(/<br[^>]*>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
-    .replace(/[^\S\n]+/g, " ")
-    .replace(/ *\n+ */g, " ")
-    .trim(),
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n"),
 );
 
 const stripInvisible = (html: string): string => html
@@ -115,7 +120,7 @@ const extractHeadingPairs = (html: string): { pairs: Pair[]; rest: string } => {
   for (const segment of segments) {
     if (segment.heading !== undefined) {
       if (pendingHeading !== undefined) {
-        const answer = answerParts.join(" ").trim();
+        const answer = answerParts.join("\n").trim();
         if (answer) pairs.push({ question: pendingHeading, answer });
       }
       pendingHeading = segment.heading;
@@ -128,10 +133,36 @@ const extractHeadingPairs = (html: string): { pairs: Pair[]; rest: string } => {
     else leftoverParts.push(text);
   }
   if (pendingHeading !== undefined) {
-    const answer = answerParts.join(" ").trim();
+    const answer = answerParts.join("\n").trim();
     if (answer) pairs.push({ question: pendingHeading, answer });
   }
   return { pairs, rest: leftoverParts.join("\n\n") };
+};
+
+const isQuestionLike = (line: string): boolean =>
+  line.endsWith("?") ||
+  /^(how|what|can|do|does|did|is|are|when|where|why|who|which|will|should|could)\b/i.test(line);
+
+// A heading section on real FAQ pages often holds the actual questions as
+// paragraphs (e.g. everything under an H1 like "Frequently asked questions").
+// Split such a section into one pair per question-like paragraph; following
+// non-question paragraphs become that question's answer.
+const splitHeadingPair = (pair: Pair): Pair[] => {
+  const lines = pair.answer.split("\n").map((line) => line.trim()).filter(Boolean);
+  if (lines.length < 2) return [pair];
+  const children: Pair[] = [];
+  let current: Pair | null = null;
+  for (const line of lines) {
+    if (isQuestionLike(line) && line.split(/\s+/).length <= 30) {
+      if (current) children.push(current);
+      current = { question: line, answer: "" };
+    } else if (current) {
+      current.answer = current.answer ? `${current.answer}\n${line}` : line;
+    }
+  }
+  if (current) children.push(current);
+  const withAnswers = children.filter((child) => child.answer.trim().length > 0);
+  return withAnswers.length > 0 ? withAnswers : [pair];
 };
 
 const normalizeKey = (value: string): string =>
@@ -155,7 +186,12 @@ export const extractFaqContent = (html: string): FaqExtraction => {
   const definitions = extractDefinitionListPairs(details.rest);
   const headings = extractHeadingPairs(definitions.rest);
 
-  const pairs = dedupePairs([...jsonLd.pairs, ...details.pairs, ...definitions.pairs, ...headings.pairs]);
+  const pairs = dedupePairs([
+    ...jsonLd.pairs,
+    ...details.pairs,
+    ...definitions.pairs,
+    ...headings.pairs.flatMap(splitHeadingPair),
+  ]);
   const structured = pairs.length > 0;
   const extractedText = structured
     ? pairs.map((pair) => `Q: ${pair.question}\nA: ${pair.answer}`).join("\n\n")

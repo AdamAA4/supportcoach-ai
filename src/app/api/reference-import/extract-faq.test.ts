@@ -40,7 +40,7 @@ describe("extractFaqContent", () => {
     expect(result.extractedText).toContain("Q: When will my order arrive?");
     expect(result.extractedText).toContain("A: Standard delivery takes 3 to 5 business days.");
     expect(result.extractedText).toContain("Q: What if my delivery is late?");
-    expect(result.extractedText).toContain("A: Check the tracking link. Contact support after the window.");
+    expect(result.extractedText).toContain("A: Check the tracking link.\nContact support after the window.");
   });
 
   it("drops exact duplicate entries and keeps distinct questions with the same answer", () => {
@@ -62,5 +62,22 @@ describe("extractFaqContent", () => {
     expect(result.qaPairs).toBe(0);
     expect(result.extractedText).toContain("Standard delivery takes 3 to 5 business days.");
     expect(result.extractedText).toContain("Tracking links are sent by email.");
+  });
+
+  it("splits a banner heading section into one pair per embedded question", () => {
+    const html = `<main><h1>Frequently asked questions</h1><p>Everything you need to know before trading.</p><p>How does the KYC verification work?</p><p>Submit your documents and verification completes within 24 hours.</p><p>What is slippage?</p><p>Slippage is the price difference between the expected and executed price.</p></main>`;
+    const result = extractFaqContent(html);
+    expect(result.qaPairs).toBe(2);
+    expect(result.extractedText).toContain("Q: How does the KYC verification work?\nA: Submit your documents and verification completes within 24 hours.");
+    expect(result.extractedText).toContain("Q: What is slippage?\nA: Slippage is the price difference between the expected and executed price.");
+    expect(result.extractedText).not.toContain("Q: Frequently asked questions");
+  });
+
+  it("keeps a question heading with a plain multi-paragraph answer as one pair", () => {
+    const html = `<main><h2>What if my delivery is late?</h2><p>Check the tracking link first.</p><p>If the delivery window has passed, contact support and we will escalate the order to the carrier.</p></main>`;
+    const result = extractFaqContent(html);
+    expect(result.qaPairs).toBe(1);
+    expect(result.extractedText).toContain("Q: What if my delivery is late?");
+    expect(result.extractedText).toContain("Check the tracking link first.\nIf the delivery window has passed");
   });
 });

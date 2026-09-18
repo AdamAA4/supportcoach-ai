@@ -16,8 +16,9 @@ const STOP_WORDS = new Set([
   "where", "why", "your", "you", "it", "its", "if", "there",
 ]);
 
-// Sections that are site furniture rather than practice material.
-const NON_TOPIC_HEADINGS = /^(contact( us)?|about( us)?|home|follow us|newsletter|careers|jobs?|blog|news|press|menu|navigation|search|sign in|log ?in|sign up|register|privacy( policy)?|terms( of (use|service))?|get in touch|reach us|home page)\??$/i;
+// Sections that are page furniture or generic FAQ banners rather than a
+// practice topic ("Frequently asked questions" holding the whole FAQ).
+const NON_TOPIC_HEADINGS = /^(contact( us)?|about( us)?|home|follow us|subscribe to (?:our )?newsletter|newsletter(?: sign ?up| subscription)?|careers|jobs?|blog|news|press|menu|navigation|search|sign in|log ?in|sign up|register|privacy( policy)?|terms( of (use|service))?|get in touch|reach us|home page|frequently asked questions?|faqs?|common(ly asked)? questions?)\??$/i;
 
 const wordsOf = (value: string): string[] => value.toLowerCase().match(/[a-z0-9']+/g) ?? [];
 
