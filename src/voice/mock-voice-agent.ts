@@ -1,5 +1,6 @@
 import type { ReferenceFact } from "../domain/reference-source";
 import type { ScenarioDefinition } from "../domain/practice-pack";
+import { buildQuestionPlan, type PlannedQuestion } from "./question-plan";
 import type { VoiceAgent, VoiceAgentEvent } from "./voice-agent";
 
 type SpeechRecognitionResultEventLike = { results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }> };
@@ -20,12 +21,9 @@ type SpeechSynthesisLike = { speak: (utterance: SpeechSynthesisUtteranceLike) =>
 type SpeechSynthesisUtteranceLike = { text: string; onend: (() => void) | null; onerror: (() => void) | null };
 type SpeechSynthesisUtteranceConstructor = new (text: string) => SpeechSynthesisUtteranceLike;
 
-const mockFollowUp = (scenario: ScenarioDefinition, facts: ReferenceFact[]): string => {
-  const fact = facts.find((candidate) => scenario.factIds.includes(candidate.id)) ?? facts[0];
-  return fact
-    ? `Thanks. Can you tell me what happens next under the ${fact.source} guidance?`
-    : "Thanks. What is the next step you can offer me?";
-};
+// When the grounded question plan is exhausted (or empty), the customer asks
+// for a next step — the same fallback the audio fixtures are recorded for.
+const fallbackFollowUp = "Thanks. What is the next step you can offer me?";
 
 /** Fixtures are used only when their spoken text exactly matches the current turn. */
 const mockCustomerAudioFixtures: Record<string, string> = {
@@ -39,6 +37,8 @@ export class MockVoiceAgent implements VoiceAgent {
   private onEvent?: (event: VoiceAgentEvent) => void;
   private scenario?: ScenarioDefinition;
   private facts: ReferenceFact[] = [];
+  private plan: PlannedQuestion[] = [];
+  private planCursor = 0;
   private customerSpeaking = false;
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private recognition?: SpeechRecognitionLike;
@@ -52,6 +52,8 @@ export class MockVoiceAgent implements VoiceAgent {
     this.onEvent = input.onEvent;
     this.scenario = input.scenario;
     this.facts = input.facts;
+    this.plan = buildQuestionPlan(input.scenario, input.facts);
+    this.planCursor = 0;
     this.emit({ type: "session-ready", sessionId: "mock-session" });
     this.emitCustomerTurn(input.scenario.openingLine);
   }
@@ -118,7 +120,17 @@ export class MockVoiceAgent implements VoiceAgent {
   requestMockCustomerTurn(): void {
     if (!this.scenario) return;
     this.interruptCustomer();
-    this.emitCustomerTurn(mockFollowUp(this.scenario, this.facts));
+    this.emitCustomerTurn(this.nextFollowUp());
+  }
+
+  // The customer works through the grounded question plan one question at a
+  // time; repeats are never asked. When the plan runs dry, the customer asks
+  // for a next step — content the scenario itself provides.
+  private nextFollowUp(): string {
+    const next = this.plan[this.planCursor];
+    if (!next) return fallbackFollowUp;
+    this.planCursor += 1;
+    return next.question;
   }
 
   async end(): Promise<void> {
@@ -133,7 +145,7 @@ export class MockVoiceAgent implements VoiceAgent {
 
   private respondAfterTraineeTurn(): void {
     if (!this.scenario) return;
-    this.schedule(() => this.emitCustomerTurn(mockFollowUp(this.scenario!, this.facts)), 250);
+    this.schedule(() => this.emitCustomerTurn(this.nextFollowUp()), 250);
   }
 
   private emitCustomerTurn(text: string): void {

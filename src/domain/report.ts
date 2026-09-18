@@ -1,6 +1,7 @@
 import type { Score } from "./practice-pack";
 import type { SourceProvenance } from "./reference-source";
 import type { TranscriptTurn } from "./transcript";
+import type { PracticeTask } from "../evaluation/practice-task";
 
 export type CoachingReport = {
   callId: string;
@@ -16,6 +17,7 @@ export type CoachingReport = {
   missedFacts: string[];
   unsupportedClaims: string[];
   nextExercise: string;
+  practice?: PracticeTask;
   transcript: TranscriptTurn[];
   sourceProvenance: SourceProvenance;
 };

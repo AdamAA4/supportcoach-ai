@@ -1,6 +1,7 @@
 import type { ScenarioDefinition } from "../domain/practice-pack";
 import type { ReferenceFact } from "../domain/reference-source";
 import { MockVoiceAgent } from "./mock-voice-agent";
+import { buildQuestionPlan } from "./question-plan";
 import type { VoiceAgent, VoiceAgentEvent } from "./voice-agent";
 
 const VOICE_TOKEN_URL = "/api/voice-token";
@@ -54,17 +55,25 @@ const resampleTo24k = (samples: Float32Array, sourceRate: number): Float32Array 
   return result;
 };
 
-const promptFor = (scenario: ScenarioDefinition, facts: ReferenceFact[]): string => [
-  "You are a simulated customer in a support-practice exercise, never a real customer support assistant.",
-  "The trainee is the support responder. Stay in character as the customer and do not answer the trainee's customer questions for them.",
-  `Scenario: ${scenario.title}.`,
-  `Customer persona: ${scenario.customerPersona}.`,
-  `Opening line: ${scenario.openingLine}.`,
-  `Customer goals: ${scenario.goals.join("; ") || "Ask for help with the scenario."}.`,
-  "After every trainee answer, react to its specific content with one concise realistic follow-up. Never repeat the opening line after the first turn.",
-  "Use only these confirmed FAQ/policy facts when reacting to the trainee's answer:",
-  ...facts.map((fact) => `- ${fact.question}: ${fact.answer}`),
-].join("\n");
+const promptFor = (scenario: ScenarioDefinition, facts: ReferenceFact[]): string => {
+  const questionPlan = buildQuestionPlan(scenario, facts);
+  return [
+    "You are a simulated customer in a support-practice exercise, never a real customer support assistant.",
+    "The trainee is the support responder. Stay in character as the customer and do not answer the trainee's customer questions for them.",
+    `Scenario: ${scenario.title}.`,
+    `Customer persona: ${scenario.customerPersona}.`,
+    `Opening line: ${scenario.openingLine}.`,
+    `Customer goals: ${scenario.goals.join("; ") || "Ask for help with the scenario."}.`,
+    "After every trainee answer, react to its specific content with one concise realistic follow-up. Never repeat the opening line after the first turn.",
+    "Use only these confirmed FAQ/policy facts when reacting to the trainee's answer:",
+    ...facts.map((fact) => `- ${fact.question}: ${fact.answer}`),
+    "Work through this question plan one question at a time, in order, and never repeat a question you have already asked:",
+    ...(questionPlan.length
+      ? questionPlan.map((item) => `- ${item.question}`)
+      : ["- Ask the trainee for a next step you can check with your team."]),
+    "If the trainee asks about something these facts do not cover, say that you need to check rather than inventing policy details.",
+  ].join("\n");
+};
 
 export class AssemblyAiVoiceAgent implements VoiceAgent {
   private readonly request: typeof fetch;

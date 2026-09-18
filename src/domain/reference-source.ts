@@ -59,17 +59,42 @@ const questionAnswerPairs = (sourceText: string): Array<{ question: string; answ
     .map((paragraph, index) => ({ question: `Reference detail ${index + 1}`, answer: paragraph }));
 };
 
+const normalizeFactText = (value: string): string =>
+  value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+// Exact duplicate entries (normalized question + answer together) are dropped;
+// the same answer under a different question is retained on purpose.
+const dedupePairs = <T extends { question: string; answer: string }>(items: T[]): T[] => {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = `${normalizeFactText(item.question)}\u0000${normalizeFactText(item.answer)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const dedupeDetails = <T extends { question: string; answer: string }>(items: T[]): T[] => {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = normalizeFactText(item.answer);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
 export const normalizeReferenceFacts = (
   sourceText: string,
   notes: ExperienceNote[],
 ): ReferenceFact[] => {
-  const sourceFacts = questionAnswerPairs(sourceText).map((pair, index) => ({
+  const sourceFacts = dedupeDetails(dedupePairs(questionAnswerPairs(sourceText).map((pair, index) => ({
     id: `source-fact-${index + 1}`,
     question: pair.question,
     answer: pair.answer,
     keywords: keywordsFor(`${pair.question} ${pair.answer}`),
     source: (/policy|refund|cancel|return/i.test(`${pair.question} ${pair.answer}`) ? "policy" : "faq") as "faq" | "policy",
-  }));
+  }))));
 
   const approvedAdviceFacts = notes
     .filter((note) => note.kind === "approved-practice-advice" && note.text.trim())

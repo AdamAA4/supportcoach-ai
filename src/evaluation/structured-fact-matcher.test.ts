@@ -82,6 +82,14 @@ describe("matchReferenceFacts", () => {
     expect(result.unsupportedClaims).toEqual([text]);
   });
 
+  it("does not cut a fact's own subject when a sibling fact uses the same word as a relation", () => {
+    const delivery = fact("delivery", "Standard delivery takes 3 to 5 business days from dispatch");
+    const late = fact("late", "Check the tracking link first. If the delivery window has passed, contact support and we will escalate the order to the carrier.");
+    const text = "Standard delivery takes 3 to 5 business days from dispatch, and your order is past that window, so we have escalated it to the carrier and sent you the tracking link.";
+    const result = matchReferenceFacts([delivery, late], [{ text, isQuestion: false }]);
+    expect(result.supportedFactIds.has(delivery.id)).toBe(true);
+  });
+
   it("supports an equivalent confirmed negative fact phrased with a contraction", () => {
     const negative = fact("negative", "Refunds are not available after 30 days");
     const text = "Refunds aren't available after 30 days.";

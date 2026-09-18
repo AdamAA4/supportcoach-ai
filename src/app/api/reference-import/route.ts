@@ -7,6 +7,8 @@ import { checkServerIdentity } from "node:tls";
 
 import { NextResponse } from "next/server";
 
+import { extractFaqContent } from "./extract-faq";
+
 export const runtime = "nodejs";
 
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -68,27 +70,11 @@ const publicHttpsUrl = (value: unknown): URL | undefined => {
   }
 };
 
-// Block-level closers become newlines so paragraph structure survives text
-// extraction; the fact extractor and the fallback detail splitter depend on it.
-const textFromHtml = (html: string): string => html
-  .replace(/<!--[\s\S]*?-->/g, " ")
-  .replace(/<(script|style|noscript|iframe|svg|template)[^>]*>[\s\S]*?<\/\1>/gi, " ")
-  .replace(/<(nav|header|footer|aside|form)[^>]*>[\s\S]*?<\/\1>/gi, "\n")
-  .replace(/<\/(p|div|li|h[1-6]|tr|section|article|blockquote|dd|dt|table|ul|ol|main|figure|figcaption)>/gi, "\n")
-  .replace(/<br[^>]*>/gi, "\n")
-  .replace(/<[^>]+>/g, " ")
-  .replace(/&nbsp;/gi, " ")
-  .replace(/&amp;/gi, "&")
-  .replace(/&lt;/gi, "<")
-  .replace(/&gt;/gi, ">")
-  .replace(/&quot;/gi, '"')
-  .replace(/&#39;/gi, "'")
-  .replace(/[^\S\n]+/g, " ")
-  .replace(/ *\n+ */g, "\n")
-  .replace(/\n{3,}/g, "\n\n")
-  .trim();
-
-const readBoundedBody = async (response: IncomingMessage): Promise<string> => {
+// Structured FAQ extraction (JSON-LD, details/summary, definition lists,
+// heading sections) plus the text fallback lives in ./extract-faq so it can
+// be tested directly. Block-level closers become newlines so paragraph
+// structure survives for the fact extractor.
+const readBoundedBody = async (response: IncomingMessage): Promise<{ html: string; bytes: number }> => {
   const advertisedLength = Number(response.headers["content-length"]);
   if (Number.isFinite(advertisedLength) && advertisedLength > MAX_BYTES) {
     response.destroy();
@@ -102,7 +88,7 @@ const readBoundedBody = async (response: IncomingMessage): Promise<string> => {
     if (size > MAX_BYTES) { response.destroy(); throw new Error("too-large"); }
     chunks.push(bytes);
   }
-  return Buffer.concat(chunks, size).toString("utf8");
+  return { html: Buffer.concat(chunks, size).toString("utf8"), bytes: size };
 };
 
 const resolvePublicAddress = async (url: URL): Promise<string> => {
@@ -112,7 +98,7 @@ const resolvePublicAddress = async (url: URL): Promise<string> => {
   return addresses[0].address;
 };
 
-const retrieve = (url: URL, address: string, signal: AbortSignal): Promise<string> => new Promise((resolve, reject) => {
+const retrieve = (url: URL, address: string, signal: AbortSignal): Promise<{ html: string; bytes: number }> => new Promise((resolve, reject) => {
   const hostname = hostnameOf(url);
   // The connection uses a validated numeric IP, so it cannot perform a second DNS
   // lookup. Host, SNI and certificate verification retain the requested identity.
@@ -149,13 +135,18 @@ export async function POST(request: Request) {
   });
   try {
     const address = await Promise.race([resolvePublicAddress(sourceUrl), deadline]);
-    const extractedText = textFromHtml(await Promise.race([retrieve(sourceUrl, address, controller.signal), deadline]));
+    const { html, bytes } = await Promise.race([retrieve(sourceUrl, address, controller.signal), deadline]);
+    const extraction = extractFaqContent(html);
+    const extractedText = extraction.extractedText;
     if (!extractedText) return failure("unavailable");
     const canonicalUrl = sourceUrl.toString();
     return NextResponse.json({
       canonicalUrl,
       extractedText,
       contentHash: `sha256:${createHash("sha256").update(extractedText).digest("hex")}`,
+      pageBytes: bytes,
+      qaPairs: extraction.qaPairs,
+      structured: extraction.structured,
     });
   } catch (error) {
     if (error instanceof Error && error.message === "too-large") {

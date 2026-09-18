@@ -18,6 +18,7 @@ export default function CallPage() {
   const [ready, setReady] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
   const [reportError, setReportError] = useState("");
+  const [canRetryReport, setCanRetryReport] = useState(false);
   const completedTurns = useRef<TranscriptTurn[] | undefined>(undefined);
   const activeRequest = useRef<AbortController | undefined>(undefined);
 
@@ -30,6 +31,13 @@ export default function CallPage() {
 
   const evaluate = async (transcript: TranscriptTurn[]) => {
     if (!context || activeRequest.current) return;
+    if (!transcript.some((turn) => turn.speaker === "trainee")) {
+      // An empty call is not a scored call: evaluation would return all-zero
+      // scores for a transcript with no trainee response.
+      setReportError("This call ended before you spoke, so there is nothing to score. Start a new practice call to try again.");
+      setCanRetryReport(false);
+      return;
+    }
     completedTurns.current = transcript;
     const controller = new AbortController();
     activeRequest.current = controller;
@@ -40,14 +48,14 @@ export default function CallPage() {
       const report: unknown = await response.json();
       if (controller.signal.aborted) return;
       if (!response.ok || !isCoachingReport(report) || !equalData(report.transcript, transcript) || !equalData(report.sourceProvenance, context.sourceProvenance) || report.scenarioId !== context.scenario.id) {
-        setReportError("The coaching report could not be generated. Your final transcript is still here; try again."); return;
+        setReportError("The coaching report could not be generated. Your final transcript is still here; try again."); setCanRetryReport(true); return;
       }
       if (!saveCompletedPractice({ context, report })) {
-        setReportError("The report could not be saved. Check browser storage space and permissions, then retry."); return;
+        setReportError("The report could not be saved. Check browser storage space and permissions, then retry."); setCanRetryReport(true); return;
       }
       router.push("/report");
     } catch {
-      setReportError("The coaching report could not be generated. Check your connection and try again.");
+      setReportError("The coaching report could not be generated. Check your connection and try again."); setCanRetryReport(true);
     } finally {
       clearTimeout(timeout);
       activeRequest.current = undefined;
@@ -88,15 +96,17 @@ export default function CallPage() {
         </p>
       )}
       {reportError && (
-        <div role="alert" className="mb-4 rounded-lg border border-danger/40 bg-danger-bg px-4 py-3 text-sm text-danger-ink">
+        <div role="alert" className="mb-4 rounded-lg border border-danger-ink/20 bg-danger px-4 py-3 text-sm text-danger-ink">
           {reportError}
-          <button
-            type="button"
-            onClick={() => { if (completedTurns.current) void evaluate(completedTurns.current); }}
-            className="ml-3 font-bold underline underline-offset-2 transition-opacity duration-150 hover:opacity-80"
-          >
-            Retry report
-          </button>
+          {canRetryReport && (
+            <button
+              type="button"
+              onClick={() => { if (completedTurns.current) void evaluate(completedTurns.current); }}
+              className="ml-3 font-semibold underline underline-offset-2 transition-opacity duration-200 hover:opacity-80"
+            >
+              Retry report
+            </button>
+          )}
         </div>
       )}
       <CallConsole context={context} onCallEnded={(transcript) => void evaluate(transcript)} />

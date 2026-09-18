@@ -123,13 +123,18 @@ const relationAnchoredSpans = (
     const tokens = normalizeFactTokens(segment);
     const ownAnchors = unique(positionsOf(tokens, spec.relationTerms))
       .sort((left, right) => left - right);
+    // Another fact's relation anchor may also be this fact's subject term
+    // (e.g. "delivery" across delivery facts): such positions must not cut
+    // this fact's evidence window in front of its own subject.
+    const subjectTermAt = (position: number): boolean =>
+      spec.subjectTerms.includes(tokens[position]);
 
     return ownAnchors.map((anchor) => {
       const previousDifferentAnchor = positionsOf(tokens, differentRelations)
-        .filter((position) => position < anchor)
+        .filter((position) => position < anchor && !subjectTermAt(position))
         .sort((left, right) => right - left)[0] ?? -1;
       const nextDifferentAnchor = positionsOf(tokens, differentRelations)
-        .filter((position) => position > anchor)
+        .filter((position) => position > anchor && !subjectTermAt(position))
         .sort((left, right) => left - right)[0] ?? tokens.length;
       const subjectPositions = positionsOf(
         tokens.slice(previousDifferentAnchor + 1, anchor + 1),

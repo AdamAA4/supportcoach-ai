@@ -36,6 +36,12 @@ export const isTranscript = (value: unknown): value is TranscriptTurn[] => Array
 
 export const isCoachingReport = (value: unknown): value is CoachingReport => {
   if (!isRecord(value) || !isRecord(value.scores) || !isRecord(value.sourceProvenance)) return false;
+  if (value.practice !== undefined) {
+    const practice = value.practice;
+    if (!isRecord(practice) || typeof practice.openingLine !== "string" || typeof practice.focus !== "string" || typeof practice.needsConfirmation !== "boolean") return false;
+    if (!Array.isArray(practice.facts) || !practice.facts.every((fact) => isRecord(fact) && typeof fact.question === "string" && typeof fact.answer === "string")) return false;
+    if (!Array.isArray(practice.checklist) || !practice.checklist.every((item) => typeof item === "string")) return false;
+  }
   return text(value.callId) && text(value.scenarioId) && text(value.completedAt) && Number.isFinite(Date.parse(value.completedAt)) &&
     ["factualAccuracy", "empathy", "clarity", "resolution"].every((key) => Number.isInteger(value.scores && (value.scores as Record<string, unknown>)[key]) && [0, 1, 2, 3].includes((value.scores as Record<string, number>)[key])) &&
     texts(value.strengths) && value.strengths.length === 2 && texts(value.missedFacts) && texts(value.unsupportedClaims) && text(value.nextExercise) && isTranscript(value.transcript) && text(value.sourceProvenance.contentHash) &&

@@ -13,25 +13,34 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `9bc80b5`
-- Generated: 2026-09-17T23:42:45.309Z
+- Current commit: `a405286`
+- Generated: 2026-09-18T01:08:26.108Z
 - Uncommitted files excluding this handoff: 
 
 ```text
-M .impeccable/review/desktop-call.png
- M .impeccable/review/desktop-report.png
- M .impeccable/review/mobile-call.png
+M .impeccable/review/desktop-report.png
  M .impeccable/review/mobile-report.png
- M BUGS.md
  M CHANGELOG.md
  M src/app/api/reference-import/route.test.ts
  M src/app/api/reference-import/route.ts
- M src/app/setup/page.tsx
- M src/components/call-console.tsx
+ M src/app/call/page.tsx
+ M src/components/coaching-report.test.tsx
  M src/components/coaching-report.tsx
- M src/components/reference-panel.tsx
- M src/components/ui.tsx
+ M src/domain/reference-source.ts
+ M src/domain/report.ts
  M src/evaluation/deterministic-evaluator.ts
+ M src/evaluation/structured-fact-matcher.test.ts
+ M src/evaluation/structured-fact-matcher.ts
+ M src/evaluation/validation.ts
+ M src/voice/assemblyai-voice-agent.ts
+ M src/voice/mock-voice-agent.ts
+?? src/app/api/reference-import/extract-faq.test.ts
+?? src/app/api/reference-import/extract-faq.ts
+?? src/app/call/page.empty.test.tsx
+?? src/evaluation/practice-task.test.ts
+?? src/evaluation/practice-task.ts
+?? src/voice/question-plan.test.ts
+?? src/voice/question-plan.ts
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
@@ -61,6 +70,8 @@ Follow-up round 3 (2026-09-18, product-lead request): the import body cap was ra
 - Visual evidence: `.impeccable/review/*.png` (desktop 1440x900, mobile 390x844 at 2x) with `provenance.json`; capture scripts preserved at `.impeccable/review/scripts/`.
 
 Follow-up round 4 (2026-09-18, product-lead feedback): imported pages now preserve paragraph structure — the HTML cleaner converts block-level tags to line breaks before extraction, so imports produce per-section reference facts instead of one page-length blob (the root cause of factual accuracy scoring 0 on imports). Next exercise quotes at most 180 characters of the missed-fact answer, and the report clamps the display with a Show-full toggle. Back navigation added (Home on setup/report, Source setup on the call screen), and the session-sheet facts list collapses to three entries with a Show-all toggle.
+
+Follow-up round 5 (2026-09-18, product-lead feedback): the fact matcher's evidence windows no longer start in front of a fact's own subject when a sibling fact uses the same word as a relation (for example "delivery" shared across delivery facts). A trainee answer that states a confirmed fact verbatim is now credited instead of missed; regression test added. Structured FAQ extraction also landed this round (JSON-LD, details/summary, definition lists, heading sections, duplicate removal) with import stats, and a grounded customer question plan now drives both voice modes.
 
 ## Remaining work or known issues
 

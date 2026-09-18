@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import type { CoachingReport as Report } from "../domain/report";
 import { TranscriptPane } from "./transcript-pane";
-import { BackLink, btnDanger, btnPrimary, ChevronDownIcon } from "./ui";
+import { BackLink, btnDanger, btnPrimary, CheckIcon, ChevronDownIcon } from "./ui";
 
 const EXERCISE_LIMIT = 320;
 
@@ -72,21 +72,55 @@ export function CoachingReport({ report, onClear }: { report: Report; onClear: (
           <FeedbackList title="Missed facts" items={report.missedFacts} empty="You stated all the required reference answers." />
           <FeedbackList title="Unsupported claims" items={report.unsupportedClaims} empty="No conflicting claims were detected by this rule-based check." />
         </div>
-        <section className="rounded-2xl border border-warn/30 bg-warn-bg p-5">
-          <h2 className="font-display text-lg font-bold tracking-tight text-warn-ink">Next exercise</h2>
-          <p className="mt-3 break-words leading-relaxed text-ink-soft">
-            {exerciseLong && !exerciseExpanded ? `${report.nextExercise.slice(0, EXERCISE_LIMIT).trimEnd()}...` : report.nextExercise}
-          </p>
-          {exerciseLong && (
-            <button
-              type="button"
-              onClick={() => setExerciseExpanded(!exerciseExpanded)}
-              className="mt-3 text-sm font-bold text-warn-ink underline underline-offset-2 transition-opacity duration-200 hover:opacity-80"
-            >
-              {exerciseExpanded ? "Show less" : "Show full exercise"}
-            </button>
-          )}
-        </section>
+        {report.practice ? (
+          <section className="rounded-2xl border border-warn/30 bg-warn-bg p-5">
+            <h2 className="font-display text-lg font-bold tracking-tight text-warn-ink">Next exercise</h2>
+            <p className="mt-3 text-sm font-semibold text-ink">
+              Customer opens with: <span className="font-normal italic">&quot;{report.practice.openingLine}&quot;</span>
+            </p>
+            <p className="mt-3 break-words leading-relaxed text-ink-soft">{report.practice.focus}</p>
+            {report.practice.facts.length > 0 && (
+              <div className="mt-4">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-warn-ink">Confirmed facts to include</p>
+                <div className="mt-2 space-y-2.5">
+                  {report.practice.facts.map((fact) => (
+                    <div key={fact.question} className="rounded-xl border border-line bg-panel p-3">
+                      <p className="font-bold text-ink">{fact.question}</p>
+                      <p className="mt-1 text-sm leading-relaxed text-ink-soft">{fact.answer}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="mt-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-warn-ink">Success checklist</p>
+              <ul className="mt-2 space-y-1.5">
+                {report.practice.checklist.map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm leading-relaxed text-ink-soft">
+                    <CheckIcon className="mt-0.5 size-4 shrink-0 text-ok-ink" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        ) : (
+          <section className="rounded-2xl border border-warn/30 bg-warn-bg p-5">
+            <h2 className="font-display text-lg font-bold tracking-tight text-warn-ink">Next exercise</h2>
+            <p className="mt-3 break-words leading-relaxed text-ink-soft">
+              {exerciseLong && !exerciseExpanded ? `${report.nextExercise.slice(0, EXERCISE_LIMIT).trimEnd()}...` : report.nextExercise}
+            </p>
+            {exerciseLong && (
+              <button
+                type="button"
+                onClick={() => setExerciseExpanded(!exerciseExpanded)}
+                className="mt-3 text-sm font-bold text-warn-ink underline underline-offset-2 transition-opacity duration-200 hover:opacity-80"
+              >
+                {exerciseExpanded ? "Show less" : "Show full exercise"}
+              </button>
+            )}
+          </section>
+        )}
         <details className="group rounded-2xl border border-line bg-panel p-5 shadow-card">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-bold text-ink [&::-webkit-details-marker]:hidden">
             Full transcript
