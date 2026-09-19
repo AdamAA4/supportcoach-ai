@@ -80,4 +80,14 @@ describe("extractFaqContent", () => {
     expect(result.extractedText).toContain("Q: What if my delivery is late?");
     expect(result.extractedText).toContain("Check the tracking link first.\nIf the delivery window has passed");
   });
+
+  it("does not pair consecutive menu labels as question and answer", () => {
+    const html = `<main><h1>Frequently asked questions</h1><p>How to Secure Funding from Equity Edge</p><p>Evaluation Phase</p><p>Crypto Trading over the weekend</p><p>How does the KYC verification work?</p><p>Slippage</p><p>Restricted Countries</p><p>Policy Against Gambling in Trading</p></main>`;
+    const result = extractFaqContent(html);
+    expect(result.extractedText).not.toContain("A: Evaluation Phase");
+    expect(result.extractedText).not.toContain("A: Slippage");
+    // The section is kept as one entry with its content preserved.
+    expect(result.extractedText).toContain("How does the KYC verification work?");
+    expect(result.extractedText).toContain("Policy Against Gambling in Trading");
+  });
 });

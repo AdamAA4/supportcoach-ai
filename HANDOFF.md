@@ -13,14 +13,16 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `af4d81c`
-- Generated: 2026-09-19T05:25:49.993Z
+- Current commit: `c4c6b0d`
+- Generated: 2026-09-19T22:38:45.478Z
 - Uncommitted files excluding this handoff: 
 
 ```text
 M CHANGELOG.md
- M src/app/icon.svg
-?? .impeccable/review/favicon.png
+ M src/app/api/reference-import/extract-faq.test.ts
+ M src/app/api/reference-import/extract-faq.ts
+ M src/components/source-preview.tsx
+?? .impeccable/review/preview-legend.png
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
@@ -54,6 +56,8 @@ Follow-up round 4 (2026-09-18, product-lead feedback): imported pages now preser
 Follow-up round 5 (2026-09-18, product-lead feedback): the fact matcher's evidence windows no longer start in front of a fact's own subject when a sibling fact uses the same word as a relation (for example "delivery" shared across delivery facts). A trainee answer that states a confirmed fact verbatim is now credited instead of missed; regression test added. Structured FAQ extraction also landed this round (JSON-LD, details/summary, definition lists, heading sections, duplicate removal) with import stats, and a grounded customer question plan now drives both voice modes.
 
 Favicon updated in round 9 to the same identity (plum tile, rose voice bars) replacing the amber-on-charcoal mark.
+
+Follow-up round 10 (2026-09-18, product-lead screenshot): splitHeadingPair no longer pairs consecutive menu labels as Q/A (the reported "A: Evaluation Phase" / "A: Slippage" nonsense). A question-like line pairs only with following content that reads as an answer (sentence-ending punctuation or a line of 8+ words); unanswered questions are skipped and the section falls back to one entry with its full text. The extracted-source preview now explains the Q/A legend. Regression test covers the equityedge-shaped fixture.
 
 Follow-up round 9 (2026-09-18, product-lead request): app logo added — voice-bar mark in a plum rounded tile with a Fraunces wordmark ("SupportCoach" ink, "AI" rose), reusable as `src/components/logo.tsx` (`Logo`, `LogoMark`) and standalone `public/logo.svg`; used in the home header (links home, wordmark nowrap, eyebrow hidden below sm) and the site footer (compact, links home). Verified in-browser at 390px; full suite green.
 

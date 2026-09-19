@@ -146,23 +146,37 @@ const isQuestionLike = (line: string): boolean =>
 // A heading section on real FAQ pages often holds the actual questions as
 // paragraphs (e.g. everything under an H1 like "Frequently asked questions").
 // Split such a section into one pair per question-like paragraph; following
-// non-question paragraphs become that question's answer.
+// non-question paragraphs become that question's answer. A question only
+// pairs with content that reads like an answer (sentence punctuation or a
+// full-length line): consecutive topic labels are a menu list, and pairing
+// them would invent nonsense like "A: Evaluation Phase".
+const readsAsAnswer = (line: string): boolean => {
+  const words = line.split(/\s+/).length;
+  return /[.!?]$/.test(line) || words >= 8;
+};
+
 const splitHeadingPair = (pair: Pair): Pair[] => {
   const lines = pair.answer.split("\n").map((line) => line.trim()).filter(Boolean);
   if (lines.length < 2) return [pair];
   const children: Pair[] = [];
-  let current: Pair | null = null;
+  let current: { question: string; answerLines: string[]; answered: boolean } | null = null;
+  const flush = () => {
+    if (current && current.answered) {
+      children.push({ question: current.question, answer: current.answerLines.join("\n").trim() });
+    }
+    current = null;
+  };
   for (const line of lines) {
     if (isQuestionLike(line) && line.split(/\s+/).length <= 30) {
-      if (current) children.push(current);
-      current = { question: line, answer: "" };
+      flush();
+      current = { question: line, answerLines: [], answered: false };
     } else if (current) {
-      current.answer = current.answer ? `${current.answer}\n${line}` : line;
+      if (readsAsAnswer(line)) current.answered = true;
+      current.answerLines.push(line);
     }
   }
-  if (current) children.push(current);
-  const withAnswers = children.filter((child) => child.answer.trim().length > 0);
-  return withAnswers.length > 0 ? withAnswers : [pair];
+  flush();
+  return children.length > 0 ? children : [pair];
 };
 
 const normalizeKey = (value: string): string =>

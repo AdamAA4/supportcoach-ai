@@ -14,7 +14,10 @@ export function SourcePreview({ sourceText, confirmed, canConfirm = true, onConf
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="source-preview-heading" className="font-display text-base font-bold tracking-tight text-tape-ink">Extracted source preview</h2>
-          <p className="mt-0.5 text-sm text-tape-muted">Review this snapshot. Customer prompts and factual scoring use only this confirmed material.</p>
+          <p className="mt-0.5 text-sm text-tape-muted">
+            Review this snapshot. Customer prompts and factual scoring use only this confirmed material.
+            Each <span className="font-bold">Q</span> is a question from the page and <span className="font-bold">A</span> is the answer text extracted beneath it.
+          </p>
         </div>
         <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] ${confirmed ? "bg-ok-ink text-white" : "border-2 border-warn-ink text-warn-ink"}`}>
           {confirmed ? "Confirmed" : "Needs confirmation"}

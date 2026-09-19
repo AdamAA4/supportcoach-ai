@@ -72,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Imported pages whose FAQ section is a list of topic labels no longer produce nonsense Q/A pairs (such as "A: Evaluation Phase" or "A: Slippage"): a question-like line only pairs with following content that reads like an answer (sentence punctuation or a full-length line), consecutive labels are skipped, and the section keeps its full text when no question has a real answer.
 - Fact matcher: an evidence window no longer starts in front of a fact's own subject when a sibling fact uses the same word as its relation (for example "delivery" shared across delivery facts). A trainee answer that states a confirmed fact verbatim is now credited instead of being missed; regression test added.
 - Empty-call message is readable and clearer: light-red panel with dark-red text (was dark text on a dark red panel), now reading "No answers were recorded in this call, so there is nothing to score. Start a new practice call and answer the customer before ending."
 - FAQ import now preserves paragraph structure from imported pages: block-level tags (p, li, headings, table rows, and similar) become line breaks before text extraction, so each page section is extracted as its own reference fact. Previously the whole page collapsed into one page-length "Reference detail" blob, which made factual accuracy score 0 on imported pages because no trainee answer could match it.
