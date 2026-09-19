@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Favicon updated to the app logo identity: plum rounded tile with rose voice bars (was the earlier amber-on-charcoal mark), matching `public/logo.svg` and the header/footer logo components.
 - FAQ-import URL field uses type="url" with a URL keyboard on mobile; server-side validation is unchanged.
 
 ### Added
