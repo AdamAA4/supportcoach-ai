@@ -13,23 +13,17 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `6840c8f`
-- Generated: 2026-09-18T17:11:13.488Z
+- Current commit: `407ec17`
+- Generated: 2026-09-19T05:06:42.693Z
 - Uncommitted files excluding this handoff: 
 
 ```text
 M CHANGELOG.md
- M src/app/api/reference-import/extract-faq.test.ts
- M src/app/api/reference-import/extract-faq.ts
- M src/app/call/page.tsx
- M src/components/reference-panel.tsx
- M src/domain/derived-scenarios.test.ts
- M src/domain/derived-scenarios.ts
-?? .impeccable/review/banner-element.png
-?? .impeccable/review/mobile-empty-call-banner.png
-?? .impeccable/review/mobile-setup-suggestions.png
-?? .impeccable/review/mobile-sheet-expand.png
-?? src/components/expandable-text.tsx
+ M src/app/page.tsx
+ M src/components/site-footer.tsx
+?? .impeccable/review/mobile-home-logo.png
+?? public/logo.svg
+?? src/components/logo.tsx
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
@@ -61,6 +55,8 @@ Follow-up round 3 (2026-09-18, product-lead request): the import body cap was ra
 Follow-up round 4 (2026-09-18, product-lead feedback): imported pages now preserve paragraph structure — the HTML cleaner converts block-level tags to line breaks before extraction, so imports produce per-section reference facts instead of one page-length blob (the root cause of factual accuracy scoring 0 on imports). Next exercise quotes at most 180 characters of the missed-fact answer, and the report clamps the display with a Show-full toggle. Back navigation added (Home on setup/report, Source setup on the call screen), and the session-sheet facts list collapses to three entries with a Show-all toggle.
 
 Follow-up round 5 (2026-09-18, product-lead feedback): the fact matcher's evidence windows no longer start in front of a fact's own subject when a sibling fact uses the same word as a relation (for example "delivery" shared across delivery facts). A trainee answer that states a confirmed fact verbatim is now credited instead of missed; regression test added. Structured FAQ extraction also landed this round (JSON-LD, details/summary, definition lists, heading sections, duplicate removal) with import stats, and a grounded customer question plan now drives both voice modes.
+
+Follow-up round 9 (2026-09-18, product-lead request): app logo added — voice-bar mark in a plum rounded tile with a Fraunces wordmark ("SupportCoach" ink, "AI" rose), reusable as `src/components/logo.tsx` (`Logo`, `LogoMark`) and standalone `public/logo.svg`; used in the home header (links home, wordmark nowrap, eyebrow hidden below sm) and the site footer (compact, links home). Verified in-browser at 390px; full suite green.
 
 Follow-up round 8 (2026-09-18, product-lead decisions): built-in drills removed from the setup screen — scenarios are now always derived from the confirmed source's own sections; a confirmed source with no complete FAQ sections gets the scenario error "This source has no complete FAQ sections to practice yet. Add a question with a full answer and try again." (validation gating; unresolved ids now build an honest empty-facts placeholder in createScenarioDefinition instead of silently falling back to a legacy archetype). Legacy late-delivery/refund-eligibility ids remain valid in validators so previously saved sessions restore. Bug fix from product-lead video: selecting a drill no longer calls invalidateSetup — clicking a suggested drill after confirming an imported link used to reset the source to unconfirmed, dropping its snapshot, wiping facts, and making every suggestion disappear. Verified in-browser: after confirm + drill click, "Source confirmed" persists and all 4 suggestions remain; built-in drills absent; the derived scenario carries into the call.
 

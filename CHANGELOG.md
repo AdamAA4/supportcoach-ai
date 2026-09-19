@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- App logo: voice-bar mark in a plum rounded tile with a Fraunces wordmark ("SupportCoach" in ink, "AI" in rose), as a reusable component (`src/components/logo.tsx`) plus a standalone `public/logo.svg` asset; used in the home header (linking home) and the site footer.
+
+### Fixed
+
 - FAQ-derived practice scenarios: after a source is confirmed, substantive FAQ sections each become a suggested drill (persona, natural customer opening line, and the section's confirmed facts, with related sections grouped when their headings share significant words). The setup screen shows them under a "From your FAQ" group above the two built-in drills; picking one grounds the customer's questions and factual scoring in that section. Thin sections, placeholder headings, and site furniture are never suggested, suggestions are capped at six, and ids are content-derived so stored sessions rebuild deterministically.
 - Fact matcher: required terms may now be covered across the fact's own comma-separated clauses within one statement (windows anchored on the fact's relation words pool their tokens), so multi-clause answers like "To register as an affiliate, submit the form..." are credited verbatim; questions, ambiguity, and conflicts still never pool.
 
