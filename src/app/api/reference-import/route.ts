@@ -7,7 +7,9 @@ import { checkServerIdentity } from "node:tls";
 
 import { NextResponse } from "next/server";
 
-import { extractFaqContent } from "./extract-faq";
+import { extractFaqContent, harvestFaqCorpus } from "./extract-faq";
+import { extractPairsWithLlm, isLlmConfigured } from "./llm";
+import { verifyGroundedPairs } from "./grounding";
 import { clientKeyOf, createRateLimiter, rateLimitingEnabled } from "../../../lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -147,7 +149,31 @@ export async function POST(request: Request) {
   try {
     const address = await Promise.race([resolvePublicAddress(sourceUrl), deadline]);
     const { html, bytes } = await Promise.race([retrieve(sourceUrl, address, controller.signal), deadline]);
-    const extraction = extractFaqContent(html);
+    // Stage 1: harvest every scrap of text the page contains (visible,
+    // JSON-LD, and strings embedded in inline scripts).
+    const harvest = harvestFaqCorpus(html);
+    // Stage 2a: deterministic structure-based extraction (also the fallback).
+    let extraction = extractFaqContent(html);
+    let extractionSource: "llm" | "basic" = "basic";
+    // Stage 2b: optional AI-assisted read of the full corpus. Its pairs are
+    // verified against the harvested text before use; anything the model
+    // invented is dropped, and any failure silently falls back to basic.
+    if (isLlmConfigured()) {
+      try {
+        const llmPairs = verifyGroundedPairs(
+          await extractPairsWithLlm(harvest.corpus),
+          harvest.corpus,
+        );
+        if (llmPairs.length > 0) {
+          extraction = {
+            extractedText: llmPairs.map((pair) => `Q: ${pair.question}\nA: ${pair.answer}`).join("\n\n"),
+            qaPairs: llmPairs.length,
+            structured: true,
+          };
+          extractionSource = "llm";
+        }
+      } catch { /* AI-assisted extraction unavailable: basic extraction already covers the page */ }
+    }
     const extractedText = extraction.extractedText;
     if (!extractedText) return failure("unavailable");
     const canonicalUrl = sourceUrl.toString();
@@ -158,6 +184,7 @@ export async function POST(request: Request) {
       pageBytes: bytes,
       qaPairs: extraction.qaPairs,
       structured: extraction.structured,
+      extractionSource,
     });
   } catch (error) {
     if (error instanceof Error && error.message === "too-large") {

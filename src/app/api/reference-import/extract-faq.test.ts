@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractFaqContent } from "./extract-faq";
+import { extractFaqContent, harvestFaqCorpus } from "./extract-faq";
 
 describe("extractFaqContent", () => {
   it("extracts question/answer pairs from FAQPage JSON-LD structured data", () => {
@@ -89,5 +89,12 @@ describe("extractFaqContent", () => {
     // The section is kept as one entry with its content preserved.
     expect(result.extractedText).toContain("How does the KYC verification work?");
     expect(result.extractedText).toContain("Policy Against Gambling in Trading");
+  });
+
+  it("harvests FAQ text embedded in Next.js-style inline scripts", () => {
+    const html = `<html><body><p>Menu: evaluations, funding.</p><script>self.__next_f.push([1,"How does the KYC verification work? Submit your documents and verification completes within 24 hours."])</script></body></html>`;
+    const { corpus } = harvestFaqCorpus(html);
+    expect(corpus).toContain("How does the KYC verification work?");
+    expect(corpus).toContain("verification completes within 24 hours");
   });
 });

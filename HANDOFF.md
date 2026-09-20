@@ -13,16 +13,25 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `c4c6b0d`
-- Generated: 2026-09-19T22:38:45.478Z
+- Current commit: `d358ad2`
+- Generated: 2026-09-20T06:06:10.473Z
 - Uncommitted files excluding this handoff: 
 
 ```text
-M CHANGELOG.md
+M .env.example
+ M CHANGELOG.md
+ M README.md
  M src/app/api/reference-import/extract-faq.test.ts
  M src/app/api/reference-import/extract-faq.ts
+ M src/app/api/reference-import/route.test.ts
+ M src/app/api/reference-import/route.ts
  M src/components/source-preview.tsx
-?? .impeccable/review/preview-legend.png
+ M src/components/source-setup-form.tsx
+?? .zcodeignore
+?? src/app/api/reference-import/grounding.test.ts
+?? src/app/api/reference-import/grounding.ts
+?? src/app/api/reference-import/llm.test.ts
+?? src/app/api/reference-import/llm.ts
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
@@ -58,6 +67,8 @@ Follow-up round 5 (2026-09-18, product-lead feedback): the fact matcher's eviden
 Favicon updated in round 9 to the same identity (plum tile, rose voice bars) replacing the amber-on-charcoal mark.
 
 Follow-up round 10 (2026-09-18, product-lead screenshot): splitHeadingPair no longer pairs consecutive menu labels as Q/A (the reported "A: Evaluation Phase" / "A: Slippage" nonsense). A question-like line pairs only with following content that reads as an answer (sentence-ending punctuation or a line of 8+ words); unanswered questions are skipped and the section falls back to one entry with its full text. The extracted-source preview now explains the Q/A legend. Regression test covers the equityedge-shaped fixture.
+
+Follow-up round 11 (2026-09-18, product-lead approved design): optional AI-assisted FAQ extraction, two-stage. Stage 1 harvests every scrap of text the page contains (visible content, JSON-LD payloads, and human-readable strings decoded from inline scripts - where JavaScript-rendered sites hide their real FAQ). Stage 2, only when LLM_PROVIDER + LLM_API_KEY are set in .env.local (server-only, never shipped), sends that corpus to the configured model (Gemini default; OpenAI-compatible endpoint also supported) with a strict no-invention contract, then a deterministic grounding layer (src/app/api/reference-import/grounding.ts) verifies every returned pair against the harvested text - hallucinated pairs are dropped, and any LLM failure falls back silently to the basic extractor (labeled basic on the setup screen, which also now displays import stats: page KB, extracted pairs, extraction path, and an unstructured-content flag). Env vars documented in .env.example and README. Tests: grounding verifier (hallucination/thin/numeric cases), LLM client (Gemini + OpenAI shapes, NO_ANSWERS, fences, unparseable), route-level grounded AI test proving a hallucinated pair is dropped while a real pair passes.
 
 Follow-up round 9 (2026-09-18, product-lead request): app logo added — voice-bar mark in a plum rounded tile with a Fraunces wordmark ("SupportCoach" ink, "AI" rose), reusable as `src/components/logo.tsx` (`Logo`, `LogoMark`) and standalone `public/logo.svg`; used in the home header (links home, wordmark nowrap, eyebrow hidden below sm) and the site footer (compact, links home). Verified in-browser at 390px; full suite green.
 

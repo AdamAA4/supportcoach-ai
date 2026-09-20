@@ -34,6 +34,17 @@ NEXT_PUBLIC_VOICE_MODE=live
 
 `ASSEMBLYAI_API_KEY` is a server-only secret. Add it for Preview and Production, never as a `NEXT_PUBLIC_` value, and never commit it. Redeploy after saving the variables. Test the deployed app with a short FAQ and one microphone call in desktop Chrome or Edge.
 
+## Optional AI-assisted FAQ extraction
+
+Without extra configuration, imported pages use basic structure-based extraction. For better results on JavaScript-heavy FAQ pages, set these server-only variables in `.env.local` (never commit them):
+
+```env
+LLM_PROVIDER=gemini
+LLM_API_KEY=your_llm_key
+```
+
+`LLM_PROVIDER` accepts `gemini` (Google AI Studio key) or `openai`. With a key configured, the importer sends the page's collected text to the model with a strict no-invention instruction, then verifies every returned question/answer pair against the page's own words before use — pairs that are not grounded in the page are dropped, and any AI failure falls back to basic extraction silently. The setup screen always labels which extraction path was used.
+
 ## Voice modes
 
 `NEXT_PUBLIC_VOICE_MODE=mock` is the default and needs no API key. It supports the hackathon demo with simulated voice behavior.

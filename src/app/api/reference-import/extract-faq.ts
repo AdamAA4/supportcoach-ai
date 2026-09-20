@@ -1,6 +1,8 @@
 // Structured FAQ extraction for the public reference importer.
-// Converts recognized page structures into "Q: / A:" text pairs that the
-// domain fact extractor (normalizeReferenceFacts) consumes unchanged.
+// extractFaqContent is the deterministic structure-based extractor.
+// harvestFaqCorpus collects ALL text the page actually contains (visible
+// text, JSON-LD payloads, and strings embedded in inline scripts) for the
+// optional AI-assisted extraction path and for grounding verification.
 
 export type FaqExtraction = {
   extractedText: string;
@@ -8,7 +10,7 @@ export type FaqExtraction = {
   structured: boolean;
 };
 
-type Pair = { question: string; answer: string };
+export type Pair = { question: string; answer: string };
 
 const decodeEntities = (text: string): string => text
   .replace(/&nbsp;/gi, " ")
@@ -147,9 +149,9 @@ const isQuestionLike = (line: string): boolean =>
 // paragraphs (e.g. everything under an H1 like "Frequently asked questions").
 // Split such a section into one pair per question-like paragraph; following
 // non-question paragraphs become that question's answer. A question only
-// pairs with content that reads like an answer (sentence punctuation or a
-// full-length line): consecutive topic labels are a menu list, and pairing
-// them would invent nonsense like "A: Evaluation Phase".
+// pairs with content that reads as an answer (sentence punctuation or a
+// full-length line): consecutive topic labels are a menu, and pairing them
+// would invent nonsense like "A: Evaluation Phase".
 const readsAsAnswer = (line: string): boolean => {
   const words = line.split(/\s+/).length;
   return /[.!?]$/.test(line) || words >= 8;
@@ -211,4 +213,45 @@ export const extractFaqContent = (html: string): FaqExtraction => {
     ? pairs.map((pair) => `Q: ${pair.question}\nA: ${pair.answer}`).join("\n\n")
     : headings.rest.trim();
   return { extractedText, qaPairs: pairs.length, structured };
+};
+
+const READABLE_STRING = (value: string): boolean =>
+  value.length >= 30 &&
+  value.split(/\s+/).length >= 5 &&
+  (value.includes("?") || /[.,!?]/.test(value));
+
+// Collects every scrap of human-readable text the page contains: visible
+// content, JSON-LD payloads, and human-readable strings embedded in inline
+// scripts (where JavaScript-rendered sites keep their real FAQ data). The
+// corpus feeds the optional AI-assisted extraction and grounds every
+// extracted pair against the page's actual words.
+export const harvestFaqCorpus = (html: string): { corpus: string } => {
+  const withoutComments = html.replace(/<!--[\s\S]*?-->/g, "");
+
+  const jsonLdParts: string[] = [];
+  const body = withoutComments.replace(
+    /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+    (_match, payload: string) => {
+      jsonLdParts.push(payload);
+      return "";
+    },
+  );
+
+  const dataParts: string[] = [];
+  for (const match of body.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
+    for (const literal of match[1].matchAll(/"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'/g)) {
+      const raw = literal[0];
+      try {
+        const decoded = JSON.parse(raw);
+        if (typeof decoded === "string" && READABLE_STRING(decoded)) dataParts.push(decoded);
+      } catch { /* not a JSON string literal; skip */ }
+    }
+  }
+
+  const visible = blockText(
+    body.replace(/<(script|style|noscript|template|svg|iframe)\b[^>]*>[\s\S]*?<\/\1>/gi, ""),
+  );
+
+  const corpus = [visible, ...jsonLdParts, ...dataParts].filter((part) => part.trim().length > 0).join("\n\n");
+  return { corpus };
 };

@@ -13,7 +13,15 @@ import { ScenarioPicker } from "./scenario-picker";
 import { AlertIcon, ArrowRightIcon, btnPrimary, btnSecondary, CheckIcon, fieldLabel, inputBase } from "./ui";
 
 type SourceKind = "pasted-text" | "public-https-link";
-type ImportedSource = { canonicalUrl: string; extractedText: string; contentHash: string };
+type ImportedSource = {
+  canonicalUrl: string;
+  extractedText: string;
+  contentHash: string;
+  pageBytes?: number;
+  qaPairs?: number;
+  structured?: boolean;
+  extractionSource?: "llm" | "basic";
+};
 
 const channelTile =
   "flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-ink-muted transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] peer-checked:bg-surface peer-checked:text-ink peer-checked:shadow-soft peer-hover:text-ink-soft peer-focus-visible:ring-2 peer-focus-visible:ring-accent";
@@ -91,7 +99,15 @@ export function SourceSetupForm() {
       const imported = payload as ImportedSource;
       setSourceValue(imported.canonicalUrl);
       setPreviewText(imported.extractedText);
-      setImportedSource(imported);
+      setImportedSource({
+        canonicalUrl: imported.canonicalUrl,
+        extractedText: imported.extractedText,
+        contentHash: imported.contentHash,
+        pageBytes: typeof imported.pageBytes === "number" ? imported.pageBytes : undefined,
+        qaPairs: typeof imported.qaPairs === "number" ? imported.qaPairs : undefined,
+        structured: imported.structured === true,
+        extractionSource: imported.extractionSource === "llm" ? "llm" : "basic",
+      });
     } catch (error) {
       setPreviewText("");
       setImportedSource(undefined);
@@ -165,7 +181,18 @@ export function SourceSetupForm() {
         )}
         {fieldError("source")}
       </fieldset>
-      <SourcePreview sourceText={sourceText} confirmed={confirmed} canConfirm={sourceKind === "pasted-text" || Boolean(importedSource)} onConfirm={() => setConfirmed(true)} />
+      <SourcePreview
+        sourceText={sourceText}
+        confirmed={confirmed}
+        canConfirm={sourceKind === "pasted-text" || Boolean(importedSource)}
+        onConfirm={() => setConfirmed(true)}
+        importStats={sourceKind === "public-https-link" && importedSource ? {
+          pageBytes: importedSource.pageBytes,
+          qaPairs: importedSource.qaPairs,
+          structured: importedSource.structured === true,
+          source: importedSource.extractionSource ?? "basic",
+        } : undefined}
+      />
       <ScenarioPicker facts={context.facts} derived={derived} value={scenarioId} onChange={setScenarioId} />
       {fieldError("scenario")}
       <fieldset className="space-y-3">

@@ -6,9 +6,10 @@ type SourcePreviewProps = {
   confirmed: boolean;
   canConfirm?: boolean;
   onConfirm: () => void;
+  importStats?: { pageBytes?: number; qaPairs?: number; structured: boolean; source: "llm" | "basic" };
 };
 
-export function SourcePreview({ sourceText, confirmed, canConfirm = true, onConfirm }: SourcePreviewProps) {
+export function SourcePreview({ sourceText, confirmed, canConfirm = true, onConfirm, importStats }: SourcePreviewProps) {
   return (
     <section aria-labelledby="source-preview-heading" className="rounded-2xl border border-tape-line bg-tape p-4 text-tape-ink sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -23,7 +24,13 @@ export function SourcePreview({ sourceText, confirmed, canConfirm = true, onConf
           {confirmed ? "Confirmed" : "Needs confirmation"}
         </span>
       </div>
-      <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded-xl border border-line bg-panel p-3.5 text-[13.5px] leading-relaxed text-ink-soft">{sourceText.trim() || "Add FAQ or policy text to preview it here."}</pre>
+      <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded-xl border border-line bg-panel p-3.5 font-mono text-[13px] leading-relaxed text-ink-soft">{sourceText.trim() || "Add FAQ or policy text to preview it here."}</pre>
+      {importStats && (
+        <p className="mt-2 text-xs leading-relaxed text-tape-muted">
+          Imported {importStats.pageBytes ? `${Math.max(1, Math.round(importStats.pageBytes / 1024))} KB page · ` : ""}{importStats.qaPairs} question/answer pair{importStats.qaPairs === 1 ? "" : "s"} · {importStats.source === "llm" ? "AI-assisted extraction" : "basic extraction"}
+          {!importStats.structured && " · no question/answer structure was detected on the page; for best results, paste the FAQ text instead"}
+        </p>
+      )}
       <button
         type="button"
         onClick={onConfirm}

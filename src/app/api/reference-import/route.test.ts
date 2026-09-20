@@ -128,4 +128,24 @@ describe("public HTTPS import boundary", () => {
     expect(await response.json()).toEqual({ error: { code: "reference_unavailable", message: "The reference source could not be imported." } });
     expect(signal?.aborted).toBe(true);
   });
+
+  it("prefers grounded AI-assisted extraction when an LLM key is configured", async () => {
+    vi.stubEnv("LLM_PROVIDER", "openai");
+    vi.stubEnv("LLM_API_KEY", "test-llm-key");
+    respond(`<main><p>Refunds are available within 30 days for unopened items.</p></main>`, 200, {});
+    const llmJson = JSON.stringify([
+      { question: "When are refunds available?", answer: "Refunds are available within 30 days for unopened items." },
+      { question: "Do you guarantee funding?", answer: "Yes, we guarantee instant funding for every applicant." },
+    ]);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ choices: [{ message: { content: llmJson } }] }), { status: 200 })));
+
+    const response = await importUrl();
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.extractionSource).toBe("llm");
+    expect(payload.extractedText).toContain("When are refunds available?");
+    // The grounding layer drops the hallucinated pair the model also returned.
+    expect(payload.extractedText).not.toContain("guarantee funding");
+    vi.unstubAllEnvs();
+  });
 });
