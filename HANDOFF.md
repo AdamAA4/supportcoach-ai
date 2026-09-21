@@ -13,22 +13,11 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `580711b`
-- Generated: 2026-09-21T15:26:55.847Z
-- Uncommitted files excluding this handoff: 
+- Current commit: `33f9527`
+- Generated: 2026-09-21T15:30:17.469Z
+- Uncommitted files excluding this handoff: none
 
-```text
-M BUGS.md
- M CHANGELOG.md
- M ENHANCEMENTS.md
- M README.md
- M src/app/api/reference-import/extract-faq.test.ts
- M src/app/api/reference-import/extract-faq.ts
- M src/app/api/reference-import/llm.test.ts
- M src/app/api/reference-import/llm.ts
- M src/app/api/reference-import/route.test.ts
- M src/app/api/reference-import/route.ts
-```
+
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
 
@@ -53,6 +42,7 @@ Follow-up round 3 (2026-09-18, product-lead request): the import body cap was ra
 - `npm test`: 14 files, 187/187 passed (after fixing a details/summary nesting regression the redesign introduced).
 - `npm run build`: succeeded, all routes prerendered.
 - 2026-09-21 importer fix: `npm run lint`, `npm run typecheck`, `npm test` (22 files, 249/249), and `npm run build` all passed. Live local `POST /api/reference-import` against `https://equityedge.io/faq`: 9 pages read, 14 article facts, 3.1 seconds, no original fake pair or newsletter footer fact.
+- Production verification after Vercel deploy: `POST https://supportcoach-ai-ten.vercel.app/api/reference-import` against `https://equityedge.io/faq` returned 9 pages, 14 facts, 2.2 seconds, no original fake pair, and no newsletter footer fact.
 - `impeccable detect --json` over all changed UI files: zero findings.
 - Impeccable finish review (fresh subagent): first verdict `fix`; after placeholder/danger contrast token fixes, live-state captures (mock voice mode, fake mic), DESIGN.md, and provenance, the verdict pass resolved every item; the final documentation amendment (console-composition deviation recorded in the brief and CHANGELOG) flipped it to ship.
 - Visual evidence: `.impeccable/review/*.png` (desktop 1440x900, mobile 390x844 at 2x) with `provenance.json`; capture scripts preserved at `.impeccable/review/scripts/`.
@@ -67,7 +57,7 @@ Follow-up round 10 (2026-09-18, product-lead screenshot): splitHeadingPair no lo
 
 Follow-up round 11 (2026-09-18, product-lead approved design): optional AI-assisted FAQ extraction, two-stage. Stage 1 harvests every scrap of text the page contains (visible content, JSON-LD payloads, and human-readable strings decoded from inline scripts - where JavaScript-rendered sites hide their real FAQ). Stage 2, only when LLM_PROVIDER + LLM_API_KEY are set in .env.local (server-only, never shipped), sends that corpus to the configured model (Gemini default; OpenAI-compatible endpoint also supported) with a strict no-invention contract, then a deterministic grounding layer (src/app/api/reference-import/grounding.ts) verifies every returned pair against the harvested text - hallucinated pairs are dropped, and any LLM failure falls back silently to the basic extractor (labeled basic on the setup screen, which also now displays import stats: page KB, extracted pairs, extraction path, and an unstructured-content flag). Env vars documented in .env.example and README. Tests: grounding verifier (hallucination/thin/numeric cases), LLM client (Gemini + OpenAI shapes, NO_ANSWERS, fences, unparseable), route-level grounded AI test proving a hallucinated pair is dropped while a real pair passes.
 
-Follow-up round 12 (2026-09-21, resolved production importer bug): `equityedge.io/faq` is a Framer hub, not a Next.js page. Its `./general/...` links resolve outside `/faq/`, and each article stores the actual Q&A in Framer inline rich-text state. The importer now allows only bounded nested relative same-origin article links, applies its existing validated-IP/no-redirect/size controls to each, extracts exact Framer heading-and-prose facts, and replaces a menu-only hub with its article facts. When deterministic facts exist, the LLM is not called; it remains a strictly grounded rescue path for otherwise unstructured sources. Gemini Production variables were added in Vercel, and the retired Gemini 2.0 Flash endpoint was moved to Gemini 3.5 Flash. Local live import evidence: 9 pages, 14 facts, 3.1 seconds, no KYC-to-Slippage fake pair, no newsletter footer fact.
+Follow-up round 12 (2026-09-21, resolved production importer bug): `equityedge.io/faq` is a Framer hub, not a Next.js page. Its `./general/...` links resolve outside `/faq/`, and each article stores the actual Q&A in Framer inline rich-text state. The importer now allows only bounded nested relative same-origin article links, applies its existing validated-IP/no-redirect/size controls to each, extracts exact Framer heading-and-prose facts, and replaces a menu-only hub with its article facts. When deterministic facts exist, the LLM is not called; it remains a strictly grounded rescue path for otherwise unstructured sources. Gemini Production variables were added in Vercel, and the retired Gemini 2.0 Flash endpoint was moved to Gemini 3.5 Flash. Production import evidence after deployment: 9 pages, 14 facts, 2.2 seconds, no KYC-to-Slippage fake pair, no newsletter footer fact.
 
 Follow-up round 9 (2026-09-18, product-lead request): app logo added — voice-bar mark in a plum rounded tile with a Fraunces wordmark ("SupportCoach" ink, "AI" rose), reusable as `src/components/logo.tsx` (`Logo`, `LogoMark`) and standalone `public/logo.svg`; used in the home header (links home, wordmark nowrap, eyebrow hidden below sm) and the site footer (compact, links home). Verified in-browser at 390px; full suite green.
 
