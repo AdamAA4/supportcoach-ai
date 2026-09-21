@@ -13,20 +13,12 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `d0f78a7`
-- Generated: 2026-09-21T13:24:51.940Z
+- Current commit: `c83e698`
+- Generated: 2026-09-21T14:10:16.161Z
 - Uncommitted files excluding this handoff: 
 
 ```text
-M CHANGELOG.md
- M src/app/api/reference-import/extract-faq.test.ts
- M src/app/api/reference-import/extract-faq.ts
- M src/app/api/reference-import/route.test.ts
- M src/app/api/reference-import/route.ts
- M src/components/source-preview.tsx
- M src/components/source-setup-form.tsx
- M src/domain/validation.test.ts
- M src/domain/validation.ts
+M BUGS.md
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
@@ -77,8 +69,8 @@ Follow-up round 6 (2026-09-18, product-lead 20-item launch checklist): privacy p
 
 ## Remaining work or known issues
 
+- ⭐⭐⭐ OPEN (also in BUGS.md): importing a JavaScript-rendered FAQ page (reproduced with equityedge.io/faq) produces garbage facts. The server-side importer sees only the topic menu, contact form, and footer; the extractor pairs those labels into fake Q/A pairs ("Q: How does the KYC verification work? / A: Slippage Restricted Countries..."), which breaks drills, customer questions, and the accuracy report. The LLM-assisted path (round 11) did not rescue the deployed import because (a) LLM_PROVIDER/LLM_API_KEY were not configured in the Vercel environment (only in local .env.local), and (b) the harvested corpus from that page may not contain the client-rendered answers at all. Next steps: configure LLM env vars on Vercel and re-test; if the corpus still lacks answers, inspect the site's data source (Next.js __NEXT_DATA__/RSC payload or FAQ API endpoint) and fetch it server-side with the existing SSRF guardrails; headless-browser rendering is the heaviest fallback. Paste-the-text remains the safe recovery for trainees today.
 - Live AssemblyAI path was verified in mock voice mode only (joined call, lamps, REC); a smoke test with a real `ASSEMBLYAI_API_KEY` on a physical Android Chrome device is the recommended next check.
-- Imported pages that render their FAQ client-side (JavaScript-only accordions) still cannot be read by the server-side importer; pasting the text remains the recovery. The deterministic matcher also stays conservative on paraphrases.
 - The native file-input label ("Choose File") is unthemed browser copy, accepted in the finish review; revisit if it bothers anyone.
 - The Mimosa pre-commit hook reported a partial scan (dependency-source and callgraph limits) on recent commits; re-run a full security audit when convenient.
 
