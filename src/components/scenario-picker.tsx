@@ -8,8 +8,8 @@ import { fieldLabel } from "./ui";
 type ScenarioPickerProps = {
   facts: ReferenceFact[];
   derived: ScenarioDefinition[];
-  value: string;
-  onChange: (value: string) => void;
+  value: string[];
+  onChange: (value: string[]) => void;
 };
 
 const scenarioTile =
@@ -24,25 +24,28 @@ const excerptOf = (answer: string): string => {
 // match the source's domain; there are no built-in scenarios anymore.
 export function ScenarioPicker({ facts, derived, value, onChange }: ScenarioPickerProps) {
   const factById = new Map(facts.map((fact) => [fact.id, fact]));
+  const toggle = (id: string) => onChange(value.includes(id) ? value.filter((valueId) => valueId !== id) : [...value, id]);
   return (
     <fieldset>
-      <legend className={fieldLabel}>Practice scenario</legend>
+      <legend className={fieldLabel}>Practice scenarios</legend>
       {derived.length > 0 ? (
         <>
+          <p className="mt-2 text-sm leading-relaxed text-ink-muted">Select one or more topics for this voice practice call.</p>
           <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.14em] text-accent-strong">From your FAQ</p>
           <div className="mt-2 grid gap-2.5">
             {derived.map((scenario) => {
               const primary = factById.get(scenario.factIds[0]);
-              const checked = value === scenario.id;
+              const checked = value.includes(scenario.id);
               return (
                 <label htmlFor={`scenario-${scenario.id}`} key={scenario.id}>
                   <input
-                    type="radio"
+                    type="checkbox"
                     id={`scenario-${scenario.id}`}
-                    name="scenario"
+                    name="scenarios"
+                    aria-label={scenario.title}
                     className="peer sr-only"
                     checked={checked}
-                    onChange={() => onChange(scenario.id)}
+                    onChange={() => toggle(scenario.id)}
                   />
                   <span className={`${scenarioTile} ${checked ? "border-accent" : "border-line"}`}>
                     <span className="flex items-center justify-between gap-3">

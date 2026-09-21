@@ -64,6 +64,29 @@ describe("deriveScenarios", () => {
     expect(scenarios.every((scenario) => scenario.factIds.every((id) => !id.startsWith("note-")))).toBe(true);
   });
 
+  it("combines selected FAQ scenarios into one grounded practice session", () => {
+    const sourceText = tradingFaq.map((item) => `Q: ${item.question}\nA: ${item.answer}`).join("\n\n");
+    const base = normalizePracticeContext({
+      source: { kind: "pasted-text", text: sourceText, confirmation: "confirmed" },
+      sourceLabel: "Equity Edge",
+      notes: [],
+      scenarioId: "late-delivery",
+    });
+    const [first, second] = deriveScenarios(base.facts);
+    const context = normalizePracticeContext({
+      source: { kind: "pasted-text", text: sourceText, confirmation: "confirmed" },
+      sourceLabel: "Equity Edge",
+      notes: [],
+      scenarioIds: [first.id, second.id],
+    });
+
+    expect(context.scenario.id).toBe(`multi-${first.id}~${second.id}`);
+    expect(context.scenario.factIds).toEqual(expect.arrayContaining([...first.factIds, ...second.factIds]));
+    expect(context.scenario.openingLine).toBe(first.openingLine);
+    expect(context.scenario.title).toContain(first.title);
+    expect(isPracticeContext(JSON.parse(JSON.stringify(context)))).toBe(true);
+  });
+
   it("never suggests newsletter or FAQ-banner furniture sections", () => {
     const furniture = [
       ...tradingFaq,

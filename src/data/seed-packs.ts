@@ -28,7 +28,7 @@ export const FALLBACK_REFERENCE_FACTS: ReferenceFact[] = [
   { id: "fallback-cancellation", question: "Can I cancel an order?", answer: "Orders can be cancelled before dispatch.", keywords: ["cancel", "order", "dispatch"], source: "policy" },
 ];
 
-export const createScenarioDefinition = (
+const createSingleScenarioDefinition = (
   scenarioId: string,
   facts: ReferenceFact[],
 ): ScenarioDefinition => {
@@ -66,5 +66,43 @@ export const createScenarioDefinition = (
     goals: archetype.goals,
     factIds: (relevantFacts.length > 0 ? relevantFacts : facts.slice(0, 2)).map((fact) => fact.id),
     difficulty: archetype.difficulty,
+  };
+};
+
+const selectedScenarioIds = (value: string | readonly string[]): string[] => {
+  const raw: readonly string[] = typeof value === "string"
+    ? value.startsWith("multi-")
+      ? value.slice("multi-".length).split("~")
+      : [value]
+    : value;
+  return [...new Set(raw.filter((id) => id.length > 0))];
+};
+
+// Several source-derived drills stay one call: their confirmed facts form one
+// question plan and one honest coaching report. The id encodes the selection
+// so storage and server-side validation can rebuild it deterministically.
+export const createScenarioDefinition = (
+  scenarioId: string | readonly string[],
+  facts: ReferenceFact[],
+): ScenarioDefinition => {
+  const ids = selectedScenarioIds(scenarioId);
+  if (ids.length <= 1) return createSingleScenarioDefinition(ids[0] ?? "", facts);
+  const scenarios = ids.map((id) => createSingleScenarioDefinition(id, facts));
+  if (scenarios.some((scenario) => scenario.factIds.length === 0)) {
+    return createSingleScenarioDefinition(`multi-${ids.join("~")}`, facts);
+  }
+  const factIds = [...new Set(scenarios.flatMap((scenario) => scenario.factIds))];
+  const goals = [...new Set(scenarios.flatMap((scenario) => scenario.goals))];
+  const title = scenarios.length === 2
+    ? `${scenarios[0].title} + ${scenarios[1].title}`
+    : `${scenarios[0].title} + ${scenarios.length - 1} more`;
+  return {
+    id: `multi-${ids.join("~")}`,
+    title,
+    customerPersona: "A customer with several questions about the confirmed policy.",
+    openingLine: scenarios[0].openingLine,
+    goals,
+    factIds,
+    difficulty: scenarios.some((scenario) => scenario.difficulty === "intermediate") ? "intermediate" : "beginner",
   };
 };

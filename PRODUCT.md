@@ -27,7 +27,7 @@ Solo practice sessions in a browser. The session source snapshot, notes, complet
 - Voice-only practice: the trainee answers by voice; typed-response practice is explicitly out of scope.
 - Source setup: paste FAQ/policy text or import one public HTTPS page (sanitized snapshot, SHA-256 provenance); confirmation required before a call starts.
 - Optional experience notes (plain text or Markdown file, 200 KB cap) classified as personal coaching note or approved practice advice.
-- Two practice scenarios: late delivery, refund eligibility.
+- One or more source-derived practice scenarios per voice session; selected scenarios combine their confirmed facts into one customer question plan and one coaching report.
 - Deterministic rule-based evaluation; conservative English lexical matching; can miss paraphrases (documented limitation).
 - AssemblyAI API key is server-only; browser receives a single-use temporary token.
 - Live calls report provider session-error or WebSocket close codes verbatim for debugging.

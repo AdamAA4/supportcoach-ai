@@ -28,7 +28,8 @@ type NormalizeInput = {
   source: SessionSource;
   sourceLabel: string;
   notes: ExperienceNote[];
-  scenarioId: string;
+  scenarioId?: string;
+  scenarioIds?: string[];
 };
 
 export const normalizePracticeContext = (input: NormalizeInput): PracticeContext => {
@@ -44,7 +45,7 @@ export const normalizePracticeContext = (input: NormalizeInput): PracticeContext
     sourceText,
     facts,
     notes: input.notes,
-    scenario: createScenarioDefinition(input.scenarioId, facts),
+    scenario: createScenarioDefinition(input.scenarioIds?.length ? input.scenarioIds : input.scenarioId ?? "", facts),
   };
 };
 

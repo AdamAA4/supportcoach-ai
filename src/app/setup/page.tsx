@@ -4,7 +4,7 @@ import { BackLink, displayTitle } from "../../components/ui";
 
 export const metadata: Metadata = {
   title: "Set up a practice call",
-  description: "Add your company FAQ or policy, confirm the extracted facts, and choose a customer scenario for a voice practice call.",
+  description: "Add your company FAQ or policy, confirm the extracted facts, and choose one or more customer scenarios for a voice practice call.",
 };
 
 export default function SetupPage() {
@@ -16,7 +16,7 @@ export default function SetupPage() {
       <header className="settle-in">
         <h1 className={`${displayTitle} text-4xl leading-[1.08] sm:text-[2.75rem]`}>Set up a grounded practice call</h1>
         <p className="mt-5 max-w-xl leading-relaxed text-ink-soft">
-          Add the company material for this session, confirm the extracted preview, and select a customer scenario.
+          Add the company material for this session, confirm the extracted preview, and select one or more customer scenarios.
           You are the voice responder; the customer is simulated from this source.
         </p>
       </header>

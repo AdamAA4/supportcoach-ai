@@ -36,7 +36,7 @@ export function SourceSetupForm() {
   const [previewText, setPreviewText] = useState("");
   const [importedSource, setImportedSource] = useState<ImportedSource>();
   const [importing, setImporting] = useState(false);
-  const [scenarioId, setScenarioId] = useState<string>("");
+  const [scenarioIds, setScenarioIds] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const [noteKind, setNoteKind] = useState<ExperienceNote["kind"]>("personal-coaching-note");
   const [noteFormat, setNoteFormat] = useState<ExperienceNoteFormat>("plain-text");
@@ -54,19 +54,24 @@ export function SourceSetupForm() {
         : { kind: "public-https-link", url: sourceValue, confirmation: "pending" },
     sourceLabel: companyName,
     notes: notes.trim() ? [{ id: "session-note", text: notes, format: noteFormat, kind: noteKind }] : [],
-    scenarioId,
-  }), [companyName, confirmed, importedSource, noteFormat, noteKind, notes, scenarioId, sourceKind, sourceValue]);
+    scenarioIds,
+  }), [companyName, confirmed, importedSource, noteFormat, noteKind, notes, scenarioIds, sourceKind, sourceValue]);
 
   // Practice drills are suggested by the confirmed content itself; when the
-  // source changes and the selected drill no longer resolves, fall back to
-  // the first suggestion. Selecting a drill never invalidates the source:
+  // source changes and a selected drill no longer resolves, keep only valid
+  // selections and fall back to the first suggestion when none remain.
+  // Selecting a drill never invalidates the source:
   // for imported links an unconfirmed source carries no snapshot, which
   // would wipe the facts and hide every suggestion again.
   const derived = useMemo(() => deriveScenarios(context.facts), [context.facts]);
   const validScenarioIds = useMemo(() => derived.map((scenario) => scenario.id), [derived]);
   useEffect(() => {
-    if (validScenarioIds.length > 0 && !validScenarioIds.includes(scenarioId)) setScenarioId(validScenarioIds[0]);
-  }, [validScenarioIds, scenarioId]);
+    setScenarioIds((current) => {
+      const next = current.filter((id) => validScenarioIds.includes(id));
+      if (next.length === 0 && validScenarioIds[0]) next.push(validScenarioIds[0]);
+      return next.length === current.length && next.every((id, index) => id === current[index]) ? current : next;
+    });
+  }, [validScenarioIds]);
 
   const invalidateSetup = () => {
     setConfirmed(false);
@@ -204,7 +209,7 @@ export function SourceSetupForm() {
           pages: importedSource.pages,
         } : undefined}
       />
-      <ScenarioPicker facts={context.facts} derived={derived} value={scenarioId} onChange={setScenarioId} />
+      <ScenarioPicker facts={context.facts} derived={derived} value={scenarioIds} onChange={setScenarioIds} />
       {fieldError("scenario")}
       <fieldset className="space-y-3">
         <legend className={fieldLabel}>Optional experience notes</legend>

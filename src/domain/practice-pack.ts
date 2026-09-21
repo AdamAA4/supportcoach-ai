@@ -5,10 +5,20 @@ export type BuiltinScenario = (typeof PRACTICE_SCENARIOS)[number];
 /** Scenario ids derived from confirmed FAQ content at runtime (`derived-<hash>`). */
 export type DerivedScenarioId = `derived-${string}`;
 
-export type PracticeScenario = BuiltinScenario | DerivedScenarioId;
+/** A deterministic session made from two or more selected scenarios. */
+export type MultiScenarioId = `multi-${string}`;
 
-export const isSupportedScenarioId = (value: string): value is PracticeScenario =>
+export type PracticeScenario = BuiltinScenario | DerivedScenarioId | MultiScenarioId;
+
+const isBaseScenarioId = (value: string): boolean =>
   (PRACTICE_SCENARIOS as readonly string[]).includes(value) || value.startsWith("derived-");
+
+export const isSupportedScenarioId = (value: string): value is PracticeScenario => {
+  if (isBaseScenarioId(value)) return true;
+  if (!value.startsWith("multi-")) return false;
+  const selected = value.slice("multi-".length).split("~");
+  return selected.length >= 2 && selected.every(isBaseScenarioId);
+};
 
 export const SCORE_DIMENSIONS = [
   "factual-accuracy",
