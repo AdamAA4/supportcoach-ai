@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractFaqContent, harvestFaqCorpus } from "./extract-faq";
+import { extractFaqContent, extractSameOriginLinks, harvestFaqCorpus } from "./extract-faq";
 
 describe("extractFaqContent", () => {
   it("extracts question/answer pairs from FAQPage JSON-LD structured data", () => {
@@ -96,5 +96,34 @@ describe("extractFaqContent", () => {
     const { corpus } = harvestFaqCorpus(html);
     expect(corpus).toContain("How does the KYC verification work?");
     expect(corpus).toContain("verification completes within 24 hours");
+  });
+});
+
+describe("extractSameOriginLinks", () => {
+  const hub = new URL("https://equityedge.io/faq/");
+
+  it("discovers same-origin article links inside the hub's path", () => {
+    const html = `<a href="/faq/general">General</a><a href="/faq/trading-rules">Trading Rules</a>`;
+    expect(extractSameOriginLinks(html, hub, 8)).toEqual([
+      "https://equityedge.io/faq/general",
+      "https://equityedge.io/faq/trading-rules",
+    ]);
+  });
+
+  it("skips the hub itself, other hosts, assets, and duplicates", () => {
+    const html = [
+      `<a href="/faq/">Hub</a>`,
+      `<a href="/faq/one">One</a>`,
+      `<a href="/faq/one">One again</a>`,
+      `<a href="https://other.example/faq/external">External</a>`,
+      `<a href="http://equityedge.io/faq/http">Insecure</a>`,
+      `<a href="/files/rules.pdf">PDF</a>`,
+    ].join("");
+    expect(extractSameOriginLinks(html, hub, 8)).toEqual(["https://equityedge.io/faq/one"]);
+  });
+
+  it("stops at the cap", () => {
+    const html = Array.from({ length: 5 }, (_, index) => `<a href="/faq/page-${index}">P${index}</a>`).join("");
+    expect(extractSameOriginLinks(html, hub, 3)).toHaveLength(3);
   });
 });

@@ -45,7 +45,7 @@ describe("practice context validation", () => {
     expect(result).toEqual({
       ok: false,
       errors: {
-        companyName: ["Enter your company name."],
+        companyName: ["Enter your session name."],
         source: ["Extracted FAQ/policy text is required."],
         facts: ["Each extracted fact needs an answer.", "Fact IDs must be unique."],
         scenario: ["The selected scenario refers to a fact that is not available in this source."],

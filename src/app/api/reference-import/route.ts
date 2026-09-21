@@ -7,7 +7,7 @@ import { checkServerIdentity } from "node:tls";
 
 import { NextResponse } from "next/server";
 
-import { extractFaqContent, harvestFaqCorpus } from "./extract-faq";
+import { extractFaqContent, extractSameOriginLinks, harvestFaqCorpus } from "./extract-faq";
 import { extractPairsWithLlm, isLlmConfigured } from "./llm";
 import { verifyGroundedPairs } from "./grounding";
 import { clientKeyOf, createRateLimiter, rateLimitingEnabled } from "../../../lib/rate-limit";
@@ -16,6 +16,8 @@ export const runtime = "nodejs";
 
 const MAX_BYTES = 2 * 1024 * 1024;
 const TIMEOUT_MS = 5_000;
+const MAX_ARTICLE_PAGES = 8;
+const PAGES_TIMEOUT_MS = 12_000;
 
 type ImportFailure = "invalid" | "too-large" | "unavailable";
 
@@ -155,14 +157,64 @@ export async function POST(request: Request) {
     // Stage 2a: deterministic structure-based extraction (also the fallback).
     let extraction = extractFaqContent(html);
     let extractionSource: "llm" | "basic" = "basic";
+    const corpusParts = [harvest.corpus];
+    const pages: Array<{ url: string; status: string }> = [{ url: sourceUrl.pathname, status: "ok" }];
+    let pagesRead = 1;
+
+    // FAQ hubs often only LIST their content: the real answers live on
+    // same-origin article pages linked from the hub. Read them with a
+    // bounded, parallel, per-URL-validated pass (no redirects, no external
+    // hosts, no asset extensions, capped page count and total time).
+    const articleLinks = extractSameOriginLinks(html, sourceUrl, MAX_ARTICLE_PAGES);
+    if (articleLinks.length > 0) {
+      const pagesController = new AbortController();
+      const pagesTimer = setTimeout(() => pagesController.abort(), PAGES_TIMEOUT_MS);
+      try {
+        const attempts = articleLinks.map((link) => (async () => {
+          const pageUrl = new URL(link);
+          try {
+            const pageAddress = await Promise.race([
+              resolvePublicAddress(pageUrl),
+              new Promise<never>((_, reject) => { const timer = setTimeout(() => reject(new Error("pages-timeout")), PAGES_TIMEOUT_MS); timer.unref?.(); }),
+            ]);
+            const fetched = await Promise.race([
+              retrieve(pageUrl, pageAddress, pagesController.signal),
+              new Promise<never>((_, reject) => { const timer = setTimeout(() => reject(new Error("pages-timeout")), PAGES_TIMEOUT_MS); timer.unref?.(); }),
+            ]);
+            return { url: pageUrl.pathname, html: fetched.html, failed: false };
+          } catch {
+            return { url: pageUrl.pathname, html: "", failed: true };
+          }
+        })());
+        const settled = await Promise.allSettled(attempts);
+        for (const entry of settled) {
+          const outcome = entry.status === "fulfilled" ? entry.value : { url: "unreachable page", html: "", failed: true };
+          if (outcome.failed) { pages.push({ url: outcome.url, status: "failed" }); continue; }
+          pagesRead += 1;
+          pages.push({ url: outcome.url, status: "ok" });
+          corpusParts.push(harvestFaqCorpus(outcome.html).corpus);
+          const pageExtraction = extractFaqContent(outcome.html);
+          if (pageExtraction.structured) {
+            extraction = {
+              extractedText: `${extraction.extractedText}\n\n${pageExtraction.extractedText}`.trim(),
+              qaPairs: extraction.qaPairs + pageExtraction.qaPairs,
+              structured: true,
+            };
+          }
+        }
+      } finally {
+        clearTimeout(pagesTimer);
+      }
+    }
+
     // Stage 2b: optional AI-assisted read of the full corpus. Its pairs are
     // verified against the harvested text before use; anything the model
     // invented is dropped, and any failure silently falls back to basic.
     if (isLlmConfigured()) {
       try {
         const llmPairs = verifyGroundedPairs(
-          await extractPairsWithLlm(harvest.corpus),
-          harvest.corpus,
+          await extractPairsWithLlm(corpusParts.join("\n\n")),
+          corpusParts.join("\n\n"),
         );
         if (llmPairs.length > 0) {
           extraction = {
@@ -172,7 +224,7 @@ export async function POST(request: Request) {
           };
           extractionSource = "llm";
         }
-      } catch { /* AI-assisted extraction unavailable: basic extraction already covers the page */ }
+      } catch { /* AI-assisted extraction unavailable: basic extraction already covers the pages */ }
     }
     const extractedText = extraction.extractedText;
     if (!extractedText) return failure("unavailable");
@@ -185,6 +237,8 @@ export async function POST(request: Request) {
       qaPairs: extraction.qaPairs,
       structured: extraction.structured,
       extractionSource,
+      pagesRead,
+      pages: pages.slice(0, 12),
     });
   } catch (error) {
     if (error instanceof Error && error.message === "too-large") {

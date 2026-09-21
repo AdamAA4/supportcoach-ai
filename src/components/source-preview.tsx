@@ -6,7 +6,14 @@ type SourcePreviewProps = {
   confirmed: boolean;
   canConfirm?: boolean;
   onConfirm: () => void;
-  importStats?: { pageBytes?: number; qaPairs?: number; structured: boolean; source: "llm" | "basic" };
+  importStats?: {
+    pageBytes?: number;
+    qaPairs?: number;
+    structured: boolean;
+    source: "llm" | "basic";
+    pagesRead?: number;
+    pages?: Array<{ url: string; status: string }>;
+  };
 };
 
 export function SourcePreview({ sourceText, confirmed, canConfirm = true, onConfirm, importStats }: SourcePreviewProps) {
@@ -26,10 +33,23 @@ export function SourcePreview({ sourceText, confirmed, canConfirm = true, onConf
       </div>
       <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded-xl border border-line bg-panel p-3.5 font-mono text-[13px] leading-relaxed text-ink-soft">{sourceText.trim() || "Add FAQ or policy text to preview it here."}</pre>
       {importStats && (
-        <p className="mt-2 text-xs leading-relaxed text-tape-muted">
-          Imported {importStats.pageBytes ? `${Math.max(1, Math.round(importStats.pageBytes / 1024))} KB page · ` : ""}{importStats.qaPairs} question/answer pair{importStats.qaPairs === 1 ? "" : "s"} · {importStats.source === "llm" ? "AI-assisted extraction" : "basic extraction"}
-          {!importStats.structured && " · no question/answer structure was detected on the page; for best results, paste the FAQ text instead"}
-        </p>
+        <div className="mt-2 space-y-1 text-xs leading-relaxed text-tape-muted">
+          <p>
+            {importStats.pagesRead && importStats.pagesRead > 1
+              ? `Read ${importStats.pagesRead} pages`
+              : "Read 1 page"}
+            {" · "}{importStats.qaPairs} question/answer pair{importStats.qaPairs === 1 ? "" : "s"}
+            {" · "}{importStats.source === "llm" ? "AI-assisted extraction" : "basic extraction"}
+          </p>
+          {importStats.pages?.some((page) => page.status !== "ok") && (
+            <p>
+              Skipped (unreachable): {importStats.pages.filter((page) => page.status !== "ok").map((page) => page.url).join(", ")}
+            </p>
+          )}
+          {!importStats.structured && (
+            <p>No question/answer structure was detected on these pages; for best results, paste the FAQ text instead.</p>
+          )}
+        </div>
       )}
       <button
         type="button"

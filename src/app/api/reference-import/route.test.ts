@@ -148,4 +148,44 @@ describe("public HTTPS import boundary", () => {
     expect(payload.extractedText).not.toContain("guarantee funding");
     vi.unstubAllEnvs();
   });
+
+  it("follows bounded same-origin article links and merges their Q/A pairs", async () => {
+    const hub = `<nav><a href="/policy/blog">Blog</a></nav><main><a href="/policy/kyc">How does the KYC verification work?</a><a href="/policy/slippage">What is slippage?</a></main>`;
+    vi.mocked(httpsRequest).mockImplementation(((options: RequestOptions, callback: (response: unknown) => void) => {
+      const path = options.path ?? "";
+      const body = path.startsWith("/policy/kyc")
+        ? "<main><h2>How does the KYC verification work?</h2><p>Submit your documents and verification completes within 24 hours.</p></main>"
+        : path.startsWith("/policy/slippage")
+          ? "<main><h2>What is slippage?</h2><p>Slippage is the price difference between the expected and executed price.</p></main>"
+          : hub;
+      const response = Readable.from([Buffer.from(body)]);
+      Object.assign(response, { statusCode: 200, headers: {} });
+      const request = new EventEmitter();
+      return Object.assign(request, { end: () => callback(response), destroy: vi.fn() });
+    }) as unknown as typeof httpsRequest);
+
+    const response = await importUrl();
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.extractedText).toContain("Q: How does the KYC verification work?\nA: Submit your documents and verification completes within 24 hours.");
+    expect(payload.extractedText).toContain("Q: What is slippage?\nA: Slippage is the price difference between the expected and executed price.");
+    expect(payload.pagesRead).toBe(4);
+    expect(payload.pages.filter((page: { status: string }) => page.status === "ok")).toHaveLength(4);
+  });
+
+  it("does not fetch cross-origin or external-host links discovered on the hub", async () => {
+    vi.mocked(httpsRequest).mockImplementation(((options: RequestOptions, callback: (response: unknown) => void) => {
+      const path = options.path ?? "";
+      const body = path === "/faq/" ? `<main><a href="/faq/one">Internal</a><a href="https://other.example/faq/two">External</a></main>` : "<main>Page body.</main>";
+      const response = Readable.from([Buffer.from(body)]);
+      Object.assign(response, { statusCode: 200, headers: {} });
+      const request = new EventEmitter();
+      return Object.assign(request, { end: () => callback(response), destroy: vi.fn() });
+    }) as unknown as typeof httpsRequest);
+
+    const response = await importUrl("https://example.com/faq/");
+    expect(response.status).toBe(200);
+    const paths = vi.mocked(httpsRequest).mock.calls.map((call) => (call[0] as { path?: string }).path ?? "");
+    expect(paths.some((path) => path.startsWith("other.example"))).toBe(false);
+  });
 });

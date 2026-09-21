@@ -86,7 +86,7 @@ export const validatePracticeContext = ({
   noteFileSizeBytes?: number;
 }): PracticeContextValidation => {
   const errors: FieldErrors = {};
-  if (!companyName.trim()) addError(errors, "companyName", "Enter your company name.");
+  if (!companyName.trim()) addError(errors, "companyName", "Enter your session name.");
 
   const packValidation = validatePracticePack({
     source: context.source,

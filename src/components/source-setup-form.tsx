@@ -21,6 +21,8 @@ type ImportedSource = {
   qaPairs?: number;
   structured?: boolean;
   extractionSource?: "llm" | "basic";
+  pagesRead?: number;
+  pages?: Array<{ url: string; status: string }>;
 };
 
 const channelTile =
@@ -107,6 +109,13 @@ export function SourceSetupForm() {
         qaPairs: typeof imported.qaPairs === "number" ? imported.qaPairs : undefined,
         structured: imported.structured === true,
         extractionSource: imported.extractionSource === "llm" ? "llm" : "basic",
+        pagesRead: typeof imported.pagesRead === "number" ? imported.pagesRead : undefined,
+        pages: Array.isArray(imported.pages)
+          ? imported.pages.filter((page): page is { url: string; status: string } => {
+              const record = page as { url?: unknown; status?: unknown };
+              return typeof record.url === "string" && typeof record.status === "string";
+            })
+          : undefined,
       });
     } catch (error) {
       setPreviewText("");
@@ -155,7 +164,7 @@ export function SourceSetupForm() {
   return (
     <form onSubmit={submit} className="space-y-7" noValidate>
       <label className="block">
-        <span className={fieldLabel}>Company name</span>
+        <span className={fieldLabel}>Session name</span>
         <input value={companyName} onChange={(event) => { setCompanyName(event.target.value); invalidateSetup(); }} className={`${inputBase} mt-2`} />
         {fieldError("companyName")}
       </label>
@@ -191,6 +200,8 @@ export function SourceSetupForm() {
           qaPairs: importedSource.qaPairs,
           structured: importedSource.structured === true,
           source: importedSource.extractionSource ?? "basic",
+          pagesRead: importedSource.pagesRead,
+          pages: importedSource.pages,
         } : undefined}
       />
       <ScenarioPicker facts={context.facts} derived={derived} value={scenarioId} onChange={setScenarioId} />

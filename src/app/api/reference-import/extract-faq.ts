@@ -194,6 +194,33 @@ const dedupePairs = (pairs: Pair[]): Pair[] => {
   });
 };
 
+const SKIP_LINK_EXTENSIONS = /\.(pdf|docx?|xlsx?|pptx?|zip|png|jpe?g|gif|webp|svg|xml|json|css|m?js)(?:$|[?#])/i;
+
+// FAQ hubs list their article pages as same-origin links below the hub's own
+// path (e.g. /faq/ registers under /faq/registration-guide). Only such links
+// are discovered: same host, inside the hub's section of the site, not the
+// hub itself, not downloadable assets, deduplicated by path, bounded by cap.
+export const extractSameOriginLinks = (html: string, baseUrl: URL, cap: number): string[] => {
+  const hubPath = baseUrl.pathname.replace(/\/+$/, "");
+  const hubPrefix = `${hubPath}/`;
+  const seen = new Set<string>();
+  const links: string[] = [];
+  for (const match of html.matchAll(/<a\b[^>]*\bhref="([^"]*)"/gi)) {
+    let candidate: URL;
+    try { candidate = new URL(match[1], baseUrl); } catch { continue; }
+    if (candidate.protocol !== "https:" || candidate.hostname !== baseUrl.hostname) continue;
+    if (candidate.username || candidate.password) continue;
+    const path = candidate.pathname.replace(/\/+$/, "");
+    if (!path || path === hubPath || !path.startsWith(hubPrefix)) continue;
+    if (SKIP_LINK_EXTENSIONS.test(path)) continue;
+    if (seen.has(path)) continue;
+    seen.add(path);
+    links.push(candidate.toString());
+    if (links.length >= cap) break;
+  }
+  return links;
+};
+
 export const extractFaqContent = (html: string): FaqExtraction => {
   // JSON-LD runs first: its scripts are data containers and must not be
   // stripped before their FAQPage payload is read.

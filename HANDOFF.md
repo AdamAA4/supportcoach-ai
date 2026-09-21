@@ -13,25 +13,20 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `d358ad2`
-- Generated: 2026-09-20T06:06:10.473Z
+- Current commit: `d0f78a7`
+- Generated: 2026-09-21T13:24:51.940Z
 - Uncommitted files excluding this handoff: 
 
 ```text
-M .env.example
- M CHANGELOG.md
- M README.md
+M CHANGELOG.md
  M src/app/api/reference-import/extract-faq.test.ts
  M src/app/api/reference-import/extract-faq.ts
  M src/app/api/reference-import/route.test.ts
  M src/app/api/reference-import/route.ts
  M src/components/source-preview.tsx
  M src/components/source-setup-form.tsx
-?? .zcodeignore
-?? src/app/api/reference-import/grounding.test.ts
-?? src/app/api/reference-import/grounding.ts
-?? src/app/api/reference-import/llm.test.ts
-?? src/app/api/reference-import/llm.ts
+ M src/domain/validation.test.ts
+ M src/domain/validation.ts
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
