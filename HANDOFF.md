@@ -13,16 +13,11 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `27569e0`
-- Generated: 2026-09-21T23:44:40.642Z
-- Uncommitted files excluding this handoff:
+- Current commit: `ad09003`
+- Generated: 2026-09-21T23:48:57.213Z
+- Uncommitted files excluding this handoff: none
 
-```text
-M BUGS.md
- M CHANGELOG.md
- M src/components/source-setup-form.tsx
- M src/voice/assemblyai-voice-agent.test.ts
-```
+
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
 
@@ -49,6 +44,7 @@ Follow-up round 3 (2026-09-18, product-lead request): the import body cap was ra
 - 2026-09-21 importer fix: `npm run lint`, `npm run typecheck`, `npm test` (22 files, 249/249), and `npm run build` all passed. Live local `POST /api/reference-import` against `https://equityedge.io/faq`: 9 pages read, 14 article facts, 3.1 seconds, no original fake pair or newsletter footer fact.
 - 2026-09-21 multi-scenario practice: `npm run lint`, `npm run typecheck`, targeted scenario-picker/normalization tests (18/18), `npm test` (23 files, 251/251), and `npm run build` all passed. The UI test proves selecting a second FAQ drill preserves the first and removing one leaves the other selected; the context test proves its combined fact IDs round-trip through persisted-session validation.
 - 2026-09-22 session-name confirmation fix: `npm run lint`, `npm run typecheck`, `npm test` (23 files, 252/252), and `npm run build` passed. The new form regression test confirms an imported source, its selected scenario, and the enabled Start practice call button survive a session-name edit.
+- Production browser verification after deployment: confirm a pasted FAQ, then edit Session name. The confirmed state, selected scenario, and Start practice call button remained available; browser logs were empty.
 - Production verification after Vercel deploy: `POST https://supportcoach-ai-ten.vercel.app/api/reference-import` against `https://equityedge.io/faq` returned 9 pages, 14 facts, 2.2 seconds, no original fake pair, and no newsletter footer fact.
 - `impeccable detect --json` over all changed UI files: zero findings.
 - Impeccable finish review (fresh subagent): first verdict `fix`; after placeholder/danger contrast token fixes, live-state captures (mock voice mode, fake mic), DESIGN.md, and provenance, the verdict pass resolved every item; the final documentation amendment (console-composition deviation recorded in the brief and CHANGELOG) flipped it to ship.
