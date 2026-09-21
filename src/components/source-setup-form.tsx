@@ -170,7 +170,7 @@ export function SourceSetupForm() {
     <form onSubmit={submit} className="space-y-7" noValidate>
       <label className="block">
         <span className={fieldLabel}>Session name</span>
-        <input value={companyName} onChange={(event) => { setCompanyName(event.target.value); invalidateSetup(); }} className={`${inputBase} mt-2`} />
+        <input value={companyName} onChange={(event) => setCompanyName(event.target.value)} className={`${inputBase} mt-2`} />
         {fieldError("companyName")}
       </label>
       <fieldset className="space-y-3">

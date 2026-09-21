@@ -8,7 +8,7 @@ import { AssemblyAiVoiceAgent, createConfiguredVoiceAgent } from "./assemblyai-v
 import type { VoiceSocketConstructor } from "./assemblyai-voice-agent";
 import { MockVoiceAgent } from "./mock-voice-agent";
 import { SourceSetupForm } from "../components/source-setup-form";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { VoiceAgentEvent } from "./voice-agent";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -105,6 +105,35 @@ describe("source setup import", () => {
     expect(await screen.findByText("Refunds are available within 30 days.")).toBeVisible();
     expect(request).toHaveBeenCalledTimes(1);
     expect(request).toHaveBeenCalledWith("/api/reference-import", expect.objectContaining({ method: "POST" }));
+  });
+
+  it("keeps a confirmed source and selected scenarios when the session name changes", async () => {
+    cleanup();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      canonicalUrl: "https://example.com/faq",
+      extractedText: [
+        "Q: What is your refund policy?",
+        "A: Refunds are available within 30 days for unopened items.",
+        "",
+        "Q: How do I cancel an order?",
+        "A: Orders can be cancelled before dispatch.",
+      ].join("\n"),
+      contentHash: "sha256:source-hash",
+    }), { status: 200 })));
+    render(React.createElement(SourceSetupForm));
+
+    fireEvent.click(screen.getByLabelText("Public HTTPS link"));
+    fireEvent.change(screen.getByLabelText("FAQ or policy URL"), { target: { value: "https://example.com/faq" } });
+    fireEvent.click(screen.getByRole("button", { name: "Import source" }));
+    await vi.waitFor(() => expect(screen.getByRole("button", { name: "Confirm this source" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Confirm this source" }));
+
+    expect(await screen.findByRole("checkbox", { name: "What is your refund policy" })).toBeChecked();
+    fireEvent.change(screen.getByLabelText("Session name"), { target: { value: "Updated session name" } });
+
+    expect(screen.getByRole("button", { name: "Source confirmed" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "What is your refund policy" })).toBeChecked();
+    expect(screen.getByRole("button", { name: "Start practice call" })).toBeEnabled();
   });
 });
 
