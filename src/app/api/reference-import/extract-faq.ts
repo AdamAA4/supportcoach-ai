@@ -157,6 +157,62 @@ const readsAsAnswer = (line: string): boolean => {
   return /[.!?]$/.test(line) || words >= 8;
 };
 
+const inlineScriptStrings = (html: string): string[] => {
+  const strings: string[] = [];
+  for (const match of html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
+    for (const literal of match[1].matchAll(/"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'/g)) {
+      try {
+        const decoded = JSON.parse(literal[0]);
+        if (typeof decoded === "string") strings.push(decoded);
+      } catch { /* not a JSON string literal; skip */ }
+    }
+  }
+  return strings;
+};
+
+// Framer serializes each article's rich text into an inline component tree.
+// The FAQ hub contains menu labels, while the linked article holds the actual
+// h2/p nodes. Read a semantic article heading followed by full prose so
+// presentation data becomes an exact, source-grounded fallback when the LLM
+// provider is unavailable. A title may be a topic rather than a sentence
+// question, but it is still copied from the source rather than invented.
+const extractFramerRichTextPairs = (html: string): Pair[] => {
+  const pairs: Pair[] = [];
+  for (const source of inlineScriptStrings(html)) {
+    if (!source.includes('[4,"')) continue;
+    const nodes: Array<{ tag: string; text: string }> = [];
+    for (const segment of source.split(/(?=\[4,"(?:h[1-6]|p)")/g)) {
+      const tag = /^\[4,"(h[1-6]|p)"/.exec(segment)?.[1];
+      if (!tag) continue;
+      const fragments: string[] = [];
+      for (const fragment of segment.matchAll(/\[5,"((?:[^"\\]|\\.)*)"\]/g)) {
+        try { fragments.push(JSON.parse(`"${fragment[1]}"`)); } catch { /* malformed text fragment */ }
+      }
+      let text = fragments.join("");
+      text = blockText(text).replace(/\u200b/g, "").trim();
+      if (text) nodes.push({ tag: tag.toLowerCase(), text });
+    }
+    let question = "";
+    const answerParts: string[] = [];
+    const flush = () => {
+      const answer = answerParts.join("\n").trim();
+      if (question && answer && readsAsAnswer(answer)) pairs.push({ question, answer });
+      question = "";
+      answerParts.length = 0;
+    };
+    for (const node of nodes) {
+      if (node.tag.startsWith("h")) {
+        flush();
+        question = node.text;
+      } else if (question) {
+        answerParts.push(node.text);
+      }
+    }
+    flush();
+  }
+  return pairs;
+};
+
 const splitHeadingPair = (pair: Pair): Pair[] => {
   const lines = pair.answer.split("\n").map((line) => line.trim()).filter(Boolean);
   if (lines.length < 2) return [pair];
@@ -197,9 +253,11 @@ const dedupePairs = (pairs: Pair[]): Pair[] => {
 const SKIP_LINK_EXTENSIONS = /\.(pdf|docx?|xlsx?|pptx?|zip|png|jpe?g|gif|webp|svg|xml|json|css|m?js)(?:$|[?#])/i;
 
 // FAQ hubs list their article pages as same-origin links below the hub's own
-// path (e.g. /faq/ registers under /faq/registration-guide). Only such links
-// are discovered: same host, inside the hub's section of the site, not the
-// hub itself, not downloadable assets, deduplicated by path, bounded by cap.
+// path (e.g. /faq/ registers under /faq/registration-guide). Some static-site
+// routers serve a file-like hub (/faq) and use ./category/article links that
+// resolve outside that prefix. Both shapes are discovered, while navigation
+// links such as ./contact are excluded by requiring a nested article path.
+// All candidates remain same-host, non-asset, deduplicated, and bounded.
 export const extractSameOriginLinks = (html: string, baseUrl: URL, cap: number): string[] => {
   const hubPath = baseUrl.pathname.replace(/\/+$/, "");
   const hubPrefix = `${hubPath}/`;
@@ -211,7 +269,8 @@ export const extractSameOriginLinks = (html: string, baseUrl: URL, cap: number):
     if (candidate.protocol !== "https:" || candidate.hostname !== baseUrl.hostname) continue;
     if (candidate.username || candidate.password) continue;
     const path = candidate.pathname.replace(/\/+$/, "");
-    if (!path || path === hubPath || !path.startsWith(hubPrefix)) continue;
+    const nestedRelativeArticle = match[1].startsWith("./") && path.split("/").filter(Boolean).length >= 2;
+    if (!path || path === hubPath || (!path.startsWith(hubPrefix) && !nestedRelativeArticle)) continue;
     if (SKIP_LINK_EXTENSIONS.test(path)) continue;
     if (seen.has(path)) continue;
     seen.add(path);
@@ -228,12 +287,16 @@ export const extractFaqContent = (html: string): FaqExtraction => {
   const details = extractDetailsPairs(stripInvisible(jsonLd.rest));
   const definitions = extractDefinitionListPairs(details.rest);
   const headings = extractHeadingPairs(definitions.rest);
+  const framerPairs = extractFramerRichTextPairs(html);
+  const hasFramerRichText = inlineScriptStrings(html).some((source) => source.includes('[4,"h'));
 
   const pairs = dedupePairs([
     ...jsonLd.pairs,
     ...details.pairs,
     ...definitions.pairs,
-    ...headings.pairs.flatMap(splitHeadingPair),
+    // Framer article text is a more precise source than its rendered footer
+    // and navigation, which otherwise resemble heading sections.
+    ...(hasFramerRichText ? framerPairs : headings.pairs.flatMap(splitHeadingPair)),
   ]);
   const structured = pairs.length > 0;
   const extractedText = structured
@@ -264,16 +327,7 @@ export const harvestFaqCorpus = (html: string): { corpus: string } => {
     },
   );
 
-  const dataParts: string[] = [];
-  for (const match of body.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
-    for (const literal of match[1].matchAll(/"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'/g)) {
-      const raw = literal[0];
-      try {
-        const decoded = JSON.parse(raw);
-        if (typeof decoded === "string" && READABLE_STRING(decoded)) dataParts.push(decoded);
-      } catch { /* not a JSON string literal; skip */ }
-    }
-  }
+  const dataParts = inlineScriptStrings(body).filter(READABLE_STRING);
 
   const visible = blockText(
     body.replace(/<(script|style|noscript|template|svg|iframe)\b[^>]*>[\s\S]*?<\/\1>/gi, ""),

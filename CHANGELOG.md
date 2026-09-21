@@ -69,6 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Framer-backed FAQ hubs such as `equityedge.io/faq` now import their real linked article facts instead of pairing topic-menu labels into fabricated answers. The importer accepts bounded nested relative article links, reads Framer rich-text state, excludes hub/footer text when article facts exist, and keeps the LLM as a grounded rescue path only when deterministic extraction finds no complete pairs. Gemini now uses the supported `gemini-3.5-flash` endpoint.
 - Imported pages whose FAQ section is a list of topic labels no longer produce nonsense Q/A pairs (such as "A: Evaluation Phase" or "A: Slippage"): a question-like line only pairs with following content that reads like an answer (sentence punctuation or a full-length line), consecutive labels are skipped, and the section keeps its full text when no question has a real answer.
 - Fact matcher: an evidence window no longer starts in front of a fact's own subject when a sibling fact uses the same word as its relation (for example "delivery" shared across delivery facts). A trainee answer that states a confirmed fact verbatim is now credited instead of being missed; regression test added.
 - Empty-call message is readable and clearer: light-red panel with dark-red text (was dark text on a dark red panel), now reading "No answers were recorded in this call, so there is nothing to score. Start a new practice call and answer the customer before ending."

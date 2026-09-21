@@ -7,9 +7,10 @@ const LLM_TIMEOUT_MS = 20_000;
 const MAX_PAIRS = 15;
 const MAX_CORPUS_CHARS = 150_000;
 
-const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+// Gemini 2.0 Flash was shut down in June 2026. Keep this endpoint current so
+// configured production imports do not silently fall back to basic extraction.
+const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent";
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
-const GEMINI_MODEL = "gemini-2.0-flash";
 const OPENAI_MODEL = "gpt-4o-mini";
 
 export type LlmPair = { question: string; answer: string };

@@ -97,6 +97,15 @@ describe("extractFaqContent", () => {
     expect(corpus).toContain("How does the KYC verification work?");
     expect(corpus).toContain("verification completes within 24 hours");
   });
+
+  it("extracts grounded question and answer text from Framer rich-text state", () => {
+    const html = `<main><h2>Subscribe to our newsletter</h2><p>Send</p></main><script>window.__framer = "[4,\\"h2\\",{\\"dir\\":\\"auto\\"},[5,\\"Am I required to verify my KYC every time I complete the challenge?\\"]],[4,\\"p\\",{\\"dir\\":\\"auto\\"},[5,\\"KYC is only required for the first challenge you pass. Once your identity is verified and approved, you won’t need to complete the KYC process again for future challenges you pass.\\"]]";</script>`;
+    const result = extractFaqContent(html);
+
+    expect(result.extractedText).toContain("Q: Am I required to verify my KYC every time I complete the challenge?");
+    expect(result.extractedText).toContain("A: KYC is only required for the first challenge you pass.");
+    expect(result.extractedText).not.toContain("Subscribe to our newsletter");
+  });
 });
 
 describe("extractSameOriginLinks", () => {
@@ -107,6 +116,18 @@ describe("extractSameOriginLinks", () => {
     expect(extractSameOriginLinks(html, hub, 8)).toEqual([
       "https://equityedge.io/faq/general",
       "https://equityedge.io/faq/trading-rules",
+    ]);
+  });
+
+  it("discovers nested relative article links when a hub uses a file-like path", () => {
+    const html = [
+      `<a href="./general/how-does-the-kyc-verification-work">KYC</a>`,
+      `<a href="./general/slippage">Slippage</a>`,
+      `<a href="./contact">Contact</a>`,
+    ].join("");
+    expect(extractSameOriginLinks(html, new URL("https://equityedge.io/faq"), 8)).toEqual([
+      "https://equityedge.io/general/how-does-the-kyc-verification-work",
+      "https://equityedge.io/general/slippage",
     ]);
   });
 

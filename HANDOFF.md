@@ -13,12 +13,21 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `c83e698`
-- Generated: 2026-09-21T14:10:16.161Z
+- Current commit: `580711b`
+- Generated: 2026-09-21T15:26:55.847Z
 - Uncommitted files excluding this handoff: 
 
 ```text
 M BUGS.md
+ M CHANGELOG.md
+ M ENHANCEMENTS.md
+ M README.md
+ M src/app/api/reference-import/extract-faq.test.ts
+ M src/app/api/reference-import/extract-faq.ts
+ M src/app/api/reference-import/llm.test.ts
+ M src/app/api/reference-import/llm.ts
+ M src/app/api/reference-import/route.test.ts
+ M src/app/api/reference-import/route.ts
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
@@ -43,6 +52,7 @@ Follow-up round 3 (2026-09-18, product-lead request): the import body cap was ra
 - `npm run typecheck`: clean.
 - `npm test`: 14 files, 187/187 passed (after fixing a details/summary nesting regression the redesign introduced).
 - `npm run build`: succeeded, all routes prerendered.
+- 2026-09-21 importer fix: `npm run lint`, `npm run typecheck`, `npm test` (22 files, 249/249), and `npm run build` all passed. Live local `POST /api/reference-import` against `https://equityedge.io/faq`: 9 pages read, 14 article facts, 3.1 seconds, no original fake pair or newsletter footer fact.
 - `impeccable detect --json` over all changed UI files: zero findings.
 - Impeccable finish review (fresh subagent): first verdict `fix`; after placeholder/danger contrast token fixes, live-state captures (mock voice mode, fake mic), DESIGN.md, and provenance, the verdict pass resolved every item; the final documentation amendment (console-composition deviation recorded in the brief and CHANGELOG) flipped it to ship.
 - Visual evidence: `.impeccable/review/*.png` (desktop 1440x900, mobile 390x844 at 2x) with `provenance.json`; capture scripts preserved at `.impeccable/review/scripts/`.
@@ -57,6 +67,8 @@ Follow-up round 10 (2026-09-18, product-lead screenshot): splitHeadingPair no lo
 
 Follow-up round 11 (2026-09-18, product-lead approved design): optional AI-assisted FAQ extraction, two-stage. Stage 1 harvests every scrap of text the page contains (visible content, JSON-LD payloads, and human-readable strings decoded from inline scripts - where JavaScript-rendered sites hide their real FAQ). Stage 2, only when LLM_PROVIDER + LLM_API_KEY are set in .env.local (server-only, never shipped), sends that corpus to the configured model (Gemini default; OpenAI-compatible endpoint also supported) with a strict no-invention contract, then a deterministic grounding layer (src/app/api/reference-import/grounding.ts) verifies every returned pair against the harvested text - hallucinated pairs are dropped, and any LLM failure falls back silently to the basic extractor (labeled basic on the setup screen, which also now displays import stats: page KB, extracted pairs, extraction path, and an unstructured-content flag). Env vars documented in .env.example and README. Tests: grounding verifier (hallucination/thin/numeric cases), LLM client (Gemini + OpenAI shapes, NO_ANSWERS, fences, unparseable), route-level grounded AI test proving a hallucinated pair is dropped while a real pair passes.
 
+Follow-up round 12 (2026-09-21, resolved production importer bug): `equityedge.io/faq` is a Framer hub, not a Next.js page. Its `./general/...` links resolve outside `/faq/`, and each article stores the actual Q&A in Framer inline rich-text state. The importer now allows only bounded nested relative same-origin article links, applies its existing validated-IP/no-redirect/size controls to each, extracts exact Framer heading-and-prose facts, and replaces a menu-only hub with its article facts. When deterministic facts exist, the LLM is not called; it remains a strictly grounded rescue path for otherwise unstructured sources. Gemini Production variables were added in Vercel, and the retired Gemini 2.0 Flash endpoint was moved to Gemini 3.5 Flash. Local live import evidence: 9 pages, 14 facts, 3.1 seconds, no KYC-to-Slippage fake pair, no newsletter footer fact.
+
 Follow-up round 9 (2026-09-18, product-lead request): app logo added — voice-bar mark in a plum rounded tile with a Fraunces wordmark ("SupportCoach" ink, "AI" rose), reusable as `src/components/logo.tsx` (`Logo`, `LogoMark`) and standalone `public/logo.svg`; used in the home header (links home, wordmark nowrap, eyebrow hidden below sm) and the site footer (compact, links home). Verified in-browser at 390px; full suite green.
 
 Follow-up round 8 (2026-09-18, product-lead decisions): built-in drills removed from the setup screen — scenarios are now always derived from the confirmed source's own sections; a confirmed source with no complete FAQ sections gets the scenario error "This source has no complete FAQ sections to practice yet. Add a question with a full answer and try again." (validation gating; unresolved ids now build an honest empty-facts placeholder in createScenarioDefinition instead of silently falling back to a legacy archetype). Legacy late-delivery/refund-eligibility ids remain valid in validators so previously saved sessions restore. Bug fix from product-lead video: selecting a drill no longer calls invalidateSetup — clicking a suggested drill after confirming an imported link used to reset the source to unconfirmed, dropping its snapshot, wiping facts, and making every suggestion disappear. Verified in-browser: after confirm + drill click, "Source confirmed" persists and all 4 suggestions remain; built-in drills absent; the derived scenario carries into the call.
@@ -69,7 +81,6 @@ Follow-up round 6 (2026-09-18, product-lead 20-item launch checklist): privacy p
 
 ## Remaining work or known issues
 
-- ⭐⭐⭐ OPEN (also in BUGS.md): importing a JavaScript-rendered FAQ page (reproduced with equityedge.io/faq) produces garbage facts. The server-side importer sees only the topic menu, contact form, and footer; the extractor pairs those labels into fake Q/A pairs ("Q: How does the KYC verification work? / A: Slippage Restricted Countries..."), which breaks drills, customer questions, and the accuracy report. The LLM-assisted path (round 11) did not rescue the deployed import because (a) LLM_PROVIDER/LLM_API_KEY were not configured in the Vercel environment (only in local .env.local), and (b) the harvested corpus from that page may not contain the client-rendered answers at all. Next steps: configure LLM env vars on Vercel and re-test; if the corpus still lacks answers, inspect the site's data source (Next.js __NEXT_DATA__/RSC payload or FAQ API endpoint) and fetch it server-side with the existing SSRF guardrails; headless-browser rendering is the heaviest fallback. Paste-the-text remains the safe recovery for trainees today.
 - Live AssemblyAI path was verified in mock voice mode only (joined call, lamps, REC); a smoke test with a real `ASSEMBLYAI_API_KEY` on a physical Android Chrome device is the recommended next check.
 - The native file-input label ("Choose File") is unthemed browser copy, accepted in the finish review; revisit if it bothers anyone.
 - The Mimosa pre-commit hook reported a partial scan (dependency-source and callgraph limits) on recent commits; re-run a full security audit when convenient.
@@ -78,5 +89,6 @@ Follow-up round 6 (2026-09-18, product-lead 20-item launch checklist): privacy p
 
 - Approved scope was the UI redesign plus the product lead's follow-up fixes (navigation, extraction structure, next-exercise clamp, import cap); beyond that, behavior, routes, API contracts, and environment-variable handling must stay as they are.
 - Preserve the voice-only practice flow (no typed-response practice), the FAQ/notes grounding flow, server-only API secrets, and all test-pinned strings in `src/components/call-console.test.tsx` (including "Microphone: On — speak naturally") and `src/components/coaching-report.test.tsx`.
+- Keep deterministic article extraction preferred over the LLM whenever it finds structured facts; the LLM is only the grounded rescue path for sources with no complete deterministic pairs.
 - Follow DESIGN.md for any future UI work: the Maison Rose world (blush/white/plum/rose), cream session sheet only for confirmed source material, Fraunces for display, one rose accent, no kickers above headings, no fake data visuals.
 - Run `npm run handoff` before handing back, and commit completed work with its handoff together.

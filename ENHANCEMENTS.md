@@ -1,8 +1,10 @@
 # Enhancements
 
-Last updated: 2026-09-17
+Last updated: 2026-09-21
 
 Task 5 review fixes are recorded in the changelog; they do not change the approved enhancement priorities below.
+
+Resolved the JavaScript-rendered FAQ importer bug on 2026-09-21; this is a reliability correction tracked in BUGS.md, not a new backlog priority.
 
 Completed: full UI redesign in the "Rehearsal Studio" direction (2026-09-17), chosen by the product lead from three presented options using the emil-design-eng, design-taste-frontend, and impeccable skills. Recorded in CHANGELOG.md. No backlog priorities were changed.
 

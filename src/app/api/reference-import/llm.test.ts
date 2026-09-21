@@ -37,6 +37,7 @@ describe("extractPairsWithLlm", () => {
     expect(pairs).toEqual([{ question: "How does the KYC verification work?", answer: "Submit your documents and verification completes within 24 hours." }]);
     const [url, init] = fetchMock.mock.calls[0];
     expect(String(url)).toContain("generativelanguage.googleapis.com");
+    expect(String(url)).toContain("gemini-3.5-flash");
     expect((init as { headers: Record<string, string> }).headers["x-goog-api-key"]).toBe("test-key");
     expect(JSON.stringify((init as { body: string }).body)).not.toContain("test-key");
   });

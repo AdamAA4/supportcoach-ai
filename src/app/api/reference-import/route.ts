@@ -160,6 +160,7 @@ export async function POST(request: Request) {
     const corpusParts = [harvest.corpus];
     const pages: Array<{ url: string; status: string }> = [{ url: sourceUrl.pathname, status: "ok" }];
     let pagesRead = 1;
+    const articleExtractions: Array<ReturnType<typeof extractFaqContent>> = [];
 
     // FAQ hubs often only LIST their content: the real answers live on
     // same-origin article pages linked from the hub. Read them with a
@@ -195,11 +196,7 @@ export async function POST(request: Request) {
           corpusParts.push(harvestFaqCorpus(outcome.html).corpus);
           const pageExtraction = extractFaqContent(outcome.html);
           if (pageExtraction.structured) {
-            extraction = {
-              extractedText: `${extraction.extractedText}\n\n${pageExtraction.extractedText}`.trim(),
-              qaPairs: extraction.qaPairs + pageExtraction.qaPairs,
-              structured: true,
-            };
+            articleExtractions.push(pageExtraction);
           }
         }
       } finally {
@@ -207,10 +204,23 @@ export async function POST(request: Request) {
       }
     }
 
-    // Stage 2b: optional AI-assisted read of the full corpus. Its pairs are
-    // verified against the harvested text before use; anything the model
-    // invented is dropped, and any failure silently falls back to basic.
-    if (isLlmConfigured()) {
+    // A hub often contains only topic labels. Once linked articles provide
+    // complete pairs, use those articles as the source of truth instead of
+    // combining them with the hub's menu text.
+    if (articleExtractions.length > 0) {
+      extraction = {
+        extractedText: articleExtractions.map((article) => article.extractedText).join("\n\n"),
+        qaPairs: articleExtractions.reduce((total, article) => total + article.qaPairs, 0),
+        structured: true,
+      };
+    }
+
+    // Stage 2b: optional AI-assisted read of the full corpus. It is a rescue
+    // path only when deterministic extraction found no complete pairs, so a
+    // valid linked-article import stays within the bounded import deadline.
+    // Its pairs are verified against harvested text; anything invented is
+    // dropped, and any provider failure falls back silently to basic.
+    if (!extraction.structured && isLlmConfigured()) {
       try {
         const llmPairs = verifyGroundedPairs(
           await extractPairsWithLlm(corpusParts.join("\n\n")),

@@ -173,6 +173,46 @@ describe("public HTTPS import boundary", () => {
     expect(payload.pages.filter((page: { status: string }) => page.status === "ok")).toHaveLength(4);
   });
 
+  it("prefers article facts over a hub's menu-label pairs", async () => {
+    vi.mocked(httpsRequest).mockImplementation(((options: RequestOptions, callback: (response: unknown) => void) => {
+      const path = options.path ?? "";
+      const body = path.startsWith("/general/kyc")
+        ? "<main><h2>How does the KYC verification work?</h2><p>Submit your documents after passing the challenge.</p></main>"
+        : `<main><h1>Frequently asked questions</h1><p>How does the KYC verification work?</p><p>Slippage Restricted Countries Policy Against Gambling in Trading Giveaway Accounts Get In Touch</p><a href="./general/kyc">KYC</a></main>`;
+      const response = Readable.from([Buffer.from(body)]);
+      Object.assign(response, { statusCode: 200, headers: {} });
+      const request = new EventEmitter();
+      return Object.assign(request, { end: () => callback(response), destroy: vi.fn() });
+    }) as unknown as typeof httpsRequest);
+
+    const response = await importUrl("https://example.com/faq");
+    const payload = await response.json();
+    expect(payload.extractedText).toContain("A: Submit your documents after passing the challenge.");
+    expect(payload.extractedText).not.toContain("A: Slippage Restricted Countries");
+  });
+
+  it("does not call the optional LLM when linked articles already provide structured facts", async () => {
+    vi.stubEnv("LLM_PROVIDER", "gemini");
+    vi.stubEnv("LLM_API_KEY", "test-llm-key");
+    const providerFetch = vi.fn();
+    vi.stubGlobal("fetch", providerFetch);
+    vi.mocked(httpsRequest).mockImplementation(((options: RequestOptions, callback: (response: unknown) => void) => {
+      const body = (options.path ?? "").startsWith("/general/kyc")
+        ? "<main><h2>How does the KYC verification work?</h2><p>Submit your documents after passing the challenge.</p></main>"
+        : `<main><a href="./general/kyc">KYC</a></main>`;
+      const response = Readable.from([Buffer.from(body)]);
+      Object.assign(response, { statusCode: 200, headers: {} });
+      const request = new EventEmitter();
+      return Object.assign(request, { end: () => callback(response), destroy: vi.fn() });
+    }) as unknown as typeof httpsRequest);
+
+    const response = await importUrl("https://example.com/faq");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ extractionSource: "basic", qaPairs: 1 });
+    expect(providerFetch).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
   it("does not fetch cross-origin or external-host links discovered on the hub", async () => {
     vi.mocked(httpsRequest).mockImplementation(((options: RequestOptions, callback: (response: unknown) => void) => {
       const path = options.path ?? "";

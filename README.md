@@ -43,7 +43,7 @@ LLM_PROVIDER=gemini
 LLM_API_KEY=your_llm_key
 ```
 
-`LLM_PROVIDER` accepts `gemini` (Google AI Studio key) or `openai`. With a key configured, the importer sends the page's collected text to the model with a strict no-invention instruction, then verifies every returned question/answer pair against the page's own words before use — pairs that are not grounded in the page are dropped, and any AI failure falls back to basic extraction silently. The setup screen always labels which extraction path was used.
+`LLM_PROVIDER` accepts `gemini` (Google AI Studio key) or `openai`. The importer uses the model only when deterministic extraction cannot find complete source facts; it sends the page's collected text with a strict no-invention instruction, then verifies every returned question/answer pair against the page's own words before use. Pairs that are not grounded in the page are dropped, and any AI failure falls back to basic extraction silently. The setup screen always labels which extraction path was used.
 
 ## Voice modes
 
