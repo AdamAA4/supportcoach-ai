@@ -13,13 +13,17 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `ad09003`
-- Generated: 2026-09-21T23:48:57.213Z
+- Current commit: `7700ce0`
+- Generated: 2026-09-22T15:53:28.309Z
 - Uncommitted files excluding this handoff: none
 
 
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
+
+2026-09-22 grounded coaching and call-capture follow-up: clarity scoring now requires a supported FAQ fact and no unsupported claim before direct, concise delivery can earn points. A reply such as "I will check" therefore scores 0 clarity; a concise, grounded answer earns 3. FAQ drill suggestions now rotate source-grounded six-item windows per confirmed content hash, and the setup screen has a `Refresh suggestions` action. This keeps all candidates deterministic for session validation while avoiding the same visible set after repeated imports. No LLM is used for suggestion rotation.
+
+2026-09-22 voice-capture follow-up: the live AssemblyAI session now explicitly sets `vad_threshold: 0.3` (one measured change from the documented default), and the call console surfaces transient local stages: microphone connected, outgoing voice signal detected, and provider speech detection. PCM framing, token flow, audio output, and voice-only behavior are unchanged. Retry/mute/event-order races are covered by regression tests. The reported phone transcription issue is **not resolved until a physical-phone call reaches a trainee transcript and an AI follow-up**; the UI stages identify whether the failure is browser capture, provider speech detection, or transcription.
 
 Full UI redesign of the home, source setup, practice call, and coaching report screens. Final world: "Maison Rose," ported from the product lead's cosmet project (Downloads/cosmet) and pinned by the product lead on 2026-09-17 — blush canvas (#fbf3f0), white cards with rose-tinted shadows, plum ink, single rose accent (#b0586a), Fraunces + DM Sans via `next/font`, cream session sheet reserved for confirmed source. An earlier same-day "Rehearsal Studio" dark direction, plus a brightening pass on it, was replaced by this user-pinned direction before shipping; the home page's "or typed fallback" clause was also removed with approval. Styling-only: no product flow, voice-agent, evaluation, API, or storage changes.
 
@@ -36,6 +40,9 @@ Follow-up round (same day, product-lead feedback): the palette was brightened (c
 Follow-up round 3 (2026-09-18, product-lead request): the import body cap was raised from 200 KB to 2 MB so heavy real-world FAQ pages import cleanly, and the oversized-page rejection now reports the measured page size with the recovery step ("This page is 4.6 MB, over the 2 MB import limit. Open the page, copy the FAQ or policy text, and paste it instead."). The extracted-text cap (200 KB), five-second deadline, SSRF protections, and test-pinned behavior are unchanged. A user-proposed "accept oversized imports" consent flow was discussed and declined: the endpoint is unauthenticated, so client-side consent cannot be enforced server-side and an absolute cap must exist regardless.
 
 ## Checks run
+
+- 2026-09-22 grounded coaching, suggestion rotation, and voice-capture follow-up: `npm run lint`, `npm run typecheck`, `npm test` (24 files, 268/268), and `npm run build` passed. Focused voice tests cover the VAD payload, first non-zero PCM signal, speech-event ordering, mute, cleanup, and a failed-then-successful microphone retry.
+- Vercel Production deployment `dpl_7GAHrMSrj49fV4KcqN8aV2vrH2ia` is Ready and aliased to `https://supportcoach-ai-ten.vercel.app`; `GET /api/health` returned 200 with `{\"status\":\"ok\"}`. Browser smoke verification reached the deployed home screen.
 
 - `npm run lint`: no ESLint warnings or errors.
 - `npm run typecheck`: clean.
@@ -78,7 +85,7 @@ Follow-up round 6 (2026-09-18, product-lead 20-item launch checklist): privacy p
 
 ## Remaining work or known issues
 
-- Live AssemblyAI path was verified in mock voice mode only (joined call, lamps, REC); a smoke test with a real `ASSEMBLYAI_API_KEY` on a physical Android Chrome device is the recommended next check.
+- Live AssemblyAI output was previously verified on a phone, but trainee transcription remains an active phone-only acceptance check after the VAD and capture-stage changes. On Android Chrome, start a call and speak normally: expected status is `Microphone: Voice signal detected`, then `Microphone: Listening to your answer`, then a trainee transcript and customer follow-up. If it stops at the first stage, inspect provider VAD/token behavior; if it never reaches the first stage, inspect browser capture/device selection.
 - The native file-input label ("Choose File") is unthemed browser copy, accepted in the finish review; revisit if it bothers anyone.
 - The Mimosa pre-commit hook reported a partial scan (dependency-source and callgraph limits) on recent commits; re-run a full security audit when convenient.
 
