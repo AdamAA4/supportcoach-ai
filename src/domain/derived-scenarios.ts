@@ -10,6 +10,10 @@ import type { ScenarioDefinition } from "./practice-pack";
 
 export const MAX_DERIVED_SCENARIOS = 6;
 
+type DeriveScenarioOptions = {
+  limit?: number;
+};
+
 const STOP_WORDS = new Set([
   "the", "a", "an", "is", "are", "do", "does", "can", "am", "i", "my", "me",
   "to", "for", "of", "in", "on", "with", "and", "or", "how", "what", "when",
@@ -102,12 +106,12 @@ const relatedFactIds = (primary: ReferenceFact, facts: ReferenceFact[]): string[
   return [primary.id, ...related.slice(0, 3)];
 };
 
-export const deriveScenarios = (facts: ReferenceFact[]): ScenarioDefinition[] => {
+export const deriveScenarios = (facts: ReferenceFact[], { limit = MAX_DERIVED_SCENARIOS }: DeriveScenarioOptions = {}): ScenarioDefinition[] => {
   const sections = facts.filter((fact) => !fact.id.startsWith("note-"));
   const derived: ScenarioDefinition[] = [];
   const seen = new Set<string>();
   for (const fact of sections) {
-    if (derived.length >= MAX_DERIVED_SCENARIOS) break;
+    if (derived.length >= limit) break;
     if (!isSubstantiveSection(fact)) continue;
     const id = `derived-${hashOf(`${fact.question.toLowerCase().trim()}\u0000${fact.answer.toLowerCase().trim().slice(0, 120)}`)}`;
     if (seen.has(id)) continue;
@@ -127,5 +131,12 @@ export const deriveScenarios = (facts: ReferenceFact[]): ScenarioDefinition[] =>
   return derived;
 };
 
+export const rotateScenarios = (scenarios: ScenarioDefinition[], cursor: number, limit: number): ScenarioDefinition[] => {
+  if (scenarios.length === 0 || limit <= 0) return [];
+  if (scenarios.length <= limit) return scenarios.slice();
+  const start = (Math.max(0, Math.floor(cursor)) * limit) % scenarios.length;
+  return Array.from({ length: Math.min(limit, scenarios.length) }, (_, offset) => scenarios[(start + offset) % scenarios.length]);
+};
+
 export const findDerivedScenario = (facts: ReferenceFact[], scenarioId: string): ScenarioDefinition | undefined =>
-  deriveScenarios(facts).find((scenario) => scenario.id === scenarioId);
+  deriveScenarios(facts, { limit: Infinity }).find((scenario) => scenario.id === scenarioId);

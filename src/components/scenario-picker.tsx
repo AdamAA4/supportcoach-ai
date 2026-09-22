@@ -10,6 +10,8 @@ type ScenarioPickerProps = {
   derived: ScenarioDefinition[];
   value: string[];
   onChange: (value: string[]) => void;
+  allCount?: number;
+  onRefresh?: () => void;
 };
 
 const scenarioTile =
@@ -22,7 +24,7 @@ const excerptOf = (answer: string): string => {
 
 // Practice drills come from the confirmed FAQ's own sections, so they always
 // match the source's domain; there are no built-in scenarios anymore.
-export function ScenarioPicker({ facts, derived, value, onChange }: ScenarioPickerProps) {
+export function ScenarioPicker({ facts, derived, value, onChange, allCount, onRefresh }: ScenarioPickerProps) {
   const factById = new Map(facts.map((fact) => [fact.id, fact]));
   const toggle = (id: string) => onChange(value.includes(id) ? value.filter((valueId) => valueId !== id) : [...value, id]);
   return (
@@ -31,7 +33,12 @@ export function ScenarioPicker({ facts, derived, value, onChange }: ScenarioPick
       {derived.length > 0 ? (
         <>
           <p className="mt-2 text-sm leading-relaxed text-ink-muted">Select one or more topics for this voice practice call.</p>
-          <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.14em] text-accent-strong">From your FAQ</p>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-accent-strong">From your FAQ</p>
+            {allCount && allCount > derived.length && onRefresh ? (
+              <button type="button" onClick={onRefresh} className="text-sm font-semibold text-accent-strong underline underline-offset-4">Refresh suggestions</button>
+            ) : null}
+          </div>
           <div className="mt-2 grid gap-2.5">
             {derived.map((scenario) => {
               const primary = factById.get(scenario.factIds[0]);

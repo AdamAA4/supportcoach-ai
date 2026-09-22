@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ScenarioPicker } from "./scenario-picker";
 
@@ -15,6 +15,8 @@ const scenarios = [
 ];
 
 describe("ScenarioPicker", () => {
+  afterEach(cleanup);
+
   it("adds and removes scenarios without replacing an existing selection", () => {
     const Harness = () => {
       const [selected, setSelected] = useState([scenarios[0].id]);
@@ -29,5 +31,26 @@ describe("ScenarioPicker", () => {
     fireEvent.click(screen.getByLabelText("Delivery timing"));
     expect(screen.getByLabelText("Delivery timing")).not.toBeChecked();
     expect(screen.getByLabelText("Refund eligibility")).toBeChecked();
+  });
+
+  it("refreshes suggestions without changing the displayed selection", () => {
+    const onRefresh = vi.fn();
+    const onChange = vi.fn();
+    render(
+      <ScenarioPicker
+        facts={facts}
+        derived={scenarios}
+        value={[scenarios[0].id]}
+        onChange={onChange}
+        allCount={8}
+        onRefresh={onRefresh}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh suggestions" }));
+
+    expect(onRefresh).toHaveBeenCalledOnce();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Delivery timing")).toBeChecked();
   });
 });

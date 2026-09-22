@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveScenarios, isSubstantiveSection } from "./derived-scenarios";
+import { deriveScenarios, findDerivedScenario, isSubstantiveSection, rotateScenarios } from "./derived-scenarios";
 import { normalizePracticeContext } from "./validation";
 import { DeterministicEvaluator } from "../evaluation/deterministic-evaluator";
 import { isPracticeContext } from "../evaluation/validation";
@@ -19,6 +19,23 @@ const tradingFaq = [
 ];
 
 describe("deriveScenarios", () => {
+  it("rotates six-item windows through every substantive source-derived drill", () => {
+    const eightTopics = Array.from({ length: 8 }, (_, index) => fact(
+      `source-fact-${index + 1}`,
+      `How do I complete account step ${index + 1}?`,
+      `Open your account settings, complete step ${index + 1}, confirm the requested details, and wait for the confirmation message before continuing.`,
+    ));
+    const candidates = deriveScenarios(eightTopics, { limit: Infinity });
+    const firstWindow = rotateScenarios(candidates, 0, 6);
+    const nextWindow = rotateScenarios(candidates, 1, 6);
+
+    expect(firstWindow).toHaveLength(6);
+    expect(nextWindow).toHaveLength(6);
+    expect(nextWindow.map((scenario) => scenario.id)).not.toEqual(firstWindow.map((scenario) => scenario.id));
+    expect([...firstWindow, ...nextWindow].every((scenario) => candidates.some((candidate) => candidate.id === scenario.id))).toBe(true);
+    expect(candidates.every((scenario) => findDerivedScenario(eightTopics, scenario.id)?.id === scenario.id)).toBe(true);
+  });
+
   it("suggests a drill per substantive FAQ section, skipping site furniture and placeholders", () => {
     const scenarios = deriveScenarios(tradingFaq);
     const titles = scenarios.map((scenario) => scenario.title);

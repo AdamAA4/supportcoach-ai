@@ -1,36 +1,26 @@
-# Task 2 report — application scaffold and engineering gates
+# Task 2 report: rotate FAQ practice suggestions
 
-## Status
+## Delivered
 
-Implemented the Next.js App Router, TypeScript, and Tailwind scaffold around the existing Task 1 domain contract, with required local and CI quality gates.
+- `deriveScenarios` accepts an optional limit, retaining six as its default.
+- `rotateScenarios` returns a wrapping window beginning at `(cursor * limit) % candidates.length`.
+- The setup form derives the complete deterministic candidate set, displays a rotated six-item window, and keeps all candidate IDs valid for session reconstruction.
+- Confirming a source reads and normalizes the local rotation cursor at `supportcoach-suggestion-rotation-v1:<contentHash>`, stores the next cursor, and refresh advances and persists it without submitting the form or changing confirmation.
+- The picker shows `Refresh suggestions` only when additional candidates exist.
 
-## Changes
+## Test-first evidence
 
-- Added a minimal App Router entry point, root layout, global Tailwind stylesheet, TypeScript path alias, ESLint setup, and generated-file ignores.
-- Added Vitest with the jsdom/testing-library setup, Playwright Chromium configuration, and the required development tools.
-- Added the exact requested package scripts and a GitHub Actions workflow for Node 20 that runs `npm ci`, lint, typecheck, unit tests, and build on every push and pull request.
-- Added the constrained environment template. `ASSEMBLYAI_API_KEY` stays server-only and all `.env` files except the empty template are ignored.
-- Documented local setup, mock/live voice modes, practice inputs, local-data clearing, golden demo path, and fallback behavior in the README.
-- Updated the project changelog under `Unreleased / Added`.
+1. Added the eight-fact domain rotation test; it failed as expected because `rotateScenarios` did not exist.
+2. Added the refresh-control test; it failed as expected because the button was absent.
+3. Added the all-candidate resolution assertion; it failed as expected because `findDerivedScenario` was still capped at six.
 
 ## Verification
 
-- `npm ci --no-audit --no-fund` — passed from a clean dependency tree.
-- `npx playwright install chromium` — passed; Chromium and Chrome Headless Shell installed.
-- `npm run lint` — passed with no ESLint warnings or errors.
+- `npm test -- src/domain/derived-scenarios.test.ts src/components/scenario-picker.test.tsx src/voice/assemblyai-voice-agent.test.ts` — 25 tests passed.
 - `npm run typecheck` — passed.
-- `npm test` — passed, 8 tests in 1 file.
-- `npm run build` — passed; Next.js compiled and statically generated `/`.
+- `npm test` — 23 files and 258 tests passed.
 - `git diff --check` — passed.
-- Secret scan of tracked-source candidates found no populated API key, secret, or password assignment.
 
-## Review and concerns
+## Self-review
 
-- The required `next lint` script is deprecated by Next.js 15 and removed in Next.js 16. This scaffold pins Next.js 15.5.25 so the exact required command continues to work; a future deliberate migration can move the script to the ESLint CLI.
-- The page is intentionally a minimal scaffold. The approved practice setup, simulated voice flow, and clear-data control are future MVP tasks; the README describes their specified final behavior without claiming the placeholder page provides it yet.
-
-## Review follow-up — 2026-09-15
-
-- Fixed the README Bash setup block to use the portable `cp .env.example .env.local` command instead of the Windows-only `copy` command.
-- Focused docs check: passed (`README.md` contains the Bash `cp` command and no `copy .env.example .env.local` command).
-- Relevant gate: `npm run lint` � passed with no ESLint warnings or errors.
+The change uses existing React state, local storage, and component styles; it adds no dependency, API, schema, or source-confirmation contract change. `type="button"` prevents refresh from submitting the setup form. Stored values accept only non-negative safe integers; malformed, fractional, negative, and unsafe values normalize to cursor zero when a confirmed source is stored. No open issue was found in the changed scope.

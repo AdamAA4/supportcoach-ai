@@ -7,7 +7,7 @@ import { SourcePreview } from "./source-preview";
 import { normalizePracticeContext, validatePracticeContext, type FieldErrors } from "../domain/validation";
 import { type ExperienceNote } from "../domain/reference-source";
 import type { ExperienceNoteFormat } from "../domain/practice-pack";
-import { deriveScenarios } from "../domain/derived-scenarios";
+import { deriveScenarios, rotateScenarios } from "../domain/derived-scenarios";
 import { saveCurrentPracticeSession } from "../domain/practice-session";
 import { ScenarioPicker } from "./scenario-picker";
 import { AlertIcon, ArrowRightIcon, btnPrimary, btnSecondary, CheckIcon, fieldLabel, inputBase } from "./ui";
@@ -28,6 +28,14 @@ type ImportedSource = {
 const channelTile =
   "flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-ink-muted transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] peer-checked:bg-surface peer-checked:text-ink peer-checked:shadow-soft peer-hover:text-ink-soft peer-focus-visible:ring-2 peer-focus-visible:ring-accent";
 
+const rotationStorageKey = (contentHash: string) => `supportcoach-suggestion-rotation-v1:${contentHash}`;
+
+const storedCursor = (value: string | null): number | undefined => {
+  if (!value || !/^\d+$/.test(value)) return undefined;
+  const cursor = Number(value);
+  return Number.isSafeInteger(cursor) ? cursor : undefined;
+};
+
 export function SourceSetupForm() {
   const router = useRouter();
   const [companyName, setCompanyName] = useState("");
@@ -37,6 +45,7 @@ export function SourceSetupForm() {
   const [importedSource, setImportedSource] = useState<ImportedSource>();
   const [importing, setImporting] = useState(false);
   const [scenarioIds, setScenarioIds] = useState<string[]>([]);
+  const [suggestionCursor, setSuggestionCursor] = useState(0);
   const [notes, setNotes] = useState("");
   const [noteKind, setNoteKind] = useState<ExperienceNote["kind"]>("personal-coaching-note");
   const [noteFormat, setNoteFormat] = useState<ExperienceNoteFormat>("plain-text");
@@ -63,8 +72,9 @@ export function SourceSetupForm() {
   // Selecting a drill never invalidates the source:
   // for imported links an unconfirmed source carries no snapshot, which
   // would wipe the facts and hide every suggestion again.
-  const derived = useMemo(() => deriveScenarios(context.facts), [context.facts]);
-  const validScenarioIds = useMemo(() => derived.map((scenario) => scenario.id), [derived]);
+  const allDerived = useMemo(() => deriveScenarios(context.facts, { limit: Infinity }), [context.facts]);
+  const derived = useMemo(() => rotateScenarios(allDerived, suggestionCursor, 6), [allDerived, suggestionCursor]);
+  const validScenarioIds = useMemo(() => allDerived.map((scenario) => scenario.id), [allDerived]);
   useEffect(() => {
     setScenarioIds((current) => {
       const next = current.filter((id) => validScenarioIds.includes(id));
@@ -83,6 +93,23 @@ export function SourceSetupForm() {
     setPreviewText("");
     setImportedSource(undefined);
     invalidateSetup();
+  };
+
+  const confirmSource = () => {
+    const key = rotationStorageKey(context.sourceContentHash);
+    const previous = storedCursor(localStorage.getItem(key));
+    const next = previous === undefined ? 0 : previous + 1;
+    localStorage.setItem(key, String(next));
+    setSuggestionCursor(next);
+    setConfirmed(true);
+  };
+
+  const refreshSuggestions = () => {
+    setSuggestionCursor((current) => {
+      const next = current + 1;
+      if (confirmed) localStorage.setItem(rotationStorageKey(context.sourceContentHash), String(next));
+      return next;
+    });
   };
 
   const importPublicSource = async () => {
@@ -199,7 +226,7 @@ export function SourceSetupForm() {
         sourceText={sourceText}
         confirmed={confirmed}
         canConfirm={sourceKind === "pasted-text" || Boolean(importedSource)}
-        onConfirm={() => setConfirmed(true)}
+        onConfirm={confirmSource}
         importStats={sourceKind === "public-https-link" && importedSource ? {
           pageBytes: importedSource.pageBytes,
           qaPairs: importedSource.qaPairs,
@@ -209,7 +236,7 @@ export function SourceSetupForm() {
           pages: importedSource.pages,
         } : undefined}
       />
-      <ScenarioPicker facts={context.facts} derived={derived} value={scenarioIds} onChange={setScenarioIds} />
+      <ScenarioPicker facts={context.facts} derived={derived} value={scenarioIds} onChange={setScenarioIds} allCount={allDerived.length} onRefresh={refreshSuggestions} />
       {fieldError("scenario")}
       <fieldset className="space-y-3">
         <legend className={fieldLabel}>Optional experience notes</legend>
