@@ -65,6 +65,12 @@ export function SourceSetupForm() {
     notes: notes.trim() ? [{ id: "session-note", text: notes, format: noteFormat, kind: noteKind }] : [],
     scenarioIds,
   }), [companyName, confirmed, importedSource, noteFormat, noteKind, notes, scenarioIds, sourceKind, sourceValue]);
+  // A public link has no snapshot in the pending practice context. Use the
+  // importer's hash until confirmation so its cursor cannot collide with the
+  // shared empty pending-context hash.
+  const rotationContentHash = sourceKind === "public-https-link" && importedSource
+    ? importedSource.contentHash
+    : context.sourceContentHash;
 
   // Practice drills are suggested by the confirmed content itself; when the
   // source changes and a selected drill no longer resolves, keep only valid
@@ -96,7 +102,7 @@ export function SourceSetupForm() {
   };
 
   const confirmSource = () => {
-    const key = rotationStorageKey(context.sourceContentHash);
+    const key = rotationStorageKey(rotationContentHash);
     const previous = storedCursor(localStorage.getItem(key));
     const next = previous === undefined ? 0 : previous + 1;
     localStorage.setItem(key, String(next));
@@ -107,7 +113,7 @@ export function SourceSetupForm() {
   const refreshSuggestions = () => {
     setSuggestionCursor((current) => {
       const next = current + 1;
-      if (confirmed) localStorage.setItem(rotationStorageKey(context.sourceContentHash), String(next));
+      if (confirmed) localStorage.setItem(rotationStorageKey(rotationContentHash), String(next));
       return next;
     });
   };

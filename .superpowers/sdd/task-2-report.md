@@ -24,3 +24,15 @@
 ## Self-review
 
 The change uses existing React state, local storage, and component styles; it adds no dependency, API, schema, or source-confirmation contract change. `type="button"` prevents refresh from submitting the setup form. Stored values accept only non-negative safe integers; malformed, fractional, negative, and unsafe values normalize to cursor zero when a confirmed source is stored. No open issue was found in the changed scope.
+
+## Review fix — 2026-09-22
+
+- Root cause: confirming an imported public link read the pending normalized context hash before `setConfirmed(true)`. That pending link has no snapshot, so its hash is shared and could select an unrelated rotation cursor.
+- Resolution: confirmation and refresh now use `importedSource.contentHash` whenever a public import is available. Pasted sources continue to use their deterministic content hash.
+- Added direct `SourceSetupForm` integration coverage for imported-hash confirmation/refresh persistence, malformed-cursor fallback to zero, and pasted-source hash persistence.
+
+### Verification
+
+- Failing reproduction: `npm test -- src/components/source-setup-form.test.tsx` — 2 expected failures on imported-hash persistence before the fix; pasted path passed.
+- `npm test -- src/components/source-setup-form.test.tsx` — 3 tests passed.
+- `npm run typecheck` — passed.

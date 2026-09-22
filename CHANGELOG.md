@@ -71,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Public-link drill rotation now reads and persists its cursor under the imported source snapshot hash during confirmation, avoiding the shared pending-context hash; malformed imported cursors safely restart at zero.
 - Clarity coaching now requires at least one supported FAQ fact and no unsupported claim; direct, concise wording only increases a grounded answer's score. The report explanation and clarity drill now lead with the confirmed FAQ answer.
 
 - Editing the session name no longer clears a confirmed source or its selected FAQ scenarios. The source snapshot remains valid and Start practice call stays enabled because the label does not change the grounded reference material.
