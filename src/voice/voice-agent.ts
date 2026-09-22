@@ -6,6 +6,8 @@ export type VoiceAgentEvent =
   | { type: "customer-transcript"; text: string; final: boolean }
   | { type: "trainee-transcript"; text: string; final: boolean }
   | { type: "customer-audio"; audio: ArrayBuffer }
+  | { type: "microphone-signal" }
+  | { type: "trainee-speech-started" }
   | { type: "customer-turn-started" }
   | { type: "customer-turn-ended" }
   | { type: "interrupted" }

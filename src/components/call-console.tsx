@@ -13,7 +13,7 @@ import { TranscriptPane } from "./transcript-pane";
 import { BackLink, btnDanger, btnPrimary, btnSecondary, displayTitle, EndCallIcon, MicIcon, MicOffIcon, StatusLamp, type LampTone } from "./ui";
 
 type CallConsoleProps = { context: PracticeContext; createAgent?: () => VoiceAgent; onCallEnded?: (transcript: TranscriptTurn[]) => void };
-type MicrophoneStatus = "not-started" | "recording" | "muted";
+type MicrophoneStatus = "not-started" | "recording" | "signal-detected" | "listening" | "muted";
 type MuteableVoiceAgent = VoiceAgent & { setMuted?: (muted: boolean) => Promise<void> };
 type FixturePlaybackAwareVoiceAgent = VoiceAgent & { completeCustomerAudioPlayback?: () => void; getCustomerAudioAvailability?: () => "available" | "text-only" };
 
@@ -24,6 +24,13 @@ const createConfiguredAgent = (): VoiceAgent => createConfiguredVoiceAgent();
 const callStateTone = (state: CallState): LampTone =>
   state === "error" ? "danger" : state === "idle" || state === "ended" ? "neutral" : "ok";
 const callStateLive = (state: CallState): boolean => state !== "idle" && state !== "ended" && state !== "error";
+const microphoneActive = (status: MicrophoneStatus): boolean => status === "recording" || status === "signal-detected" || status === "listening";
+const microphoneStatusCopy = (status: MicrophoneStatus): string => {
+  if (status === "recording") return "On — speak naturally";
+  if (status === "signal-detected") return "Voice signal detected";
+  if (status === "listening") return "Listening to your answer";
+  return status === "muted" ? "Muted" : "Not connected";
+};
 
 export function CallConsole({ context, createAgent = createConfiguredAgent, onCallEnded }: CallConsoleProps) {
   const agent = useRef<VoiceAgent | undefined>(undefined);
@@ -51,6 +58,8 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
 
   const handleEvent = useCallback((event: VoiceAgentEvent) => {
     if (event.type === "session-ready") { transition(event); return; }
+    if (event.type === "microphone-signal") { setMicrophone("signal-detected"); return; }
+    if (event.type === "trainee-speech-started") { setMicrophone("listening"); return; }
     if (event.type === "customer-turn-started") { setCustomerAudioActive(true); setCustomerAudioAvailability("available"); transition(event); return; }
     if (event.type === "customer-turn-ended") { setCustomerAudioActive(false); setCustomerAudioAvailability((agent.current as FixturePlaybackAwareVoiceAgent | undefined)?.getCustomerAudioAvailability?.() ?? "available"); transition(event); return; }
     if (event.type === "interrupted") { audio.current.stop(); setCustomerAudioActive(false); transition(event); return; }
@@ -67,7 +76,7 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
   const joinVoiceCall = useCallback(async (retry = false) => {
     const revision = ++connectionRevision.current;
     captureRevision.current += 1;
-    setError(undefined); setCustomerAudioActive(false); transition({ type: retry ? "retry" : "connect" });
+    setError(undefined); setCustomerAudioActive(false); setMicrophone("not-started"); transition({ type: retry ? "retry" : "connect" });
     const previousAgent = agent.current;
     agent.current = undefined;
     if (previousAgent) await previousAgent.end();
@@ -81,14 +90,16 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
       await audio.current.prepare();
       const connection = nextAgent.connect({ scenario: context.scenario, facts: context.facts, onEvent: handleOwnedEvent });
       await nextAgent.startMicrophone();
-      if (revision === connectionRevision.current && !microphoneFailed.current) setMicrophone("recording");
+      if (revision === connectionRevision.current && !microphoneFailed.current) {
+        setMicrophone((current) => current === "not-started" ? "recording" : current);
+      }
       await connection;
     } catch { handleOwnedEvent({ type: "error", code: "network", message: "The practice call could not connect. Try again." }); }
   }, [context.facts, context.scenario, createAgent, handleEvent, transition]);
 
   useEffect(() => { const player = audio.current; return () => { connectionRevision.current += 1; captureRevision.current += 1; player.stop(); const currentAgent = agent.current; agent.current = undefined; void currentAgent?.end(); }; }, []);
   const mute = async () => {
-    if (microphone === "muted") { setMicrophone(microphoneBeforeMute.current); const mutedAgent = agent.current as MuteableVoiceAgent | undefined; if (mutedAgent?.setMuted) await mutedAgent.setMuted(false); else if (microphoneBeforeMute.current === "recording") await agent.current?.startMicrophone(); return; }
+    if (microphone === "muted") { setMicrophone("recording"); const mutedAgent = agent.current as MuteableVoiceAgent | undefined; if (mutedAgent?.setMuted) await mutedAgent.setMuted(false); else if (microphoneActive(microphoneBeforeMute.current)) await agent.current?.startMicrophone(); return; }
     microphoneBeforeMute.current = microphone;
     audio.current.stop(); agent.current?.interruptCustomer(); setCustomerAudioActive(false); setMicrophone("muted"); await (agent.current as MuteableVoiceAgent | undefined)?.setMuted?.(true);
   };
@@ -132,8 +143,8 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
               </div>
               <div className="space-y-2.5 px-5 pb-1 pt-4 sm:px-6">
                 <p className="flex items-center gap-2.5 text-sm text-ink-soft">
-                  <StatusLamp tone={microphone === "recording" ? "ok" : microphone === "muted" ? "warn" : "neutral"} pulse={microphone === "recording"} />
-                  <span>Microphone: {microphone === "recording" ? "On — speak naturally" : microphone === "muted" ? "Muted" : "Not connected"}</span>
+                  <StatusLamp tone={microphoneActive(microphone) ? "ok" : microphone === "muted" ? "warn" : "neutral"} pulse={microphoneActive(microphone)} />
+                  <span>Microphone: {microphoneStatusCopy(microphone)}</span>
                 </p>
                 <p className="flex items-center gap-2.5 text-sm text-ink-soft">
                   <StatusLamp tone={customerAudioActive ? "ok" : customerAudioAvailability === "text-only" ? "danger" : "warn"} pulse={customerAudioActive} />
@@ -149,7 +160,7 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
               <div className="flex flex-wrap gap-2.5 px-5 py-5 sm:px-6">
                 {state === "idle" && <button type="button" onClick={() => void joinVoiceCall()} className={btnPrimary}><MicIcon className="size-4" />Join voice call</button>}
                 {state === "connecting" && <button type="button" disabled className={`${btnPrimary} opacity-70`}><span aria-hidden="true" className="rec-pulse inline-block size-2 rounded-full bg-white/80" />Connecting microphone…</button>}
-                {(microphone === "recording" || microphone === "muted") && (
+                {(microphoneActive(microphone) || microphone === "muted") && (
                   <button type="button" onClick={() => void mute()} disabled={state === "ended" || state === "error"} className={btnSecondary}>
                     {microphone === "muted" ? <MicOffIcon className="size-4" /> : <MicIcon className="size-4" />}
                     {microphone === "muted" ? "Unmute" : "Mute"}

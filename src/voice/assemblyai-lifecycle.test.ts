@@ -39,7 +39,7 @@ class CaptureContext {
   resume = vi.fn(async () => {});
   close = vi.fn(async () => { this.state = "closed"; });
   constructor() { CaptureContext.instances.push(this); }
-  frame() { this.processor.onaudioprocess?.({ inputBuffer: { getChannelData: () => new Float32Array([0.2, -0.1]) } } as unknown as AudioProcessingEvent); }
+  frame(samples = new Float32Array([0.2, -0.1])) { this.processor.onaudioprocess?.({ inputBuffer: { getChannelData: () => samples } } as unknown as AudioProcessingEvent); }
 }
 const track = { enabled: true, stop: vi.fn() };
 const stream = { getTracks: () => [track] } as unknown as MediaStream;
@@ -59,6 +59,46 @@ beforeEach(() => { Socket.instances = []; CaptureContext.instances = []; track.e
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("live lifecycle and capture", () => {
+  it("configures the provider VAD threshold without changing the audio formats", async () => {
+    const agent = makeAgent();
+    const socket = await ready(agent);
+    const update = JSON.parse(socket.send.mock.calls[0][0] as string);
+
+    expect(update.session.input).toEqual({
+      format: { encoding: "audio/pcm" },
+      turn_detection: { vad_threshold: 0.3, interrupt_response: true },
+    });
+    expect(update.session.output).toEqual({ voice: "alba", format: { encoding: "audio/pcm" }, volume: 100 });
+    await agent.end();
+  });
+
+  it("emits one microphone signal after the first non-silent captured frame", async () => {
+    const events: VoiceAgentEvent[] = [];
+    const agent = makeAgent();
+    await ready(agent, events);
+    await agent.startMicrophone();
+    const graph = CaptureContext.instances[0];
+
+    graph.frame(new Float32Array([0, 0]));
+    expect(events.filter((event) => event.type === "microphone-signal")).toHaveLength(0);
+    graph.frame();
+    graph.frame();
+
+    expect(events.filter((event) => event.type === "microphone-signal")).toHaveLength(1);
+    await agent.end();
+  });
+
+  it("emits trainee speech detection before the existing interruption event", async () => {
+    const events: VoiceAgentEvent[] = [];
+    const agent = makeAgent();
+    const socket = await ready(agent, events);
+
+    socket.receive({ type: "input.speech.started" });
+
+    expect(events.slice(-2).map((event) => event.type)).toEqual(["trainee-speech-started", "interrupted"]);
+    await agent.end();
+  });
+
   it("end during token fetch prevents late socket creation", async () => {
     const result = deferred<Response>();
     const request = vi.fn().mockReturnValue(result.promise);

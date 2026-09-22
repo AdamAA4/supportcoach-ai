@@ -91,6 +91,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
   private tokenController?: AbortController;
   private settleConnection?: () => void;
   private muted = false;
+  private microphoneSignalEmitted = false;
   private stream?: MediaStream;
   private audioContext?: AudioContext;
   private microphoneSource?: MediaStreamAudioSourceNode;
@@ -113,6 +114,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
     if (!this.closed) return Promise.resolve();
     this.closed = false;
     this.muted = false;
+    this.microphoneSignalEmitted = false;
     this.onEvent = input.onEvent;
     const generation = ++this.generation;
     this.tokenController = new AbortController();
@@ -153,7 +155,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
             session: {
               system_prompt: promptFor(input.scenario, input.facts),
               greeting: input.scenario.openingLine,
-              input: { format: { encoding: "audio/pcm" }, turn_detection: { interrupt_response: true } },
+              input: { format: { encoding: "audio/pcm" }, turn_detection: { vad_threshold: 0.3, interrupt_response: true } },
               output: { voice: "alba", format: { encoding: "audio/pcm" }, volume: 100 },
             },
           });
@@ -209,7 +211,11 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
       const sendPcm = (pcm: Uint8Array) => {
         if (!this.isCurrent(generation) || this.muted || !this.sessionReady || !this.socket || this.socket.readyState !== 1) return;
         try { this.send({ type: "input.audio", audio: asBase64(pcm) }); }
-        catch { this.fail("network", "The live voice connection failed."); }
+        catch { this.fail("network", "The live voice connection failed."); return; }
+        if (!this.microphoneSignalEmitted && pcm.some((byte) => byte !== 0)) {
+          this.microphoneSignalEmitted = true;
+          this.emit({ type: "microphone-signal" });
+        }
       };
       if (this.audioContext.audioWorklet && typeof AudioWorkletNode !== "undefined") {
         await this.audioContext.audioWorklet.addModule("/pcm-capture-worklet.js");
@@ -245,6 +251,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
   /** Optional adapter capability: preserve the capture graph while pausing transmission. */
   async setMuted(muted: boolean): Promise<void> {
     this.muted = muted;
+    if (muted) this.microphoneSignalEmitted = false;
     this.stream?.getTracks().forEach((track) => { track.enabled = !muted; });
   }
 
@@ -261,6 +268,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
     this.closed = true;
     this.generation += 1;
     this.sessionReady = false;
+    this.microphoneSignalEmitted = false;
     this.tokenController?.abort();
     this.tokenController = undefined;
     this.connectionTask = undefined;
@@ -301,6 +309,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
         return;
       }
       case "input.speech.started":
+        this.emit({ type: "trainee-speech-started" });
         this.emit({ type: "interrupted" });
         return;
       case "transcript.user.delta":
@@ -352,12 +361,14 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
 
   private fail(code: Extract<VoiceAgentEvent, { type: "error" }>["code"], message: string): void {
     if (this.closed) return;
+    this.microphoneSignalEmitted = false;
     this.emit({ type: "error", code, message });
     logEvent("error", this.callId, code);
     void this.end();
   }
 
   private async releaseMicrophone(): Promise<void> {
+    this.microphoneSignalEmitted = false;
     if (this.processor) this.processor.onaudioprocess = null;
     if (this.worklet) this.worklet.port.onmessage = null;
     this.processor?.disconnect();
