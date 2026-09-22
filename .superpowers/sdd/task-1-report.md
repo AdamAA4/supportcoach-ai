@@ -54,3 +54,34 @@ Implemented and committed the source-input decision record and browser-independe
 
 - The domain contract validates that the confirmed snapshot/hash is non-empty; the server importer still owns fetching, sanitization, hashing, and public-network enforcement as recorded in the decision record.
 - `outputs/SupportCoachAI/PRD.md` is a sibling artifact outside the `supportcoach-ai` Git repository, so its correction is not included in the repository commit.
+
+## Task 1 follow-up — Ground clarity in supported FAQ facts (2026-09-22)
+
+### Status
+
+Implemented the approved clarification gate and report/drill copy updates.
+
+### Changes
+
+- `DeterministicEvaluator` now gives clarity points only when the trainee stated at least one supported scenario FAQ fact and made no unsupported claim. A grounded answer starts at 1, then receives one point each for being direct and concise.
+- The coaching report defines clarity as: `Giving an understandable, FAQ-grounded answer in direct sentences.`
+- A clarity drill now starts with the confirmed FAQ answer, in both the focus text and its first checklist item, before directing the trainee to shorten or make the sentence more direct.
+- Added coverage for the required score cases: empty direct promise (0), long grounded direct answer (2), concise grounded direct answer (3), and contradiction (0).
+- Updated `CHANGELOG.md` and resolved the clarity issue in `BUGS.md`.
+
+### TDD evidence
+
+1. Added the score-case table to `src/evaluation/evaluator.test.ts` and the confirmed-answer assertions to `src/evaluation/practice-task.test.ts` before changing production code.
+2. `npm test -- src/evaluation/evaluator.test.ts` failed as expected: `I will check.` and the contradictory answer both scored 3 instead of 0 under the former sentence-style-only rule.
+3. Added the approved `grounded` predicate and revised clarity formula, then updated the report and drill copy.
+
+### Verification
+
+- `npm test -- src/evaluation/evaluator.test.ts src/evaluation/practice-task.test.ts` — passed, 35 tests across 2 files.
+- `npm test` — passed, 256 tests across 23 files.
+- `git diff --check` — passed with no whitespace errors.
+
+### Self-review and concerns
+
+- The gate uses `supportedFactIds` and `unsupportedClaims` from the existing deterministic fact matcher, so it preserves the app's established FAQ grounding boundary and does not introduce a new scoring dependency or public contract.
+- Existing direct/concise heuristics remain intentionally deterministic and may not recognize all valid paraphrases; the report already discloses that limitation.

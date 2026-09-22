@@ -86,12 +86,13 @@ export const buildPracticeTask = (input: PracticeTaskInput): PracticeTask => {
     };
   }
   if (lowest === "clarity") {
+    const confirmedAnswer = referenceFacts[0].answer;
     return {
       openingLine,
-      focus: "Practice answering in short, direct sentences.",
+      focus: `Lead with the confirmed FAQ answer: "${confirmedAnswer}". Then practice answering in short, direct sentences.`,
       facts: factCards(referenceFacts.slice(0, 2)),
       checklist: [
-        "Lead with the direct answer",
+        `Lead with the confirmed FAQ answer: "${confirmedAnswer}"`,
         "Keep each sentence short",
         "Add conditions only when the FAQ states them",
       ],

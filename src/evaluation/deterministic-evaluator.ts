@@ -41,8 +41,9 @@ export class DeterministicEvaluator implements Evaluator {
     const direct = traineeSentences.some((sentence) => !sentence.endsWith("?") && /\b(?:is|are|takes|can|will|please|check|send)\b/i.test(sentence));
     const factualAccuracy = referenceFacts.length ? score(3 * (referenceFacts.length - missedFacts.length) / referenceFacts.length - unsupportedClaims.length) : 0;
     const fullFactualCoverage = referenceFacts.length > 0 && missedFacts.length === 0 && unsupportedClaims.length === 0;
+    const grounded = factual.supportedFactIds.size > 0 && unsupportedClaims.length === 0;
     const personalNote = notes.find((note) => note.kind === "personal-coaching-note" && note.text.trim());
-    const scores = { factualAccuracy, empathy: score(Number(acknowledgement) * 2 + Number(apology)), clarity: score(Number(concise) + Number(direct) * 2), resolution: score(Number(nextStep) * 2 + Number(escalation)) };
+    const scores = { factualAccuracy, empathy: score(Number(acknowledgement) * 2 + Number(apology)), clarity: grounded ? score(1 + Number(direct) + Number(concise)) : 0, resolution: score(Number(nextStep) * 2 + Number(escalation)) };
     const focusFact = missedFacts.length && missedFacts[0].length > 180 ? `${missedFacts[0].slice(0, 177).trimEnd()}...` : missedFacts.length ? missedFacts[0] : "";
     return {
       callId: crypto.randomUUID(), scenarioId: scenario.id, completedAt: new Date().toISOString(),

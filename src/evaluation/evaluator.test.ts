@@ -24,6 +24,15 @@ describe("deterministic evaluation", () => {
       expect(report.missedFacts).toEqual([context.facts[0].answer]);
     }
   });
+  it.each([
+    ["I will check.", 0],
+    ["Refunds are available within 30 days for unopened items, and after I confirm your order details, I will explain the documented next step and keep you updated throughout the process.", 2],
+    ["Refunds are available within 30 days for unopened items.", 3],
+    ["Refunds are not available within 30 days for unopened items.", 0],
+  ])("scores clarity only when a supported FAQ answer is present: %s", async (answer, clarity) => {
+    const report = await evaluate([turn(answer)]);
+    expect(report.scores.clarity).toBe(clarity);
+  });
   it.each(["Refunds are available within 60 days for unopened items.", "Refunds are not available within 30 days for unopened items.", "Refunds are available within 30 days for opened items."])("flags conflicting trainee claim: %s", async (answer) => {
     const report = await evaluate([turn(answer)]);
     expect(report.scores.factualAccuracy).toBe(0);

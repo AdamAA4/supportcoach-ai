@@ -70,6 +70,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Clarity coaching now requires at least one supported FAQ fact and no unsupported claim; direct, concise wording only increases a grounded answer's score. The report explanation and clarity drill now lead with the confirmed FAQ answer.
+
 - Editing the session name no longer clears a confirmed source or its selected FAQ scenarios. The source snapshot remains valid and Start practice call stays enabled because the label does not change the grounded reference material.
 - Framer-backed FAQ hubs such as `equityedge.io/faq` now import their real linked article facts instead of pairing topic-menu labels into fabricated answers. The importer accepts bounded nested relative article links, reads Framer rich-text state, excludes hub/footer text when article facts exist, and keeps the LLM as a grounded rescue path only when deterministic extraction finds no complete pairs. Gemini now uses the supported `gemini-3.5-flash` endpoint.
 - Imported pages whose FAQ section is a list of topic labels no longer produce nonsense Q/A pairs (such as "A: Evaluation Phase" or "A: Slippage"): a question-like line only pairs with following content that reads like an answer (sentence punctuation or a full-length line), consecutive labels are skipped, and the section keeps its full text when no question has a real answer.

@@ -54,7 +54,9 @@ describe("buildPracticeTask", () => {
       scenario, referenceFacts: facts, missedFacts: [], unsupportedClaims: [],
       scores: scores({ clarity: 0 }),
     });
+    expect(task.focus).toContain(facts[0].answer);
     expect(task.focus).toMatch(/short|direct/i);
+    expect(task.checklist[0]).toContain(facts[0].answer);
   });
 
   it("builds a resolution drill when resolution is the lowest score", () => {

@@ -11,7 +11,7 @@ const EXERCISE_LIMIT = 320;
 const dimensions = [
   { key: "factualAccuracy", label: "Factual accuracy", explanation: "How many confirmed reference answers you stated with their conditions. Conflicting claims reduce this score." },
   { key: "empathy", label: "Empathy", explanation: "Acknowledging the customer's concern and offering an apology when appropriate." },
-  { key: "clarity", label: "Clarity", explanation: "Using short sentences and giving direct answers." },
+  { key: "clarity", label: "Clarity", explanation: "Giving an understandable, FAQ-grounded answer in direct sentences." },
   { key: "resolution", label: "Resolution", explanation: "Offering a next step and explaining how to get further support." },
 ] as const;
 
