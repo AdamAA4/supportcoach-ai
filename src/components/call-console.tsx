@@ -58,8 +58,8 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
 
   const handleEvent = useCallback((event: VoiceAgentEvent) => {
     if (event.type === "session-ready") { transition(event); return; }
-    if (event.type === "microphone-signal") { setMicrophone("signal-detected"); return; }
-    if (event.type === "trainee-speech-started") { setMicrophone("listening"); return; }
+    if (event.type === "microphone-signal") { setMicrophone((current) => current === "muted" ? current : "signal-detected"); return; }
+    if (event.type === "trainee-speech-started") { setMicrophone((current) => current === "muted" ? current : "listening"); return; }
     if (event.type === "customer-turn-started") { setCustomerAudioActive(true); setCustomerAudioAvailability("available"); transition(event); return; }
     if (event.type === "customer-turn-ended") { setCustomerAudioActive(false); setCustomerAudioAvailability((agent.current as FixturePlaybackAwareVoiceAgent | undefined)?.getCustomerAudioAvailability?.() ?? "available"); transition(event); return; }
     if (event.type === "interrupted") { audio.current.stop(); setCustomerAudioActive(false); transition(event); return; }
@@ -76,6 +76,7 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
   const joinVoiceCall = useCallback(async (retry = false) => {
     const revision = ++connectionRevision.current;
     captureRevision.current += 1;
+    microphoneFailed.current = false;
     setError(undefined); setCustomerAudioActive(false); setMicrophone("not-started"); transition({ type: retry ? "retry" : "connect" });
     const previousAgent = agent.current;
     agent.current = undefined;

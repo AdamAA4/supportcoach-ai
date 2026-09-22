@@ -19,6 +19,10 @@ class TestVoiceAgent implements VoiceAgent {
   interruptCustomer = vi.fn(() => this.onEvent?.({ type: "interrupted" }));
 }
 class PermissionDeniedAgent extends TestVoiceAgent { constructor() { super(); this.startMicrophone = vi.fn(async () => { this.onEvent?.({ type: "error", code: "permission-denied", message: "Denied" }); }); } }
+class RetryPermissionAgent extends TestVoiceAgent {
+  attempts = 0;
+  constructor() { super(); this.startMicrophone = vi.fn(async () => { this.attempts += 1; if (this.attempts === 1) this.onEvent?.({ type: "error", code: "permission-denied", message: "Denied" }); }); }
+}
 class SignalDuringStartupAgent extends TestVoiceAgent { constructor() { super(); this.startMicrophone = vi.fn(async () => { this.emit({ type: "microphone-signal" }); }); } }
 
 describe("CallConsole voice-only practice", () => {
@@ -36,6 +40,13 @@ describe("CallConsole voice-only practice", () => {
     fireEvent.click(screen.getByRole("button", { name: "Join voice call" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Microphone permission is required"); expect(screen.getByRole("button", { name: "Retry voice call" })).toBeVisible(); expect(screen.queryByLabelText(/typed response/i)).not.toBeInTheDocument();
   });
+  it("restores microphone state after a successful permission retry", async () => {
+    const agent = new RetryPermissionAgent(); vi.spyOn(AudioPlayer.prototype, "prepare").mockResolvedValue(); render(<CallConsole context={context} createAgent={() => agent} />);
+    fireEvent.click(screen.getByRole("button", { name: "Join voice call" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Retry voice call" }));
+    expect(await screen.findByText("Microphone: On — speak naturally")).toBeVisible();
+    expect(agent.startMicrophone).toHaveBeenCalledTimes(2);
+  });
   it("shows live microphone signal and provider listening stages", async () => {
     const agent = new TestVoiceAgent(); vi.spyOn(AudioPlayer.prototype, "prepare").mockResolvedValue(); render(<CallConsole context={context} createAgent={() => agent} />);
     fireEvent.click(screen.getByRole("button", { name: "Join voice call" }));
@@ -51,6 +62,13 @@ describe("CallConsole voice-only practice", () => {
     const agent = new SignalDuringStartupAgent(); vi.spyOn(AudioPlayer.prototype, "prepare").mockResolvedValue(); render(<CallConsole context={context} createAgent={() => agent} />);
     fireEvent.click(screen.getByRole("button", { name: "Join voice call" }));
     expect(await screen.findByText("Microphone: Voice signal detected")).toBeVisible();
+  });
+  it("keeps the microphone muted when a delayed provider speech event arrives", async () => {
+    const agent = new TestVoiceAgent(); vi.spyOn(AudioPlayer.prototype, "prepare").mockResolvedValue(); render(<CallConsole context={context} createAgent={() => agent} />);
+    fireEvent.click(screen.getByRole("button", { name: "Join voice call" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Mute" }));
+    await act(async () => agent.emit({ type: "trainee-speech-started" }));
+    expect(screen.getByText("Microphone: Muted")).toBeVisible();
   });
   it("keeps mute and unmute as the active capture controls", async () => {
     const agent = new TestVoiceAgent(); vi.spyOn(AudioPlayer.prototype, "prepare").mockResolvedValue(); render(<CallConsole context={context} createAgent={() => agent} />);
