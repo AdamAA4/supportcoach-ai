@@ -1,6 +1,6 @@
 # Enhancements
 
-Last updated: 2026-09-21
+Last updated: 2026-09-22
 
 Task 5 review fixes are recorded in the changelog; they do not change the approved enhancement priorities below.
 
@@ -20,5 +20,6 @@ Completed: follow-up Task 6 review fixes for distinct-topic coordinated facts an
 
 | Priority | Idea | Notes |
 | --- | --- | --- |
+| ⭐⭐ | Rotate FAQ-derived practice suggestions | Approved and in progress on 2026-09-22. When a confirmed FAQ has more than six usable topics, automatically rotate the displayed set on each fresh import and provide a Refresh suggestions action. Keep every scenario derived from the confirmed FAQ; retain the last rotation locally per source hash to avoid immediately repeating a set. |
 | ⭐⭐ | Add PDF and DOCX experience-note imports | Deferred from the hackathon MVP; plain text and Markdown are the approved formats. |
 | ⭐⭐ | Support private or authenticated policy links | Deferred from the hackathon MVP; the source importer accepts public HTTPS links only. |
