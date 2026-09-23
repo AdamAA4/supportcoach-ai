@@ -155,7 +155,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
             session: {
               system_prompt: promptFor(input.scenario, input.facts),
               greeting: input.scenario.openingLine,
-              input: { format: { encoding: "audio/pcm" }, turn_detection: { vad_threshold: 0.3, interrupt_response: true } },
+              input: { format: { encoding: "audio/pcm" }, continuous_partials: true, turn_detection: { vad_threshold: 0.3, interrupt_response: true } },
               output: { voice: "alba", format: { encoding: "audio/pcm" }, volume: 100 },
             },
           });

@@ -1,6 +1,6 @@
 # Enhancements
 
-Last updated: 2026-09-22
+Last updated: 2026-09-23
 
 Task 5 review fixes are recorded in the changelog; they do not change the approved enhancement priorities below.
 

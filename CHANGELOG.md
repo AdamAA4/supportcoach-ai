@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Continuous live trainee transcription: AssemblyAI sessions now request `continuous_partials`, allowing the existing call transcript UI to render trainee words while they are being spoken instead of waiting only for a finalized turn.
 - Rotating FAQ-derived practice suggestions: setup now keeps every deterministic drill available for session validation while showing a six-item window. Confirming a source stores a normalized per-content-hash rotation cursor in local storage; `Refresh suggestions` advances that window without submitting the form or changing source confirmation.
 - Live voice-capture stages: the call console distinguishes browser microphone connection, outgoing voice signal, and provider speech detection without recording or persisting audio.
 - App logo: voice-bar mark in a plum rounded tile with a Fraunces wordmark ("SupportCoach" in ink, "AI" in rose), as a reusable component (`src/components/logo.tsx`) plus a standalone `public/logo.svg` asset; used in the home header (linking home) and the site footer.

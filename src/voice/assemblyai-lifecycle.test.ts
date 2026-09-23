@@ -59,13 +59,14 @@ beforeEach(() => { Socket.instances = []; CaptureContext.instances = []; track.e
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("live lifecycle and capture", () => {
-  it("configures the provider VAD threshold without changing the audio formats", async () => {
+  it("configures continuous trainee partials without changing the audio formats", async () => {
     const agent = makeAgent();
     const socket = await ready(agent);
     const update = JSON.parse(socket.send.mock.calls[0][0] as string);
 
     expect(update.session.input).toEqual({
       format: { encoding: "audio/pcm" },
+      continuous_partials: true,
       turn_detection: { vad_threshold: 0.3, interrupt_response: true },
     });
     expect(update.session.output).toEqual({ voice: "alba", format: { encoding: "audio/pcm" }, volume: 100 });
