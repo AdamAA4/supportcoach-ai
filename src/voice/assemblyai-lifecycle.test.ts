@@ -68,9 +68,26 @@ describe("live lifecycle and capture", () => {
     expect(update.session.input).toEqual({
       format: { encoding: "audio/pcm" },
       continuous_partials: true,
+      transcription_mode: "max_accuracy",
+      keyterms: ["Late delivery"],
+      transcription_prompt: "Expect these confirmed FAQ terms when spoken: Late delivery.",
       turn_detection: { vad_threshold: 0.3, interrupt_response: true },
     });
     expect(update.session.output).toEqual({ voice: "alba", format: { encoding: "audio/pcm" }, volume: 100 });
+    await agent.end();
+  });
+
+  it("requests echo cancellation, noise suppression, and automatic gain for phone capture", async () => {
+    const agent = makeAgent();
+    await ready(agent);
+    await agent.startMicrophone();
+
+    expect(getUserMedia).toHaveBeenCalledWith({ audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+      channelCount: 1,
+    } });
     await agent.end();
   });
 

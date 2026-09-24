@@ -55,6 +55,28 @@ const resampleTo24k = (samples: Float32Array, sourceRate: number): Float32Array 
   return result;
 };
 
+const transcriptionContextFor = (scenario: ScenarioDefinition, facts: ReferenceFact[]) => {
+  const selectedFacts = facts.filter((fact) => scenario.factIds.includes(fact.id) && !fact.id.startsWith("note-"));
+  const terms: string[] = [];
+  const seen = new Set<string>();
+  const addTerm = (value: string) => {
+    const term = value.replace(/[^\p{L}\p{N}\s'-]/gu, " ").replace(/\s+/g, " ").trim();
+    const key = term.toLocaleLowerCase();
+    if (term.length < 3 || term.length > 60 || /^reference detail \d+$/i.test(term) || seen.has(key) || terms.length >= 24) return;
+    seen.add(key);
+    terms.push(term);
+  };
+  addTerm(scenario.title.replace(/\s+\+\s+\d+\s+more$/i, ""));
+  for (const fact of selectedFacts) {
+    addTerm(fact.question.replace(/^\s*(?:what (?:is|are)|how (?:do|can|should) (?:i|we|you)|how to|can i|when (?:can|do|will) i|where can i)\s+/i, "").replace(/^(?:the|a|an)\s+/i, ""));
+    for (const match of fact.answer.matchAll(/\b(?:[A-Z]{2,}(?:-[A-Z0-9]+)*|[A-Z][a-z]+[A-Z][A-Za-z0-9]*)\b/g)) addTerm(match[0]);
+  }
+  return {
+    keyterms: terms,
+    transcription_prompt: `Expect these confirmed FAQ terms when spoken: ${terms.join(", ")}.`,
+  };
+};
+
 const promptFor = (scenario: ScenarioDefinition, facts: ReferenceFact[]): string => {
   const questionPlan = buildQuestionPlan(scenario, facts);
   return [
@@ -161,7 +183,13 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
             session: {
               system_prompt: promptFor(input.scenario, input.facts),
               greeting: input.scenario.openingLine,
-              input: { format: { encoding: "audio/pcm" }, continuous_partials: true, turn_detection: { vad_threshold: 0.3, interrupt_response: true } },
+              input: {
+                format: { encoding: "audio/pcm" },
+                continuous_partials: true,
+                transcription_mode: "max_accuracy",
+                ...transcriptionContextFor(input.scenario, input.facts),
+                turn_detection: { vad_threshold: 0.3, interrupt_response: true },
+              },
               output: { voice: "alba", format: { encoding: "audio/pcm" }, volume: 100 },
             },
           });
@@ -208,7 +236,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
       return;
     }
     try {
-      const stream = await this.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, channelCount: 1 } });
+      const stream = await this.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
       if (!this.isCurrent(generation)) { stream.getTracks().forEach((track) => track.stop()); return; }
       this.stream = stream;
       stream.getTracks().forEach((track) => { track.enabled = !this.muted; });

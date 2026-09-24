@@ -166,6 +166,36 @@ describe("AssemblyAI voice agent", () => {
     expect(update.session.system_prompt).toContain("never a real customer support assistant");
   });
 
+  it("biases transcription only with selected FAQ topics and company terms", async () => {
+    FakeWebSocket.instances = [];
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ token: "temporary-token" }), { status: 200 })));
+    const agent = new AssemblyAiVoiceAgent({ WebSocket: FakeWebSocket as unknown as VoiceSocketConstructor });
+    const selectedScenario: ScenarioDefinition = {
+      ...scenario,
+      title: "1-Step Legacy Evaluation + 3 more",
+      factIds: ["legacy", "profit"],
+    };
+    const selectedFacts = [
+      { id: "legacy", question: "What is 1-Step Legacy Evaluation?", answer: "EquityEdge offers one evaluation step.", keywords: [], source: "faq" as const },
+      { id: "profit", question: "Profit Split", answer: "Traders receive an 80% profit split.", keywords: [], source: "faq" as const },
+      { id: "unselected", question: "What is KYC?", answer: "KYC verifies identity.", keywords: [], source: "faq" as const },
+    ];
+
+    const connecting = agent.connect({ scenario: selectedScenario, facts: selectedFacts, onEvent: () => {} });
+    await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
+    const socket = FakeWebSocket.instances[0];
+    socket.open();
+    await connecting;
+
+    const input = JSON.parse(socket.sent[0]).session.input;
+    expect(input.keyterms).toEqual(expect.arrayContaining(["1-Step Legacy Evaluation", "Profit Split", "EquityEdge"]));
+    expect(input.keyterms).not.toContain("KYC");
+    expect(input.keyterms).toHaveLength(3);
+    expect(input.transcription_prompt).toContain("1-Step Legacy Evaluation");
+    expect(input.transcription_prompt.length).toBeLessThanOrEqual(1750);
+    expect(input.transcription_mode).toBe("max_accuracy");
+  });
+
   it("keeps the browser fetch receiver when minting a temporary token", async () => {
     FakeWebSocket.instances = [];
     const request = vi.fn(function (this: unknown) {
