@@ -13,19 +13,22 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `de9d65e`
-- Generated: 2026-09-24T17:24:26.839Z
+- Current commit: `78d9a1e`
+- Generated: 2026-09-24T17:50:29.722Z
 - Uncommitted files excluding this handoff:
 
 ```text
 M BUGS.md
  M CHANGELOG.md
- M src/voice/assemblyai-lifecycle.test.ts
- M src/voice/assemblyai-voice-agent.test.ts
- M src/voice/assemblyai-voice-agent.ts
+ M ENHANCEMENTS.md
+ M src/evaluation/evaluator.test.ts
+ M src/evaluation/structured-fact-matcher.test.ts
+ M src/evaluation/structured-fact-matcher.ts
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
+
+2026-09-24 source-grounded report correction: the product lead confirmed the Android voice issue is fixed, then identified that a correct spoken answer about the 1 Step Legacy account's 10% profit target was shown as missed because it omitted the source answer's account-name wording. The deterministic matcher now has a narrow equivalence path for a unique, unconditional FAQ percentage metric: it requires the same percentage and two metric terms present in the source question and answer; it accepts digit, "10 percent," and "ten percent" forms. Different values, explicit wrong account numbers, multiple account facts sharing the metric, conditions, negation, and questions do not receive this fallback credit. The evaluator integration test proves the report scores the product lead's example at 3 factual accuracy with no missed fact. No importer, voice flow, API contract, or UI changed. Existing saved reports are snapshots; a new completed call generates a report using this fix. BUGS.md records the product lead's voice acceptance and this resolved grading bug.
 
 2026-09-24 approved recognition-quality follow-up: the product lead's 5:27 PM Android recording showed audio continuously sent at 48 kHz, AssemblyAI speech detection completing a turn, and trainee transcripts arriving as only "What's this?" and "Sure." The live browser capture now requests echo cancellation, noise suppression, and automatic gain control. The AssemblyAI session now requests `transcription_mode: max_accuracy`, plus a maximum of 24 short, deduplicated transcription terms from the selected scenario and its confirmed FAQ facts. The prompt and term list exclude unselected FAQ sections and coaching notes, remain below the provider's 1750-character prompt limit, and contain no API secrets. Audio encoding, VAD, worklet, voice-only flow, and customer prompt remain unchanged. This is a targeted quality adjustment, not a verified phone fix; the Android recognition bug stays open until a full answer and relevant customer follow-up are observed on device.
 
@@ -52,6 +55,8 @@ Follow-up round (same day, product-lead feedback): the palette was brightened (c
 Follow-up round 3 (2026-09-18, product-lead request): the import body cap was raised from 200 KB to 2 MB so heavy real-world FAQ pages import cleanly, and the oversized-page rejection now reports the measured page size with the recovery step ("This page is 4.6 MB, over the 2 MB import limit. Open the page, copy the FAQ or policy text, and paste it instead."). The extracted-text cap (200 KB), five-second deadline, SSRF protections, and test-pinned behavior are unchanged. A user-proposed "accept oversized imports" consent flow was discussed and declined: the endpoint is unauthenticated, so client-side consent cannot be enforced server-side and an absolute cap must exist regardless.
 
 ## Checks run
+
+- 2026-09-24 report correction: the new matcher regression failed before implementation and passed afterward. `npm run lint`, `npm run typecheck`, `npm test` (24 files, 279/279), `npm run build`, and `git diff --check` passed. Live phone grading against the newly deployed build remains to be checked by the product lead; automated tests use the exact reported fact and answer.
 
 - 2026-09-24 recognition-quality follow-up: regression tests were red for all three missing settings and green after implementation (31/31 focused). `npm run lint`, `npm run typecheck`, `npm test` (24 files, 272/272), `npm run build`, and `git diff --check` passed. Android speech accuracy and latency remain unverified pending a physical call.
 - 2026-09-24 diagnostic-only voice boundaries: focused lifecycle and console tests (25/25), `npm run lint`, `npm run typecheck`, `npm test` (24 files, 270/270), `npm run build`, and `git diff --check` passed. Physical Android verification is deliberately still pending; do not describe this as a transcription fix.
@@ -100,14 +105,13 @@ Follow-up round 6 (2026-09-18, product-lead 20-item launch checklist): privacy p
 
 ## Remaining work or known issues
 
-- Run one Android Chrome call after the 2026-09-24 recognition-quality deployment, speak one complete FAQ-grounded answer, and check that the YOU transcript contains the full meaning before the customer gives a relevant follow-up. Note the `Audio sent`, `Provider speech`, and `Transcript` statuses if recognition remains incomplete. The accuracy mode may increase response latency; measure it on the phone before deciding on another change. Keep this issue open until that test passes.
-- Live AssemblyAI output was previously verified on a phone. Verify the 2026-09-23 deployment on Android Chrome: while speaking, the trainee line should appear before the final turn and customer follow-up. The prior completed provider session used a three-second maximum silence window and then took 3.36–3.96 seconds to first customer audio; if that remaining response latency is still unacceptable after partial text is visible, investigate silence-window tuning as a separate change. Do not bundle it with the partial-transcript setting.
+- The product lead confirmed the Android voice issue fixed on 2026-09-24. After the new grading deployment, run one fresh call using the 1 Step Legacy profit-target FAQ and check that its coaching report credits the spoken 10% answer. Older saved reports are unchanged snapshots.
 - The native file-input label ("Choose File") is unthemed browser copy, accepted in the finish review; revisit if it bothers anyone.
 - The Mimosa pre-commit hook reported a partial scan (dependency-source and callgraph limits) on recent commits; re-run a full security audit when convenient.
 
 ## Instructions for the next agent
 
-- Preserve the 2026-09-24 diagnostic status as browser-memory-only: do not send it to APIs, local storage, analytics, or logs, and do not capture raw microphone samples. If the approved recognition settings still fail, use the new physical-phone evidence for a diagnostic handoff instead of another speculative VAD or AudioWorklet change.
+- Preserve the 2026-09-24 diagnostic status as browser-memory-only: do not send it to APIs, local storage, analytics, or logs, and do not capture raw microphone samples. The product lead confirmed recognition is now working; if a new voice issue appears, diagnose it from fresh physical-phone evidence.
 - Approved scope was the UI redesign plus the product lead's follow-up fixes (navigation, extraction structure, next-exercise clamp, import cap); beyond that, behavior, routes, API contracts, and environment-variable handling must stay as they are.
 - Preserve the voice-only practice flow (no typed-response practice), the FAQ/notes grounding flow, server-only API secrets, and all test-pinned strings in `src/components/call-console.test.tsx` (including "Microphone: On — speak naturally") and `src/components/coaching-report.test.tsx`.
 - Keep deterministic article extraction preferred over the LLM whenever it finds structured facts; the LLM is only the grounded rescue path for sources with no complete deterministic pairs.

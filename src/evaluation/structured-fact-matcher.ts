@@ -242,18 +242,73 @@ const assessSpan = (
   return { relevant, ambiguous, supported, conflict };
 };
 
+type PercentageMetric = { value: number; terms: string[]; identifierNumbers: string[] };
+
+const SPOKEN_PERCENTAGES: Record<string, number> = {
+  zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7,
+  eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13,
+  fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18,
+  nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60,
+  seventy: 70, eighty: 80, ninety: 90, hundred: 100,
+};
+const PERCENTAGE_PATTERN = /\b(\d+(?:\.\d+)?|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)\s*(?:%|percent(?:age)?\b)/gi;
+const percentageValue = (word: string): number =>
+  SPOKEN_PERCENTAGES[word.toLowerCase()] ?? Number(word);
+const identifierNumbers = (text: string): number[] =>
+  normalizeFactTokens(text).flatMap((token) => {
+    if (/^\d+$/.test(token)) return [Number(token)];
+    return token in SPOKEN_PERCENTAGES ? [SPOKEN_PERCENTAGES[token]] : [];
+  });
+
+const percentageMetric = (fact: ReferenceFact): PercentageMetric | null => {
+  const percentages = [...fact.answer.matchAll(PERCENTAGE_PATTERN)];
+  if (percentages.length !== 1) return null;
+  const match = percentages[0];
+  const trailing = fact.answer.slice((match.index ?? 0) + match[0].length);
+  const terms = contentTerms(normalizeFactTokens(trailing)).filter((term) => term.length > 2).slice(0, 2);
+  const questionTerms = normalizeFactTokens(fact.question);
+  if (terms.length !== 2 || !terms.every((term) => questionTerms.includes(term))) return null;
+  const withoutPercentages = fact.answer.replace(PERCENTAGE_PATTERN, "");
+  return {
+    value: percentageValue(match[1]),
+    terms,
+    identifierNumbers: identifierNumbers(withoutPercentages).map(String),
+  };
+};
+
+const supportsPercentageParaphrase = (
+  statement: { text: string; isQuestion: boolean },
+  metric: PercentageMetric,
+  metricIsUnique: boolean,
+): boolean => {
+  if (statement.isQuestion || !metricIsUnique) return false;
+  const percentages = [...statement.text.matchAll(PERCENTAGE_PATTERN)];
+  if (percentages.length !== 1 || percentageValue(percentages[0][1]) !== metric.value) return false;
+  const tokens = normalizeFactTokens(statement.text);
+  if (!metric.terms.every((term) => tokens.includes(term)) || tokens.some((term) => NEGATORS.has(term))) return false;
+  const withoutPercentages = statement.text.replace(PERCENTAGE_PATTERN, "");
+  const otherNumbers = identifierNumbers(withoutPercentages).map(String);
+  return otherNumbers.every((number) => metric.identifierNumbers.includes(number));
+};
+
 export const matchReferenceFacts = (
   facts: ReferenceFact[],
   statements: Array<{ text: string; isQuestion: boolean }>,
 ): FactualMatchResult => {
   const specs = compileFactMatchSpecs(facts);
   const allSpecs = [...specs.values()];
+  const percentageMetrics = new Map(facts.map((fact) => [fact.id, percentageMetric(fact)]));
   const supportedFactIds = new Set<string>();
   const unsupportedClaims = new Set<string>();
 
   for (const fact of facts) {
     const spec = specs.get(fact.id);
     if (!spec) continue;
+    const metric = percentageMetrics.get(fact.id);
+    const metricIsUnique = metric !== null && metric !== undefined &&
+      [...percentageMetrics.values()].filter((candidate) =>
+        candidate && candidate.terms.join(" ") === metric.terms.join(" "),
+      ).length === 1;
     for (const statement of statements) {
       // A single statement may split one fact's evidence across punctuation
       // (subject in the first clause, terms in later ones). Windows anchored
@@ -278,6 +333,10 @@ export const matchReferenceFacts = (
       } else {
         conflict = windows.some(({ result }) => result.conflict);
       }
+      // Conditions and negation still require the full fact matcher. The
+      // paraphrase path only resolves an omitted subject for a unique metric.
+      if (!supported && !conflict && spec.conditionTerms.length === 0 && metric &&
+        supportsPercentageParaphrase(statement, metric, metricIsUnique)) supported = true;
       if (supported) supportedFactIds.add(fact.id);
       if (conflict) unsupportedClaims.add(statement.text);
     }

@@ -6,6 +6,25 @@ const evaluate = (transcript: ReturnType<typeof turn>[], notes = context.notes) 
   new DeterministicEvaluator(context.sourceProvenance).evaluate({ ...context, notes, transcript });
 
 describe("deterministic evaluation", () => {
+  it("credits a correct spoken percentage paraphrase in the coaching report", async () => {
+    const target = {
+      ...context.facts[0], id: "profit-target", question: "What's the profit target?",
+      answer: "1 Step Legacy account has a 10% profit target",
+    };
+    const report = await new DeterministicEvaluator(context.sourceProvenance).evaluate({
+      ...context,
+      facts: [target],
+      scenario: { ...context.scenario, factIds: [target.id] },
+      transcript: [
+        turn("What's the profit target?", "customer"),
+        turn("It has a 10% profit target to pass the challenge and receive a funded account."),
+      ],
+    });
+    expect(report.scores.factualAccuracy).toBe(3);
+    expect(report.missedFacts).toEqual([]);
+    expect(report.unsupportedClaims).toEqual([]);
+  });
+
   it("scores a supported trainee answer and retains the exact full transcript and provenance", async () => {
     const transcript = [turn("Can I get a refund?", "customer"), turn("I understand your concern. I am sorry. Refunds are available within 30 days for unopened items. Next, I will check your order and contact support.")];
     const report = await evaluate(transcript);

@@ -1,6 +1,8 @@
 # Enhancements
 
-Last updated: 2026-09-23
+Last updated: 2026-09-24
+
+Completed the focused FAQ percentage-paraphrase scoring correction on 2026-09-24; this was a report reliability bug, not a new enhancement priority.
 
 Task 5 review fixes are recorded in the changelog; they do not change the approved enhancement priorities below.
 

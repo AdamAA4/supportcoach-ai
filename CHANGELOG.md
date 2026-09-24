@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Coaching reports now credit a unique, unconditional FAQ percentage metric when a trainee gives the correct value and metric in different words, such as "10% profit target" instead of repeating "1 Step Legacy account has a 10% profit target." Digit and spoken percentage forms are supported; conflicting values and ambiguous account variants remain uncredited.
+- The live Android trainee-recognition issue is closed following the product lead's successful phone verification on 2026-09-24.
+
 ### Added
 
 - Continuous live trainee transcription: AssemblyAI sessions now request `continuous_partials`, allowing the existing call transcript UI to render trainee words while they are being spoken instead of waiting only for a finalized turn.

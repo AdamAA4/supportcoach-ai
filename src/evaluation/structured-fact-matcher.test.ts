@@ -53,6 +53,37 @@ describe("matchReferenceFacts", () => {
   const processing = fact("processing", "Refunds are processed within 5 business days");
 
   it.each([
+    "It has a 10% profit target to pass the challenge and receive a funded account.",
+    "The profit target is 10 percent.",
+    "It has a ten percent profit target.",
+  ])("credits the same percentage metric when the trainee omits the account name: %s", (text) => {
+    const target = { ...fact("legacy", "1 Step Legacy account has a 10% profit target"), question: "What's the profit target?" };
+    const result = matchReferenceFacts([target], [{ text, isQuestion: false }]);
+    expect(result.supportedFactIds).toEqual(new Set([target.id]));
+    expect(result.unsupportedClaims).toEqual([]);
+  });
+
+  it("does not credit a different percentage or account variant", () => {
+    const target = { ...fact("legacy", "1 Step Legacy account has a 10% profit target"), question: "What's the profit target?" };
+    for (const text of ["It has an 8% profit target.", "The 2 Step account has a 10% profit target.", "The two step account has a ten percent profit target."]) {
+      expect(matchReferenceFacts([target], [{ text, isQuestion: false }]).supportedFactIds.size).toBe(0);
+    }
+  });
+
+  it("keeps an omitted account ambiguous when two confirmed accounts share the metric", () => {
+    const legacy = { ...fact("legacy", "1 Step Legacy account has a 10% profit target"), question: "What's the profit target?" };
+    const other = { ...fact("other", "2 Step account has an 8% profit target"), question: "What's the profit target?" };
+    const result = matchReferenceFacts([legacy, other], [{ text: "It has a 10% profit target.", isQuestion: false }]);
+    expect(result.supportedFactIds.size).toBe(0);
+  });
+
+  it("does not waive a confirmed condition in a percentage answer", () => {
+    const conditional = { ...fact("conditional", "1 Step Legacy account has a 10% profit target if the challenge is passed"), question: "What's the profit target?" };
+    const result = matchReferenceFacts([conditional], [{ text: "It has a 10% profit target.", isQuestion: false }]);
+    expect(result.supportedFactIds.size).toBe(0);
+  });
+
+  it.each([
     ["Refunds are available within 30 days for all items.", false, true],
     ["Refunds are available within 30 days for unopened items regardless of payment method.", true, false],
     ["Not all refunds are available within 30 days for unopened items.", false, false],
