@@ -7,7 +7,9 @@ export type VoiceAgentEvent =
   | { type: "trainee-transcript"; text: string; final: boolean }
   | { type: "customer-audio"; audio: ArrayBuffer }
   | { type: "microphone-signal" }
+  | { type: "capture-diagnostics"; inputSampleRate: number; audioSecondsSent: number; framesSent: number; rms: number }
   | { type: "trainee-speech-started" }
+  | { type: "trainee-speech-stopped" }
   | { type: "customer-turn-started" }
   | { type: "customer-turn-ended" }
   | { type: "interrupted" }

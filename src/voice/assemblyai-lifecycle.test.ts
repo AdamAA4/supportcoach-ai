@@ -29,6 +29,7 @@ class Socket {
 class CaptureContext {
   static instances: CaptureContext[] = [];
   state = "running";
+  sampleRate = 48_000;
   destination = {};
   processor = { connect: vi.fn(), disconnect: vi.fn(), onaudioprocess: null as ((event: AudioProcessingEvent) => void) | null };
   source = { connect: vi.fn(), disconnect: vi.fn() };
@@ -86,6 +87,23 @@ describe("live lifecycle and capture", () => {
     graph.frame();
 
     expect(events.filter((event) => event.type === "microphone-signal")).toHaveLength(1);
+    await agent.end();
+  });
+
+  it("reports aggregate capture diagnostics after sending microphone PCM", async () => {
+    const events: VoiceAgentEvent[] = [];
+    const agent = makeAgent();
+    await ready(agent, events);
+    await agent.startMicrophone();
+    const graph = CaptureContext.instances[0];
+
+    graph.frame(new Float32Array(4_800).fill(0.25));
+
+    expect(events.filter((event) => (event as { type: string }).type === "capture-diagnostics")).toContainEqual(expect.objectContaining({
+      inputSampleRate: 48_000,
+      audioSecondsSent: 0.1,
+      framesSent: 1,
+    }));
     await agent.end();
   });
 

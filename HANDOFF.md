@@ -13,13 +13,23 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `112f121`
-- Generated: 2026-09-23T13:29:00.013Z
-- Uncommitted files excluding this handoff: none
+- Current commit: `0793718`
+- Generated: 2026-09-24T05:33:25.103Z
+- Uncommitted files excluding this handoff:
 
-
+```text
+M BUGS.md
+ M CHANGELOG.md
+ M src/components/call-console.test.tsx
+ M src/components/call-console.tsx
+ M src/voice/assemblyai-lifecycle.test.ts
+ M src/voice/assemblyai-voice-agent.ts
+ M src/voice/voice-agent.ts
+```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
+
+2026-09-24 approved diagnostic-only live voice investigation: a matched 74.8-second Android session (`sess_762829d67bc348f7b5a4535d580a7229`) proved that the browser sent audio which AssemblyAI recorded, while its timeline recognized only `What?`. This rules out a simple connection or transcript-rendering failure, but does not yet prove which recognition boundary is failing on the device. The active call now exposes three independent, privacy-safe boundaries: `Audio sent` (aggregate sent duration, browser sample rate, and average signal), `Provider speech` (AssemblyAI speech-start/stop events), and `Transcript` (partial/final trainee text receipt). The adapter keeps only aggregate counters in browser memory for the current call; it records and persists no raw audio or diagnostics. No voice transport, VAD thresholds, AudioWorklet/resampling, prompts, customer behavior, evaluation, or voice-only product behavior changed. A focused lifecycle test covers outgoing PCM telemetry, and the console test covers each displayed boundary. The open Android recognition issue remains pending a physical-phone call with these status values.
 
 2026-09-22 grounded coaching and call-capture follow-up: clarity scoring now requires a supported FAQ fact and no unsupported claim before direct, concise delivery can earn points. A reply such as "I will check" therefore scores 0 clarity; a concise, grounded answer earns 3. FAQ drill suggestions now rotate source-grounded six-item windows per confirmed content hash, and the setup screen has a `Refresh suggestions` action. This keeps all candidates deterministic for session validation while avoiding the same visible set after repeated imports. No LLM is used for suggestion rotation.
 
@@ -43,6 +53,7 @@ Follow-up round 3 (2026-09-18, product-lead request): the import body cap was ra
 
 ## Checks run
 
+- 2026-09-24 diagnostic-only voice boundaries: focused lifecycle and console tests (25/25), `npm run lint`, `npm run typecheck`, `npm test` (24 files, 270/270), `npm run build`, and `git diff --check` passed. Physical Android verification is deliberately still pending; do not describe this as a transcription fix.
 - 2026-09-23 continuous trainee partials: focused lifecycle test passed (16/16); `npm run lint`, `npm run typecheck`, `npm test` (24 files, 268/268), and `npm run build` passed. Production deployment `dpl_GBYqRfG3wTz4j7P6NXEtzoUTVaDM` is Ready and aliased to `https://supportcoach-ai-ten.vercel.app`; `GET /api/health` returned 200 with `{"status":"ok"}`.
 - 2026-09-22 grounded coaching, suggestion rotation, and voice-capture follow-up: `npm run lint`, `npm run typecheck`, `npm test` (24 files, 268/268), and `npm run build` passed. Focused voice tests cover the VAD payload, first non-zero PCM signal, speech-event ordering, mute, cleanup, and a failed-then-successful microphone retry.
 - Vercel Production deployment `dpl_7GAHrMSrj49fV4KcqN8aV2vrH2ia` is Ready and aliased to `https://supportcoach-ai-ten.vercel.app`; `GET /api/health` returned 200 with `{\"status\":\"ok\"}`. Browser smoke verification reached the deployed home screen.
@@ -88,12 +99,14 @@ Follow-up round 6 (2026-09-18, product-lead 20-item launch checklist): privacy p
 
 ## Remaining work or known issues
 
+- Run one Android Chrome call after the 2026-09-24 diagnostics deploy, speak one complete answer, and capture the three new status lines. If `Audio sent` increases while `Provider speech` stays `Waiting`, investigate the browser capture/VAD boundary. If provider speech is detected while `Transcript` stays `Waiting`, investigate provider transcription. If transcript text arrives but is wrong, investigate recognition settings/source vocabulary. Do not make another VAD or AudioWorklet adjustment without that evidence.
 - Live AssemblyAI output was previously verified on a phone. Verify the 2026-09-23 deployment on Android Chrome: while speaking, the trainee line should appear before the final turn and customer follow-up. The prior completed provider session used a three-second maximum silence window and then took 3.36–3.96 seconds to first customer audio; if that remaining response latency is still unacceptable after partial text is visible, investigate silence-window tuning as a separate change. Do not bundle it with the partial-transcript setting.
 - The native file-input label ("Choose File") is unthemed browser copy, accepted in the finish review; revisit if it bothers anyone.
 - The Mimosa pre-commit hook reported a partial scan (dependency-source and callgraph limits) on recent commits; re-run a full security audit when convenient.
 
 ## Instructions for the next agent
 
+- Preserve the 2026-09-24 diagnostic-only scope until the physical-phone evidence identifies a failing boundary. The aggregate capture status is browser-memory-only: do not send it to APIs, local storage, analytics, or logs, and do not capture raw microphone samples.
 - Approved scope was the UI redesign plus the product lead's follow-up fixes (navigation, extraction structure, next-exercise clamp, import cap); beyond that, behavior, routes, API contracts, and environment-variable handling must stay as they are.
 - Preserve the voice-only practice flow (no typed-response practice), the FAQ/notes grounding flow, server-only API secrets, and all test-pinned strings in `src/components/call-console.test.tsx` (including "Microphone: On — speak naturally") and `src/components/coaching-report.test.tsx`.
 - Keep deterministic article extraction preferred over the LLM whenever it finds structured facts; the LLM is only the grounded rescue path for sources with no complete deterministic pairs.

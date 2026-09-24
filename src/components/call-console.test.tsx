@@ -58,6 +58,23 @@ describe("CallConsole voice-only practice", () => {
     await act(async () => agent.emit({ type: "trainee-speech-started" } as VoiceAgentEvent));
     expect(screen.getByText("Microphone: Listening to your answer")).toBeVisible();
   });
+  it("shows audio transport, provider speech detection, and transcript receipt as separate states", async () => {
+    const agent = new TestVoiceAgent(); vi.spyOn(AudioPlayer.prototype, "prepare").mockResolvedValue(); render(<CallConsole context={context} createAgent={() => agent} />);
+    fireEvent.click(screen.getByRole("button", { name: "Join voice call" }));
+    await screen.findByText("Microphone: On — speak naturally");
+
+    await act(async () => agent.emit({ type: "capture-diagnostics", inputSampleRate: 48_000, audioSecondsSent: 1.2, framesSent: 12, rms: 0.18 } as unknown as VoiceAgentEvent));
+    expect(screen.getByText("Audio sent: 1.2 s at 48 kHz")).toBeVisible();
+    expect(screen.getByText("Average signal: 18%")).toBeVisible();
+    expect(screen.getByText("Provider speech: Waiting")).toBeVisible();
+    expect(screen.getByText("Transcript: Waiting")).toBeVisible();
+
+    await act(async () => agent.emit({ type: "trainee-speech-started" }));
+    expect(screen.getByText("Provider speech: Detected")).toBeVisible();
+
+    await act(async () => agent.emit({ type: "trainee-transcript", text: "I can help", final: false }));
+    expect(screen.getByText("Transcript: Receiving words")).toBeVisible();
+  });
   it("keeps a signal detected while microphone startup completes", async () => {
     const agent = new SignalDuringStartupAgent(); vi.spyOn(AudioPlayer.prototype, "prepare").mockResolvedValue(); render(<CallConsole context={context} createAgent={() => agent} />);
     fireEvent.click(screen.getByRole("button", { name: "Join voice call" }));

@@ -98,6 +98,11 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
   private processor?: ScriptProcessorNode;
   private worklet?: AudioWorkletNode;
   private muteGain?: GainNode;
+  private inputSampleRate = 24_000;
+  private captureFramesSent = 0;
+  private captureSamplesSent = 0;
+  private captureEnergy = 0;
+  private lastDiagnosticsSeconds = -Infinity;
 
   constructor(dependencies: AssemblyAiVoiceAgentDependencies = {}) {
     // Browser fetch is a Window method in Firefox and Chromium. Keep its global
@@ -115,6 +120,7 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
     this.closed = false;
     this.muted = false;
     this.microphoneSignalEmitted = false;
+    this.resetCaptureDiagnostics();
     this.onEvent = input.onEvent;
     const generation = ++this.generation;
     this.tokenController = new AbortController();
@@ -207,11 +213,13 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
       this.stream = stream;
       stream.getTracks().forEach((track) => { track.enabled = !this.muted; });
       this.audioContext = new this.AudioContext();
+      this.inputSampleRate = Number.isFinite(this.audioContext.sampleRate) ? this.audioContext.sampleRate : 24_000;
       this.microphoneSource = this.audioContext.createMediaStreamSource(this.stream);
       const sendPcm = (pcm: Uint8Array) => {
         if (!this.isCurrent(generation) || this.muted || !this.sessionReady || !this.socket || this.socket.readyState !== 1) return;
         try { this.send({ type: "input.audio", audio: asBase64(pcm) }); }
         catch { this.fail("network", "The live voice connection failed."); return; }
+        this.recordCaptureDiagnostics(pcm);
         if (!this.microphoneSignalEmitted && pcm.some((byte) => byte !== 0)) {
           this.microphoneSignalEmitted = true;
           this.emit({ type: "microphone-signal" });
@@ -312,6 +320,9 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
         this.emit({ type: "trainee-speech-started" });
         this.emit({ type: "interrupted" });
         return;
+      case "input.speech.stopped":
+        this.emit({ type: "trainee-speech-stopped" });
+        return;
       case "transcript.user.delta":
         if (typeof message.text === "string") this.emit({ type: "trainee-transcript", text: message.text, final: false });
         return;
@@ -353,6 +364,36 @@ export class AssemblyAiVoiceAgent implements VoiceAgent {
 
   private emit(event: VoiceAgentEvent): void {
     this.onEvent?.(event);
+  }
+
+  private resetCaptureDiagnostics(): void {
+    this.inputSampleRate = 24_000;
+    this.captureFramesSent = 0;
+    this.captureSamplesSent = 0;
+    this.captureEnergy = 0;
+    this.lastDiagnosticsSeconds = -Infinity;
+  }
+
+  private recordCaptureDiagnostics(pcm: Uint8Array): void {
+    const samples = new Int16Array(pcm.buffer, pcm.byteOffset, Math.floor(pcm.byteLength / 2));
+    let energy = 0;
+    for (const sample of samples) {
+      const normalized = sample / 0x8000;
+      energy += normalized * normalized;
+    }
+    this.captureFramesSent += 1;
+    this.captureSamplesSent += samples.length;
+    this.captureEnergy += energy;
+    const audioSecondsSent = this.captureSamplesSent / 24_000;
+    if (audioSecondsSent - this.lastDiagnosticsSeconds < 0.5) return;
+    this.lastDiagnosticsSeconds = audioSecondsSent;
+    this.emit({
+      type: "capture-diagnostics",
+      inputSampleRate: this.inputSampleRate,
+      audioSecondsSent: Math.round(audioSecondsSent * 10) / 10,
+      framesSent: this.captureFramesSent,
+      rms: Math.round(Math.sqrt(this.captureEnergy / Math.max(1, this.captureSamplesSent)) * 1000) / 1000,
+    });
   }
 
   private isCurrent(generation: number): boolean {

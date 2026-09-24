@@ -14,6 +14,9 @@ import { BackLink, btnDanger, btnPrimary, btnSecondary, displayTitle, EndCallIco
 
 type CallConsoleProps = { context: PracticeContext; createAgent?: () => VoiceAgent; onCallEnded?: (transcript: TranscriptTurn[]) => void };
 type MicrophoneStatus = "not-started" | "recording" | "signal-detected" | "listening" | "muted";
+type ProviderSpeechStatus = "waiting" | "detected" | "turn-complete";
+type TranscriptStatus = "waiting" | "receiving" | "received";
+type CaptureDiagnostics = { inputSampleRate: number; audioSecondsSent: number; framesSent: number; rms: number };
 type MuteableVoiceAgent = VoiceAgent & { setMuted?: (muted: boolean) => Promise<void> };
 type FixturePlaybackAwareVoiceAgent = VoiceAgent & { completeCustomerAudioPlayback?: () => void; getCustomerAudioAvailability?: () => "available" | "text-only" };
 
@@ -48,6 +51,9 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
   const [partialCustomer, setPartialCustomer] = useState("");
   const [partialTrainee, setPartialTrainee] = useState("");
+  const [diagnostics, setDiagnostics] = useState<CaptureDiagnostics>();
+  const [providerSpeech, setProviderSpeech] = useState<ProviderSpeechStatus>("waiting");
+  const [transcriptStatus, setTranscriptStatus] = useState<TranscriptStatus>("waiting");
   const [error, setError] = useState<string>();
 
   const transition = useCallback((event: Parameters<typeof reduceCallState>[1]) => setState((current) => reduceCallState(current, event)), []);
@@ -59,13 +65,15 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
   const handleEvent = useCallback((event: VoiceAgentEvent) => {
     if (event.type === "session-ready") { transition(event); return; }
     if (event.type === "microphone-signal") { setMicrophone((current) => current === "muted" ? current : "signal-detected"); return; }
-    if (event.type === "trainee-speech-started") { setMicrophone((current) => current === "muted" ? current : "listening"); return; }
+    if (event.type === "capture-diagnostics") { setDiagnostics(event); return; }
+    if (event.type === "trainee-speech-started") { setProviderSpeech("detected"); setMicrophone((current) => current === "muted" ? current : "listening"); return; }
+    if (event.type === "trainee-speech-stopped") { setProviderSpeech("turn-complete"); return; }
     if (event.type === "customer-turn-started") { setCustomerAudioActive(true); setCustomerAudioAvailability("available"); transition(event); return; }
     if (event.type === "customer-turn-ended") { setCustomerAudioActive(false); setCustomerAudioAvailability((agent.current as FixturePlaybackAwareVoiceAgent | undefined)?.getCustomerAudioAvailability?.() ?? "available"); transition(event); return; }
     if (event.type === "interrupted") { audio.current.stop(); setCustomerAudioActive(false); transition(event); return; }
     if (event.type === "customer-audio") { const playback = agent.current instanceof AssemblyAiVoiceAgent ? audio.current.playPcm16(event.audio) : audio.current.play(event.audio, () => (agent.current as FixturePlaybackAwareVoiceAgent | undefined)?.completeCustomerAudioPlayback?.()); playback.catch(() => { setError("Customer audio could not play. End the call and try again."); setCustomerAudioActive(false); transition({ type: "error" }); }); return; }
     if (event.type === "customer-transcript") { if (!event.final) { setPartialCustomer(event.text); return; } setPartialCustomer(""); append("customer", event.text, "mock-transcript"); return; }
-    if (event.type === "trainee-transcript") { if (!event.final) { setPartialTrainee(event.text); return; } setPartialTrainee(""); append("trainee", event.text, "live-transcript"); transition({ type: "trainee-turn-finalized" }); return; }
+    if (event.type === "trainee-transcript") { setTranscriptStatus(event.final ? "received" : "receiving"); if (!event.final) { setPartialTrainee(event.text); return; } setPartialTrainee(""); append("trainee", event.text, "live-transcript"); transition({ type: "trainee-turn-finalized" }); return; }
     if (event.type === "error") {
       if (event.code === "permission-denied") { microphoneFailed.current = true; captureRevision.current += 1; setMicrophone("not-started"); setError("Microphone permission is required for voice practice. Enable it in your browser settings, then retry the call."); transition({ type: "error" }); void agent.current?.end(); return; }
       captureRevision.current += 1;
@@ -77,7 +85,7 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
     const revision = ++connectionRevision.current;
     captureRevision.current += 1;
     microphoneFailed.current = false;
-    setError(undefined); setCustomerAudioActive(false); setMicrophone("not-started"); transition({ type: retry ? "retry" : "connect" });
+    setError(undefined); setCustomerAudioActive(false); setMicrophone("not-started"); setDiagnostics(undefined); setProviderSpeech("waiting"); setTranscriptStatus("waiting"); transition({ type: retry ? "retry" : "connect" });
     const previousAgent = agent.current;
     agent.current = undefined;
     if (previousAgent) await previousAgent.end();
@@ -151,6 +159,12 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
                   <StatusLamp tone={customerAudioActive ? "ok" : customerAudioAvailability === "text-only" ? "danger" : "warn"} pulse={customerAudioActive} />
                   <span>Customer audio: {customerAudioActive ? "Speaking" : customerAudioAvailability === "text-only" ? "Unavailable" : "Ready"}</span>
                 </p>
+                <div className="border-t border-line pt-2 text-xs text-ink-muted" aria-live="polite">
+                  <p>Audio sent: {diagnostics ? `${diagnostics.audioSecondsSent.toFixed(1)} s at ${Math.round(diagnostics.inputSampleRate / 1000)} kHz` : "Waiting"}</p>
+                  <p>Average signal: {diagnostics ? `${Math.round(diagnostics.rms * 100)}%` : "Waiting"}</p>
+                  <p>Provider speech: {providerSpeech === "turn-complete" ? "Turn complete" : providerSpeech === "detected" ? "Detected" : "Waiting"}</p>
+                  <p>Transcript: {transcriptStatus === "receiving" ? "Receiving words" : transcriptStatus === "received" ? "Received" : "Waiting"}</p>
+                </div>
               </div>
               {error && (
                 <div role={state === "error" ? "alert" : "status"} className="mx-5 mt-4 rounded-lg border border-danger/40 bg-danger-bg px-3.5 py-3 text-sm text-danger-ink sm:mx-6">
