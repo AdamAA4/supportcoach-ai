@@ -1,9 +1,10 @@
 # Known bugs
 
-Last updated: 2026-09-24
+Last updated: 2026-09-27
 
 | Severity | Issue | Notes |
 | --- | --- | --- |
+| ⭐⭐ | FundingPips Help Center blocks automatic FAQ import | The 2026-09-27 phone recording shows `https://help.fundingpips.com/hc/en-us` failing to import. Direct HTTPS requests receive HTTP 403 with `Cf-Mitigated: challenge`; the production importer returns 502 because it cannot read the protected page. The app now explains that access is blocked and directs the trainee to copy actual FAQ questions and answers into Paste text. Automatic import remains unavailable unless the source website permits server access; do not treat its menu labels as facts or bypass its challenge. |
 | --- | Resolved public-link drill rotation cursor collision | Confirmation previously used the pending public-link context hash, which is shared before the imported snapshot becomes confirmed. It now uses the importer-provided content hash for both confirmation and refresh persistence; direct form tests cover imported, malformed, and pasted cursor paths (2026-09-22). |
 | --- | Resolved partial Android trainee recognition | The product lead confirmed on 2026-09-24 that the live voice issue is fixed after browser capture and AssemblyAI recognition-quality changes. The earlier recording and diagnostic history remain in the changelog and handoff. |
 | --- | Resolved valid percentage paraphrase marked as a missed fact | A trainee's "10% profit target" answer was missed because scoring required the source answer's full account name and wording. For a unique, unconditional percentage metric, the matcher now accepts the same metric and percentage despite an omitted account name, including spoken "ten percent." Wrong values, account variants, ambiguous multi-account facts, and source conditions remain guarded by tests (2026-09-24). |

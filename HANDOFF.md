@@ -13,20 +13,21 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `78d9a1e`
-- Generated: 2026-09-24T17:50:29.722Z
+- Current commit: `164b568`
+- Generated: 2026-09-27T20:24:13.664Z
 - Uncommitted files excluding this handoff:
 
 ```text
 M BUGS.md
  M CHANGELOG.md
- M ENHANCEMENTS.md
- M src/evaluation/evaluator.test.ts
- M src/evaluation/structured-fact-matcher.test.ts
- M src/evaluation/structured-fact-matcher.ts
+ M README.md
+ M src/app/api/reference-import/route.test.ts
+ M src/app/api/reference-import/route.ts
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
+
+2026-09-27 FundingPips FAQ import diagnosis and recovery: the product lead's 37-second Android recording shows a public link import of `https://help.fundingpips.com/hc/en-us` ending with the generic "The reference source could not be imported" message. The production API reproduces HTTP 502, and direct HTTPS GET/HEAD return HTTP 403 with `Cf-Mitigated: challenge`, so the server is denied the page before extraction. The importer now identifies upstream 401/403 denial and returns the existing `reference_unavailable` error code and 502 status with a clear Paste text recovery. The URL, SSRF validation, no-redirect rule, two-megabyte cap, five-second deadline, and FAQ grounding remain unchanged. The external site still blocks automatic import; this is open in BUGS.md. Users must copy actual questions and answers from relevant FAQ articles, rather than menu labels, into the existing Paste text flow.
 
 2026-09-24 source-grounded report correction: the product lead confirmed the Android voice issue is fixed, then identified that a correct spoken answer about the 1 Step Legacy account's 10% profit target was shown as missed because it omitted the source answer's account-name wording. The deterministic matcher now has a narrow equivalence path for a unique, unconditional FAQ percentage metric: it requires the same percentage and two metric terms present in the source question and answer; it accepts digit, "10 percent," and "ten percent" forms. Different values, explicit wrong account numbers, multiple account facts sharing the metric, conditions, negation, and questions do not receive this fallback credit. The evaluator integration test proves the report scores the product lead's example at 3 factual accuracy with no missed fact. No importer, voice flow, API contract, or UI changed. Existing saved reports are snapshots; a new completed call generates a report using this fix. BUGS.md records the product lead's voice acceptance and this resolved grading bug.
 
@@ -55,6 +56,8 @@ Follow-up round (same day, product-lead feedback): the palette was brightened (c
 Follow-up round 3 (2026-09-18, product-lead request): the import body cap was raised from 200 KB to 2 MB so heavy real-world FAQ pages import cleanly, and the oversized-page rejection now reports the measured page size with the recovery step ("This page is 4.6 MB, over the 2 MB import limit. Open the page, copy the FAQ or policy text, and paste it instead."). The extracted-text cap (200 KB), five-second deadline, SSRF protections, and test-pinned behavior are unchanged. A user-proposed "accept oversized imports" consent flow was discussed and declined: the endpoint is unauthenticated, so client-side consent cannot be enforced server-side and an absolute cap must exist regardless.
 
 ## Checks run
+
+- 2026-09-27 blocked-source recovery: the new 401/403 regression tests failed before the code change and passed after. The local app POST to `/api/reference-import` with the recorded FundingPips URL returned the specific recovery message; the pre-change production endpoint returned only a generic 502. `npm run lint`, `npm run typecheck`, `npm test` (24 files, 281/281), and `npm run build` passed. The post-deployment production response remains to be checked.
 
 - 2026-09-24 report correction: the new matcher regression failed before implementation and passed afterward. `npm run lint`, `npm run typecheck`, `npm test` (24 files, 279/279), `npm run build`, and `git diff --check` passed. Live phone grading against the newly deployed build remains to be checked by the product lead; automated tests use the exact reported fact and answer.
 
@@ -105,6 +108,7 @@ Follow-up round 6 (2026-09-18, product-lead 20-item launch checklist): privacy p
 
 ## Remaining work or known issues
 
+- FundingPips Help Center still returns a Cloudflare challenge to server requests, so it cannot be imported automatically. Use Paste text with the real FAQ article questions and answers. Do not bypass the challenge or score Help Center menu labels as facts.
 - The product lead confirmed the Android voice issue fixed on 2026-09-24. After the new grading deployment, run one fresh call using the 1 Step Legacy profit-target FAQ and check that its coaching report credits the spoken 10% answer. Older saved reports are unchanged snapshots.
 - The native file-input label ("Choose File") is unthemed browser copy, accepted in the finish review; revisit if it bothers anyone.
 - The Mimosa pre-commit hook reported a partial scan (dependency-source and callgraph limits) on recent commits; re-run a full security audit when convenient.

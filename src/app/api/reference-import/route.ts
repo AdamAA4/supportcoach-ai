@@ -19,7 +19,7 @@ const TIMEOUT_MS = 5_000;
 const MAX_ARTICLE_PAGES = 8;
 const PAGES_TIMEOUT_MS = 12_000;
 
-type ImportFailure = "invalid" | "too-large" | "unavailable";
+type ImportFailure = "invalid" | "too-large" | "blocked" | "unavailable";
 
 const formatMb = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 
@@ -34,6 +34,8 @@ const failure = (kind: ImportFailure, measuredBytes?: number) => {
             ? `This page is ${formatMb(measuredBytes)}, over the 2 MB import limit. Open the page, copy the FAQ or policy text, and paste it instead.`
             : "This page is over the 2 MB import limit. Open the page, copy the FAQ or policy text, and paste it instead.",
         }
+      : kind === "blocked"
+        ? { status: 502, code: "reference_unavailable", message: "This website does not allow automatic FAQ import. Open it in your browser, copy the FAQ questions and answers, then choose Paste text here." }
       : { status: 502, code: "reference_unavailable", message: "The reference source could not be imported." };
   return NextResponse.json({ error: { code: payload.code, message: payload.message } }, { status: payload.status });
 };
@@ -115,7 +117,8 @@ const retrieve = (url: URL, address: string, signal: AbortSignal): Promise<{ htm
     rejectUnauthorized: true, agent: false, signal,
   }, (response) => {
     if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
-      response.destroy(); reject(new Error("unavailable")); return;
+      const blocked = response.statusCode === 401 || response.statusCode === 403;
+      response.destroy(); reject(new Error(blocked ? "blocked" : "unavailable")); return;
     }
     void readBoundedBody(response).then(resolve, reject);
   });
@@ -255,7 +258,7 @@ export async function POST(request: Request) {
       const measuredBytes = (error as Error & { measuredBytes?: number }).measuredBytes;
       return failure("too-large", measuredBytes);
     }
-    return failure(error instanceof Error && error.message === "invalid" ? "invalid" : "unavailable");
+    return failure(error instanceof Error && error.message === "invalid" ? "invalid" : error instanceof Error && error.message === "blocked" ? "blocked" : "unavailable");
   } finally {
     if (timeout) clearTimeout(timeout);
   }

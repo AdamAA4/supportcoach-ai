@@ -94,6 +94,18 @@ describe("public HTTPS import boundary", () => {
     expect(upstream.destroyed).toBe(true);
   });
 
+  it.each([401, 403])("explains the paste-text recovery when the source denies access (%s)", async (statusCode) => {
+    const upstream = respond("Access denied", statusCode);
+    const response = await importUrl("https://help.fundingpips.com/hc/en-us");
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: {
+      code: "reference_unavailable",
+      message: "This website does not allow automatic FAQ import. Open it in your browser, copy the FAQ questions and answers, then choose Paste text here.",
+    } });
+    expect(upstream.destroyed).toBe(true);
+    expect(httpsRequest).toHaveBeenCalledTimes(1);
+  });
+
   it.each([true, false])("enforces advertised and streamed size limits (advertised: %s)", async (advertised) => {
     const upstream = respond([Buffer.alloc(2 * 1024 * 1024), Buffer.alloc(1)], 200, advertised ? { "content-length": String(2 * 1024 * 1024 + 1) } : {});
     const response = await importUrl();

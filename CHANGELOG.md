@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- FAQ import now explains when a source website refuses automatic access (HTTP 401/403) and directs the trainee to copy its FAQ questions and answers into Paste text. The public-link importer still refuses redirects and keeps its existing network and size limits.
 - Coaching reports now credit a unique, unconditional FAQ percentage metric when a trainee gives the correct value and metric in different words, such as "10% profit target" instead of repeating "1 Step Legacy account has a 10% profit target." Digit and spoken percentage forms are supported; conflicting values and ambiguous account variants remain uncredited.
 - The live Android trainee-recognition issue is closed following the product lead's successful phone verification on 2026-09-24.
 
