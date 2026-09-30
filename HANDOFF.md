@@ -13,33 +13,11 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `06f9063`
-- Generated: 2026-09-30T05:42:29.326Z
-- Uncommitted files excluding this handoff:
+- Current commit: `d27c6e7`
+- Generated: 2026-09-30T12:08:09.990Z
+- Uncommitted files excluding this handoff: none
 
-```text
-M BUGS.md
- M CHANGELOG.md
- M DESIGN.md
- M ENHANCEMENTS.md
- M PRODUCT.md
- M README.md
- M src/app/api/reference-import/extract-faq.test.ts
- M src/app/api/reference-import/extract-faq.ts
- M src/components/call-console.test.tsx
- M src/components/call-console.tsx
- M src/components/coaching-report.test.tsx
- M src/components/coaching-report.tsx
- M src/components/reference-panel.tsx
- M src/components/source-setup-form.test.tsx
- M src/components/source-setup-form.tsx
- M src/evaluation/deterministic-evaluator.ts
- M src/evaluation/evaluator.test.ts
- M src/evaluation/structured-fact-matcher.ts
- M src/voice/assemblyai-voice-agent.test.ts
- M src/voice/assemblyai-voice-agent.ts
-?? src/components/reference-panel.test.tsx
-```
+
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
 
@@ -79,7 +57,8 @@ Follow-up round 3 (2026-09-18, product-lead request): the import body cap was ra
 
 ## Checks run
 
-- 2026-09-30: regression tests reproduced metadata-as-facts, out-of-scope voice prompt, and complete multi-sentence answer scoring zero before the fixes. `npm run lint`, `npm run typecheck`, `npm test` (25 files, 294/294), `npm run build` and `git diff --check` passed. Coverage includes question/value/condition failures, note detection/recovery and collapsed diagnostics/hash interactions. Built-app public import and evaluation were tested over HTTP; complete payout answer 3/3, missing conditions 0/3. No raw audio or diagnostics were sent to an API or persisted. Production verification remains pending at this pre-deployment checkpoint.
+- 2026-09-30: regression tests reproduced metadata-as-facts, out-of-scope voice prompt, and complete multi-sentence answer scoring zero before the fixes. `npm run lint`, `npm run typecheck`, `npm test` (25 files, 294/294), `npm run build` and `git diff --check` passed. Coverage includes question/value/condition failures, note detection/recovery and collapsed diagnostics/hash interactions. Built-app public import and evaluation were tested over HTTP; complete payout answer 3/3, missing conditions 0/3. No raw audio or diagnostics were sent to an API or persisted.
+- Production verification on 2026-09-30: application commit `d27c6e7` was pushed to `supportcoach-mvp`; Vercel Git deployment `dpl_8MaDd9NSEh4eLFsBqQfnVa8x1Edg` reached Ready and its aliases include `https://supportcoach-ai-ten.vercel.app`. The live health endpoint returned `ok`; Blue Guardian import returned 10 article facts across eight pages without menu/update/contents/reaction metadata. The live evaluation endpoint returned 3/3 factual accuracy with no missed facts for the complete payout answer, and 0/3 with one missed fact for the incomplete answer. These were synthetic API checks using the confirmed public source, not a physical-phone voice test. Evidence is `production-fixed-import.json` and `production-fixed-evaluation.json` in the local review folder. The following documentation-only commit records this verification without changing application code.
 - 2026-09-27 blocked-source recovery: the new 401/403 regression tests failed before the code change and passed after. The local app POST to `/api/reference-import` with the recorded FundingPips URL returned the specific recovery message; the pre-change production endpoint returned only a generic 502. `npm run lint`, `npm run typecheck`, `npm test` (24 files, 281/281), and `npm run build` passed. The post-deployment production response remains to be checked.
 
 - 2026-09-24 report correction: the new matcher regression failed before implementation and passed afterward. `npm run lint`, `npm run typecheck`, `npm test` (24 files, 279/279), `npm run build`, and `git diff --check` passed. Live phone grading against the newly deployed build remains to be checked by the product lead; automated tests use the exact reported fact and answer.
