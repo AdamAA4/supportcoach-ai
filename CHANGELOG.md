@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Coaching retries one transient provider HTTP 502/503/504 failure within the original nine-second deadline. Authentication/quota failures and invalid output are not retried; persistent failure still produces the labeled fallback (2026-09-30).
 - Profit-target paraphrases such as "you need to gain 10% profit" can earn factual credit without repeating the FAQ wording; incorrect quantities and competing percentage metrics remain rejected (2026-09-30).
 - Intercom FAQ imports now extract the real article body and exclude collection menus, duplicate article-header metadata, contents lists, reactions, and footers from both extraction and LLM grounding evidence (2026-09-30).
 - The live customer prompt now receives only the selected scenarios' confirmed FAQ facts, matching the question plan and factual grader. Coaching notes and unselected topics cannot supply customer questions.

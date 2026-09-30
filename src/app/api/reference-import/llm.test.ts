@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { extractPairsWithLlm, isLlmConfigured } from "./llm";
+import { extractPairsWithLlm, generateLlmText, isLlmConfigured } from "./llm";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -23,6 +23,29 @@ describe("isLlmConfigured", () => {
 });
 
 describe("extractPairsWithLlm", () => {
+  it("retries a transient coaching failure once using the same abort deadline", async () => {
+    vi.stubEnv("LLM_PROVIDER", "gemini"); vi.stubEnv("LLM_API_KEY", "test-key");
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response("Unavailable", { status: 503 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"results":[]}' }] } }] })));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await generateLlmText("JSON", { timeoutMs: 9000, json: true, retryTransient: true })).toBe('{"results":[]}');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][1].signal).toBe(fetchMock.mock.calls[1][1].signal);
+  });
+  it.each([401, 429])("does not retry a credentials or quota failure: %s", async (status) => {
+    vi.stubEnv("LLM_PROVIDER", "gemini"); vi.stubEnv("LLM_API_KEY", "test-key");
+    const fetchMock = vi.fn().mockResolvedValue(new Response("Failed", { status }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(generateLlmText("JSON", { retryTransient: true })).rejects.toThrow(`llm-http-${status}`);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+  it("stops after two transient failures instead of retrying indefinitely", async () => {
+    vi.stubEnv("LLM_PROVIDER", "gemini"); vi.stubEnv("LLM_API_KEY", "test-key");
+    const fetchMock = vi.fn().mockResolvedValue(new Response("Unavailable", { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(generateLlmText("JSON", { retryTransient: true })).rejects.toThrow("llm-http-503");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
   it("parses a Gemini payload into question/answer pairs", async () => {
     process.env.LLM_PROVIDER = "gemini";
     process.env.LLM_API_KEY = "test-key";

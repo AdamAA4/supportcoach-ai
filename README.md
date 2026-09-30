@@ -83,6 +83,8 @@ Reproduce the boundary and persistence checks with `npm test -- src/evaluation/e
 
 If a new report says word-based review, inspect Vercel runtime logs for `supportcoach.coaching_fallback`. Only a bounded failure code is logged, such as `llm-http-503`, `provider-timeout` or `semantic-invalid`; source text, speech and secrets are not logged. Provider availability is not guaranteed, and broader paraphrases may be missed during fallback.
 
+Coaching retries one provider HTTP 502/503/504 failure using the same nine-second abort deadline. It does not retry authentication failures, quota failures or malformed output, and extraction retains its previous single-attempt behavior. Persistent provider failure still returns the labeled fallback.
+
 ## FAQ and report consistency
 
 The customer prompt, question plan and factual grader use the same selected FAQ facts. Select every topic you want to practice; unselected topics are not part of that call's grading scope. Intercom Help Center directories are used only to discover links, while article bodies supply the confirmed answers. The existing eight-link crawl cap still applies, so import stats describe only the pages actually read; paste any additional required FAQ answers.

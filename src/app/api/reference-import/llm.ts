@@ -107,16 +107,24 @@ const callOpenAi = async (model: string, key: string, prompt: string, signal: Ab
 // Returns question/answer pairs the model found. These are NOT yet trusted:
 // the caller must ground them against the harvested page text.
 // Shared server-only provider boundary. Callers validate all returned content.
-export const generateLlmText = async (prompt: string, options: { timeoutMs?: number; json?: boolean } = {}): Promise<string> => {
+export const generateLlmText = async (prompt: string, options: { timeoutMs?: number; json?: boolean; retryTransient?: boolean } = {}): Promise<string> => {
   const provider = (process.env.LLM_PROVIDER ?? "gemini").toLowerCase();
   const key = process.env.LLM_API_KEY ?? "";
   if (!key) throw new Error("llm-not-configured");
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? LLM_TIMEOUT_MS);
   try {
-    return await (provider === "openai"
+    const generate = () => provider === "openai"
       ? callOpenAi(OPENAI_MODEL, key, prompt, controller.signal, options.json)
-      : callGemini(key, prompt, controller.signal, options.json));
+      : callGemini(key, prompt, controller.signal, options.json);
+    try { return await generate(); }
+    catch (error) {
+      // One transient retry shares the original deadline. Never retry bad
+      // credentials, invalid responses or quota failures, or change providers.
+      if (!options.retryTransient || controller.signal.aborted || !(error instanceof Error) ||
+        !/^llm-http-(?:502|503|504)$/.test(error.message)) throw error;
+      return await generate();
+    }
   } finally {
     clearTimeout(timer);
   }

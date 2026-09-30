@@ -77,7 +77,7 @@ export class GroundedEvaluator implements Evaluator {
         "Mark supported only when the trainee conveys every material rule, condition, limit and number. Do not require marketing prose or exact word order. Missing conditions are missed; wrong values, reversed rules or invented promises are conflict. Never infer unspoken answers.",
         "Use evidence from the trainee's answer to that customer question and its direct clarification; do not assemble unrelated answers or numbers across topics. Each evidence quote must be an exact contiguous excerpt from an actual trainee turn with its exact turnId.",
         'Return JSON only: {"results":[{"factId":"exact ID","status":"supported|missed|conflict","evidence":[{"turnId":"exact trainee turn ID","quote":"exact trainee words"}]}]}. Include exactly one entry per fact. Missed facts have empty evidence. No extra prose.',
-      ].join("\n"), { timeoutMs: 9_000, json: true });
+      ].join("\n"), { timeoutMs: 9_000, json: true, retryTransient: true });
       const judgments = judgmentsFrom(response, facts, input.transcript);
       const supportedFactIds = new Set(baseline.supportedFactIds);
       const unsupportedClaims = new Set(baseline.unsupportedClaims);

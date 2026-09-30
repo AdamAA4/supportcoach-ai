@@ -13,20 +13,23 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `7d7fd2a`
-- Generated: 2026-09-30T12:54:46.646Z
+- Current commit: `c2ac6fc`
+- Generated: 2026-09-30T13:00:50.479Z
 - Uncommitted files excluding this handoff:
 
 ```text
 M BUGS.md
  M CHANGELOG.md
  M README.md
+ M src/app/api/reference-import/llm.test.ts
+ M src/app/api/reference-import/llm.ts
  M src/evaluation/grounded-evaluator.test.ts
  M src/evaluation/grounded-evaluator.ts
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
 
+Production fallback diagnosis: deployment `dpl_83cyyuycKqDQbdhpC22ZhL7QpXYf` (`c2ac6fc`) returned safe `llm-http-503` warnings for the synthetic requests, confirming transient Gemini service failures rather than missing environment variables. Added one retry for HTTP 502/503/504 to coaching only, sharing the original nine-second abort timer. Credential/quota failures, malformed responses and extraction requests are not retried. Persistent failure remains a documented external limitation with an honest report label.
 2026-09-30 final submission improvements: added original fictional ADAMTRADING material (`public/adamtrading-faq.html`, 22 rules) using the product lead's approved 10% profit target, 4% daily loss, 8% total loss and five-day minimum. All accounts, balances, trades and rewards are explicitly simulated. Share the root homepage URL (`https://supportcoach-ai-ten.vercel.app/`), then import `https://supportcoach-ai-ten.vercel.app/adamtrading-faq.html` during setup. Root already renders the approved introduction; setup remains a separate route.
 
 `src/evaluation/grounded-evaluator.ts` now reviews selected factual answers by meaning using the existing server-only provider configuration. The model must return verdicts for every selected FAQ fact and cite genuine trainee excerpts. Local validation rejects invented/customer evidence and missing or changed numeric values and percentage units. Model failures or invalid output use the existing deterministic rubric with a visible report method label. The narrow deterministic profit-goal matcher also accepts "gain 10% profit" while preserving conflicting-value/metric safeguards. AI review sends selected facts and transcript, not experience notes; privacy disclosure documents this processing. The provider deadline is nine seconds, below the client's 15-second timeout; `/api/evaluate` has a per-process 10/minute/IP rate limit, not a global spending cap.
@@ -69,6 +72,7 @@ Follow-up round 3 (2026-09-18, product-lead request): the import body cap was ra
 
 ## Checks run
 
+- Transient retry regression checks verify exactly two attempts after a service failure, the same abort signal/deadline on both attempts, and no retry for HTTP 401/429. Lint, typecheck and all 318 tests (27 files) passed. The production build also passed before committing this follow-up.
 - Application commit `7d7fd2a` deployed Ready as `dpl_teg6pCxCv7xWmvvHMhefgrBBghmu` and aliases include the production URL. Live homepage and ADAMTRADING page returned 200; import returned exactly 22 source facts. Browser navigation reached the approved homepage, imported the public FAQ, confirmed it and enabled Start practice call with a profit-target scenario. Synthetic production grading returned 3/3 for "gain 10% profit" and 0/3 for "gain 5% profit", both using semantic review in one run. An overnight paraphrase was credited under semantic review (2/3 overall because the selected drill also includes weekend rules, which were not answered). Other requests fell back and the overnight answer then scored zero; this provider/response availability limitation is recorded in BUGS.md. No physical-phone conversation was simulated or claimed verified.
 - Follow-up instrumentation logs only bounded coaching failure codes, with a regression asserting the provider key and trainee speech do not appear. Lint, typecheck and all 314 tests passed again; the updated production build is checked before committing. Failed synthetic assertions were due first to expecting 3/3 despite an unanswered grouped fact, then to provider fallback; neither is hidden as a passing semantic check.
 - 2026-09-30 final submission changes: `npm run lint`, `npm run typecheck`, `npm test` (27 files, 314/314), and `npm run build` passed. Regression coverage includes semantic paraphrases, incorrect quantities/units, fabricated/customer/question evidence, missing conditions, model conflicts, malformed output, provider failure, fallback labels, customer prompt behavior and importing all 22 ADAMTRADING facts without page furniture. Production deployment and synthetic API verification follow this application commit.
