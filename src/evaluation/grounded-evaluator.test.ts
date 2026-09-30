@@ -16,6 +16,8 @@ describe("grounded semantic evaluation", () => {
     const report = await new GroundedEvaluator(context.sourceProvenance).evaluate(data);
     expect(report).toMatchObject({ evaluationMethod: "semantic", scores: { factualAccuracy: 3 }, missedFacts: [], transcript: data.transcript });
     expect(generate.mock.calls[0][0]).toContain("Judge meaning, not copied wording");
+    expect(generate.mock.calls[0][0]).toContain("Judge each fact independently");
+    expect(generate.mock.calls[0][0]).toContain("It does not support weekend holding");
     expect(generate.mock.calls[0][1]).toEqual({ timeoutMs: 9000, json: true, retryTransient: true });
   });
   it.each(["You need to gain 5% profit.", "You need to gain 10 dollars profit."])("vetoes a model credit with an incorrect value or percentage unit: %s", async (text) => {

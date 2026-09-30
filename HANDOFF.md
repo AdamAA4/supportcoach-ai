@@ -13,22 +13,19 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `c2ac6fc`
-- Generated: 2026-09-30T13:00:50.479Z
+- Current commit: `c5b0c57`
+- Generated: 2026-09-30T13:07:07.417Z
 - Uncommitted files excluding this handoff:
 
 ```text
-M BUGS.md
- M CHANGELOG.md
- M README.md
- M src/app/api/reference-import/llm.test.ts
- M src/app/api/reference-import/llm.ts
+M CHANGELOG.md
  M src/evaluation/grounded-evaluator.test.ts
  M src/evaluation/grounded-evaluator.ts
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
 
+Final meaning-review clarification: live and direct-provider evidence showed an overnight paraphrase sometimes marked missed even with semantic review. The prompt now explicitly judges facts independently, treats fictional company branding as context and gives a grounded overnight example that cannot credit weekend holding. AI judgments can still be incorrect; the report already discloses that limitation. A direct follow-up hit provider HTTP 429 and correctly fell back without retrying quota errors. No claim of universal comprehension or guaranteed provider availability is made.
 Production fallback diagnosis: deployment `dpl_83cyyuycKqDQbdhpC22ZhL7QpXYf` (`c2ac6fc`) returned safe `llm-http-503` warnings for the synthetic requests, confirming transient Gemini service failures rather than missing environment variables. Added one retry for HTTP 502/503/504 to coaching only, sharing the original nine-second abort timer. Credential/quota failures, malformed responses and extraction requests are not retried. Persistent failure remains a documented external limitation with an honest report label.
 2026-09-30 final submission improvements: added original fictional ADAMTRADING material (`public/adamtrading-faq.html`, 22 rules) using the product lead's approved 10% profit target, 4% daily loss, 8% total loss and five-day minimum. All accounts, balances, trades and rewards are explicitly simulated. Share the root homepage URL (`https://supportcoach-ai-ten.vercel.app/`), then import `https://supportcoach-ai-ten.vercel.app/adamtrading-faq.html` during setup. Root already renders the approved introduction; setup remains a separate route.
 
@@ -72,6 +69,7 @@ Follow-up round 3 (2026-09-18, product-lead request): the import body cap was ra
 
 ## Checks run
 
+- Retry deployment `dpl_HLkEn5Sr5yTeBV4hZvYWpibdNXZJ` (`c5b0c57`) reached Ready on production. Health returned `ok`; live 10% paraphrase scored 3/3 and wrong 5% scored 0/3 with semantic review. The overnight paraphrase still varied under AI review; a separate final prompt clarification is included here. Two direct attempts after that clarification received HTTP 429 and used the correct non-retrying fallback. All 318 automated tests, lint, typecheck and production build passed after the clarification. Do not claim all paraphrases or physical voice behavior were verified.
 - Transient retry regression checks verify exactly two attempts after a service failure, the same abort signal/deadline on both attempts, and no retry for HTTP 401/429. Lint, typecheck and all 318 tests (27 files) passed. The production build also passed before committing this follow-up.
 - Application commit `7d7fd2a` deployed Ready as `dpl_teg6pCxCv7xWmvvHMhefgrBBghmu` and aliases include the production URL. Live homepage and ADAMTRADING page returned 200; import returned exactly 22 source facts. Browser navigation reached the approved homepage, imported the public FAQ, confirmed it and enabled Start practice call with a profit-target scenario. Synthetic production grading returned 3/3 for "gain 10% profit" and 0/3 for "gain 5% profit", both using semantic review in one run. An overnight paraphrase was credited under semantic review (2/3 overall because the selected drill also includes weekend rules, which were not answered). Other requests fell back and the overnight answer then scored zero; this provider/response availability limitation is recorded in BUGS.md. No physical-phone conversation was simulated or claimed verified.
 - Follow-up instrumentation logs only bounded coaching failure codes, with a regression asserting the provider key and trainee speech do not appear. Lint, typecheck and all 314 tests passed again; the updated production build is checked before committing. Failed synthetic assertions were due first to expecting 3/3 despite an unanswered grouped fact, then to provider fallback; neither is hidden as a passing semantic check.

@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Semantic review explicitly judges each selected fact independently and treats fictional company branding as context. Answering overnight holding does not require answering a separate weekend rule; genuine timing and eligibility conditions remain required.
 - Customer prompts now acknowledge equivalent answers, remember prior details, skip answered topics and ask focused clarifications instead of repeating the question plan. Voice transport is unchanged; physical-phone behavior still needs acceptance testing.
 - Privacy disclosure now explains external processing of selected FAQ facts and transcripts for AI-assisted coaching. The evaluation endpoint has a per-instance 10-request/minute rate limit and a nine-second provider deadline.
 - Approved submission cleanup (2026-09-30): audio diagnostics and source hashes move into collapsed Technical details; the repeated snapshot-confirmation row and manual note-format selector are removed. Markdown files and pasted Markdown structure are detected automatically. Call controls, microphone/customer status, FAQ answers, optional notes, four scores, and the Maison Rose design remain.
