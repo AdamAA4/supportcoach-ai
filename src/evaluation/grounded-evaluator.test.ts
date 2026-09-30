@@ -50,8 +50,12 @@ describe("grounded semantic evaluation", () => {
     expect((await new GroundedEvaluator(context.sourceProvenance).evaluate(data)).evaluationMethod).toBe("deterministic");
   });
   it("uses a labeled fallback after provider failure", async () => {
-    configure(); vi.spyOn(llm, "generateLlmText").mockRejectedValue(new Error("503"));
+    configure(); vi.spyOn(llm, "generateLlmText").mockRejectedValue(new Error("llm-http-503"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     expect((await new GroundedEvaluator(context.sourceProvenance).evaluate(input())).evaluationMethod).toBe("deterministic");
+    expect(warn).toHaveBeenCalledWith("supportcoach.coaching_fallback", { reason: "llm-http-503" });
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("test-key");
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("You need");
   });
   it("does not call the model without configuration", async () => {
     vi.stubEnv("LLM_API_KEY", ""); const generate = vi.spyOn(llm, "generateLlmText");

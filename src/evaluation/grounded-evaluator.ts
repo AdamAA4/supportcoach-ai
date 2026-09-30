@@ -90,6 +90,13 @@ export class GroundedEvaluator implements Evaluator {
       }
       const report = await new DeterministicEvaluator(this.provenance, { supportedFactIds, unsupportedClaims: [...unsupportedClaims] }).evaluate(input);
       return { ...report, evaluationMethod: "semantic" as const };
-    } catch { return fallback(); }
+    } catch (error) {
+      const reason = error instanceof Error && /^(?:llm-[a-z0-9-]+|semantic-invalid)$/.test(error.message)
+        ? error.message
+        : error instanceof Error && error.name === "AbortError" ? "provider-timeout" : "invalid-provider-response";
+      // Log only bounded failure codes, never source text, speech or secrets.
+      console.warn("supportcoach.coaching_fallback", { reason });
+      return fallback();
+    }
   }
 }

@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Privacy-safe coaching fallback logs contain a bounded provider/validation failure code only; transcripts, source content and API keys are never logged (2026-09-30).
 - Grounded AI-assisted factual review using the existing server-only Gemini/OpenAI configuration. Verdicts require actual trainee evidence and preserve numeric safeguards; provider errors or invalid responses fall back to the existing matcher with a visible report label (2026-09-30).
 - Original ADAMTRADING FAQ at `/adamtrading-faq.html`: 22 fictional trading, loss-limit and simulated-reward rules, clearly marked as demo material (2026-09-30).
 - Continuous live trainee transcription: AssemblyAI sessions now request `continuous_partials`, allowing the existing call transcript UI to render trainee words while they are being spoken instead of waiting only for a finalized turn.
