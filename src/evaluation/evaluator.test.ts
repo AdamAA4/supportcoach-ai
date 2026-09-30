@@ -6,6 +6,16 @@ const evaluate = (transcript: ReturnType<typeof turn>[], notes = context.notes) 
   new DeterministicEvaluator(context.sourceProvenance).evaluate({ ...context, notes, transcript });
 
 describe("deterministic evaluation", () => {
+  it.each(["You need to gain 10% profit.", "You need to earn ten percent profit."])("credits a unique unconditional profit-goal paraphrase even without AI: %s", async (text) => {
+    const fact = { ...context.facts[0], id: "goal", question: "How much profit is needed to meet payout requirements?", answer: "You have to generate 10% profits to meet payout requirements." };
+    const report = await new DeterministicEvaluator(context.sourceProvenance).evaluate({ ...context, facts: [fact], scenario: { ...context.scenario, factIds: [fact.id] }, transcript: [turn(text)] });
+    expect(report.scores.factualAccuracy).toBe(3);
+  });
+  it.each(["You need to gain 5% profit.", "You gain a 10% profit split.", "You do not need to gain 10% profit.", "Do I need to gain 10% profit?"])("does not credit an incorrect or questioned profit-goal paraphrase: %s", async (text) => {
+    const fact = { ...context.facts[0], id: "goal", question: "What is the profit target?", answer: "The evaluation requires a 10% profit on the starting balance." };
+    const report = await new DeterministicEvaluator(context.sourceProvenance).evaluate({ ...context, facts: [fact], scenario: { ...context.scenario, factIds: [fact.id] }, transcript: [turn(text)] });
+    expect(report.scores.factualAccuracy).toBe(0);
+  });
   it("credits a complete FAQ answer across sentences in one spoken turn", async () => {
     const fact = { ...context.facts[0], id: "payout", question: "How do payouts work?", answer: "Traders become eligible for payouts after 14 calendar days. The minimum trading day requirement must be met." };
     const report = await new DeterministicEvaluator(context.sourceProvenance).evaluate({

@@ -192,6 +192,9 @@ describe("AssemblyAI voice agent", () => {
     expect(session.system_prompt).toContain("Traders receive an 80% profit split.");
     expect(session.system_prompt).not.toContain("KYC");
     expect(session.system_prompt).not.toContain("Promise an immediate payout");
+    expect(session.system_prompt).toContain("Accept synonyms and paraphrases");
+    expect(session.system_prompt).toContain("Skip questions already answered");
+    expect(session.system_prompt).toContain("one focused clarification");
     const input = session.input;
     expect(input.keyterms).toEqual(expect.arrayContaining(["1-Step Legacy Evaluation", "Profit Split", "EquityEdge"]));
     expect(input.keyterms).not.toContain("KYC");

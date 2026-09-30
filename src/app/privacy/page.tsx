@@ -25,6 +25,10 @@ const sections = [
     body: "In live voice mode your microphone audio is streamed to AssemblyAI's voice service using a short-lived temporary token, under AssemblyAI's own privacy terms. The permanent API key stays on the server and never reaches your browser. In mock mode, voice stays inside your browser's speech features.",
   },
   {
+    heading: "AI-assisted coaching",
+    body: "When AI coaching is configured, the confirmed FAQ facts and call transcript are sent to the configured provider (Google Gemini or OpenAI) to compare answer meaning with the source. Public FAQ text may also be sent for extraction when basic extraction fails. Coaching notes are not sent for semantic grading. Providers handle submitted data under their own terms; SupportCoach does not store it in an application database or log raw transcripts. If the provider is unavailable, the report uses a word-based check and labels that fallback.",
+  },
+  {
     heading: "Your control",
     body: "You can clear all practice data at any time from the report screen, and you can use pasted FAQ text instead of importing links if you prefer not to share a URL.",
   },
@@ -38,7 +42,7 @@ export default function PrivacyPage() {
       </div>
       <header>
         <h1 className={`${displayTitle} text-4xl leading-[1.08]`}>Privacy policy</h1>
-        <p className="mt-4 text-sm text-ink-muted">Last updated 18 September 2026. Questions: mladamaadam@gmail.com</p>
+        <p className="mt-4 text-sm text-ink-muted">Last updated 30 September 2026. Questions: mladamaadam@gmail.com</p>
       </header>
       <div className="mt-8 space-y-6">
         {sections.map((section) => (

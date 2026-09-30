@@ -60,13 +60,15 @@ const parsePairs = (content: string): LlmPair[] => {
   return pairs;
 };
 
-const callGemini = async (key: string, prompt: string, signal: AbortSignal): Promise<string> => {
+const callGemini = async (key: string, prompt: string, signal: AbortSignal, json = false): Promise<string> => {
   const response = await fetch(GEMINI_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0 },
+      generationConfig: json
+        ? { responseMimeType: "application/json", maxOutputTokens: 6000, thinkingConfig: { thinkingLevel: "LOW" } }
+        : { temperature: 0 },
     }),
     signal,
   });
@@ -81,7 +83,7 @@ const callGemini = async (key: string, prompt: string, signal: AbortSignal): Pro
   return text;
 };
 
-const callOpenAi = async (model: string, key: string, prompt: string, signal: AbortSignal): Promise<string> => {
+const callOpenAi = async (model: string, key: string, prompt: string, signal: AbortSignal, json = false): Promise<string> => {
   const response = await fetch(OPENAI_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
@@ -89,6 +91,7 @@ const callOpenAi = async (model: string, key: string, prompt: string, signal: Ab
       model,
       temperature: 0,
       messages: [{ role: "user", content: prompt }],
+      ...(json ? { response_format: { type: "json_object" } } : {}),
     }),
     signal,
   });
@@ -103,19 +106,21 @@ const callOpenAi = async (model: string, key: string, prompt: string, signal: Ab
 
 // Returns question/answer pairs the model found. These are NOT yet trusted:
 // the caller must ground them against the harvested page text.
-export const extractPairsWithLlm = async (corpus: string): Promise<LlmPair[]> => {
+// Shared server-only provider boundary. Callers validate all returned content.
+export const generateLlmText = async (prompt: string, options: { timeoutMs?: number; json?: boolean } = {}): Promise<string> => {
   const provider = (process.env.LLM_PROVIDER ?? "gemini").toLowerCase();
   const key = process.env.LLM_API_KEY ?? "";
   if (!key) throw new Error("llm-not-configured");
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? LLM_TIMEOUT_MS);
   try {
-    const prompt = buildPrompt(corpus);
-    const content = provider === "openai"
-      ? await callOpenAi(OPENAI_MODEL, key, prompt, controller.signal)
-      : await callGemini(key, prompt, controller.signal);
-    return parsePairs(content);
+    return await (provider === "openai"
+      ? callOpenAi(OPENAI_MODEL, key, prompt, controller.signal, options.json)
+      : callGemini(key, prompt, controller.signal, options.json));
   } finally {
     clearTimeout(timer);
   }
 };
+
+export const extractPairsWithLlm = async (corpus: string): Promise<LlmPair[]> =>
+  parsePairs(await generateLlmText(buildPrompt(corpus)));

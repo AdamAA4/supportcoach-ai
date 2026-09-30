@@ -12,7 +12,7 @@ Support trainees practicing customer-support conversations before taking real ca
 
 ## Product Purpose
 
-SupportCoach AI lets a trainee practice a support conversation by speaking with a simulated customer. Every session is grounded in a confirmed company FAQ or policy source plus optional experience notes; after the call, a rule-based coach scores the trainee's answers 0-3 on factual accuracy, empathy, clarity, and resolution, and proposes a next exercise. Success: trainees fail safely, repeatedly, and get honest, source-grounded feedback.
+SupportCoach AI lets a trainee practice a support conversation by speaking with a simulated customer. Every session is grounded in a confirmed company FAQ or policy source plus optional experience notes. After the call, the coach scores factual accuracy, empathy, clarity and resolution from 0-3 and proposes a next exercise. Factual accuracy uses AI-assisted meaning review when available, with a labeled word-matching fallback. Success: trainees fail safely, repeatedly, and get honest, source-grounded feedback.
 
 ## Positioning
 
@@ -28,8 +28,9 @@ Solo practice sessions in a browser. The session source snapshot, notes, complet
 - Source setup: paste FAQ/policy text or import one public HTTPS page (sanitized snapshot, SHA-256 provenance); confirmation required before a call starts.
 - Optional experience notes (plain text or Markdown file, 200 KB cap) classified as personal coaching note or approved practice advice. Format is detected from the file extension or pasted Markdown structure.
 - One or more source-derived practice scenarios per voice session; selected scenarios combine their confirmed facts into one customer question plan and one coaching report.
-- Deterministic rule-based evaluation; conservative English lexical matching; can miss paraphrases (documented limitation).
-- The live customer and factual grader share the selected scenarios' FAQ facts. Complete spoken turns can supply evidence across sentences; questions and separate incomplete turns cannot be combined into a factual pass.
+- Factual evaluation uses grounded AI-assisted meaning review when configured, with exact trainee evidence and numeric safeguards. Provider failures fall back to conservative English word matching, clearly labeled in the report. Other rubric dimensions remain rule-based; AI judgments can be wrong.
+- Original fictional ADAMTRADING FAQ supplies 22 demo trading rules. It offers no real accounts, investments or payouts.
+- The live customer and factual grader share the selected scenarios' FAQ facts. The customer prompt adapts to prior answers and asks focused clarifications. Semantic review may use an answer and its direct clarification; questions and unrelated answers cannot establish a factual pass.
 - Intercom directories provide discovery links only. Article bodies provide facts; menus, update metadata, contents lists and feedback controls are excluded from grounding evidence.
 - AssemblyAI API key is server-only; browser receives a single-use temporary token.
 - Live calls report provider session-error or WebSocket close codes verbatim for debugging.

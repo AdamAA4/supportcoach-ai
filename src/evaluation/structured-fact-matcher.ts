@@ -272,9 +272,13 @@ const percentageMetric = (fact: ReferenceFact): PercentageMetric | null => {
   if (percentages.length !== 1) return null;
   const match = percentages[0];
   const trailing = fact.answer.slice((match.index ?? 0) + match[0].length);
-  const terms = contentTerms(normalizeFactTokens(trailing)).filter((term) => term.length > 2).slice(0, 2);
+  let terms = contentTerms(normalizeFactTokens(trailing)).filter((term) => term.length > 2).slice(0, 2);
   const questionTerms = normalizeFactTokens(fact.question);
-  if (terms.length !== 2 || !terms.every((term) => questionTerms.includes(term))) return null;
+  const profitGoal = /^\s*profits?\b/i.test(trailing) && questionTerms.includes("profit") &&
+    (questionTerms.includes("target") || /\bpayout requirements?\b/i.test(fact.question)) &&
+    !/\b(?:split|share|loss|drawdown)\b/i.test(fact.question);
+  if (profitGoal) terms = ["profit", "target"];
+  if (terms.length !== 2 || (!profitGoal && !terms.every((term) => questionTerms.includes(term)))) return null;
   const withoutPercentages = fact.answer.replace(PERCENTAGE_PATTERN, "");
   return {
     value: percentageValue(match[1]),
@@ -292,7 +296,10 @@ const supportsPercentageParaphrase = (
   const percentages = [...statement.text.matchAll(PERCENTAGE_PATTERN)];
   if (percentages.length !== 1 || percentageValue(percentages[0][1]) !== metric.value) return false;
   const tokens = normalizeFactTokens(statement.text);
-  if (!metric.terms.every((term) => tokens.includes(term)) || tokens.some((term) => NEGATORS.has(term))) return false;
+  const profitAction = metric.terms.join(" ") === "profit target" &&
+    /\b(?:profit|profits)\b/i.test(statement.text) && /\b(?:gain|generate|earn|make|achieve|reach)\b/i.test(statement.text) &&
+    !/\b(?:split|share|loss|drawdown)\b/i.test(statement.text);
+  if ((!metric.terms.every((term) => tokens.includes(term)) && !profitAction) || tokens.some((term) => NEGATORS.has(term))) return false;
   const withoutPercentages = statement.text.replace(PERCENTAGE_PATTERN, "");
   const otherNumbers = identifierNumbers(withoutPercentages).map(String);
   return otherNumbers.every((number) => metric.identifierNumbers.includes(number));

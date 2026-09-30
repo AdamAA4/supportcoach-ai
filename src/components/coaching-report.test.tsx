@@ -7,6 +7,7 @@ import { saveCompletedPractice, loadCompletedPractice, COMPLETED_PRACTICE_KEY } 
 import { CURRENT_PRACTICE_SESSION_KEY } from "../domain/practice-session";
 import { DeterministicEvaluator } from "../evaluation/deterministic-evaluator";
 import { context, turn } from "../evaluation/test-fixtures";
+import { CoachingReport } from "./coaching-report";
 
 afterEach(() => { cleanup(); localStorage.clear(); vi.restoreAllMocks(); });
 it("restores four score cards, transcript, and clears persisted source, notes, and report", async () => {
@@ -39,4 +40,12 @@ it("shows an empty state for malformed storage", async () => {
   render(<ReportPage />);
   expect(await screen.findByText("No saved coaching report")).toBeVisible();
   expect(screen.getByRole("link", { name: "Practice again" })).toBeVisible();
+});
+
+it("labels meaning-based review and word-based fallback distinctly", async () => {
+  const report = await new DeterministicEvaluator(context.sourceProvenance).evaluate({ ...context, transcript: [turn(context.facts[0].answer)] });
+  const view = render(<CoachingReport report={{ ...report, evaluationMethod: "semantic" }} onClear={() => {}} />);
+  expect(screen.getByText(/AI-assisted factual review compares the meaning/)).toBeVisible();
+  view.rerender(<CoachingReport report={{ ...report, evaluationMethod: "deterministic" }} onClear={() => {}} />);
+  expect(screen.getByText(/Word-based factual review was used/)).toBeVisible();
 });

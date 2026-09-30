@@ -46,8 +46,9 @@ export function CoachingReport({ report, onClear }: { report: Report; onClear: (
             Your coaching report
           </h1>
           <p className="mt-5 max-w-2xl leading-relaxed text-ink-soft">
-            Scores range from 0 to 3. This rule-based practice feedback checks the words and conditions in your
-            confirmed reference; it may miss paraphrases.
+            {report.evaluationMethod === "semantic"
+              ? "Scores range from 0 to 3. AI-assisted factual review compares the meaning of your answers with the confirmed FAQ, including numbers and conditions. Review the transcript alongside this feedback; AI can make mistakes."
+              : "Scores range from 0 to 3. Word-based factual review was used because AI review was unavailable. It checks your confirmed reference and conditions, but may miss paraphrases."}
           </p>
         </header>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

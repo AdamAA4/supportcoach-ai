@@ -18,6 +18,7 @@ export type CoachingReport = {
   unsupportedClaims: string[];
   nextExercise: string;
   practice?: PracticeTask;
+  evaluationMethod?: "semantic" | "deterministic";
   transcript: TranscriptTurn[];
   sourceProvenance: SourceProvenance;
 };

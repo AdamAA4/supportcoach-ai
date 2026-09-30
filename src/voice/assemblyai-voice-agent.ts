@@ -88,9 +88,12 @@ const promptFor = (scenario: ScenarioDefinition, facts: ReferenceFact[]): string
     `Opening line: ${scenario.openingLine}.`,
     `Customer goals: ${scenario.goals.join("; ") || "Ask for help with the scenario."}.`,
     "After every trainee answer, react to its specific content with one concise realistic follow-up. Never repeat the opening line after the first turn.",
+    "Understand the meaning of the full trainee answer, not exact FAQ wording. Accept synonyms and paraphrases with the same numbers and conditions. Remember details already given, including pronouns and answers to earlier questions.",
+    "If the trainee answers several selected topics together, treat those topics as answered. Acknowledge a useful answer briefly and ask only about the next unresolved detail. If a required detail is missing or unclear, ask one focused clarification instead of repeating the entire question.",
+    "If the answer conflicts with a selected rule, ask a natural clarification as the customer. Do not ignore the answer, give a scripted unrelated reply, or teach the policy yourself. If the speech is unintelligible, ask the trainee to repeat the unclear part.",
     "Use only these confirmed FAQ/policy facts when reacting to the trainee's answer:",
     ...selectedFacts.map((fact) => `- ${fact.question}: ${fact.answer}`),
-    "Work through this question plan one question at a time, in order, and never repeat a question you have already asked:",
+    "Use this question plan as a guide, not a rigid script. Skip questions already answered, respond to the current answer, and ask one unresolved selected-topic question at a time:",
     ...(questionPlan.length
       ? questionPlan.map((item) => `- ${item.question}`)
       : ["- Ask the trainee for a next step you can check with your team."]),

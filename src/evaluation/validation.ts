@@ -37,6 +37,7 @@ export const isTranscript = (value: unknown): value is TranscriptTurn[] => Array
 
 export const isCoachingReport = (value: unknown): value is CoachingReport => {
   if (!isRecord(value) || !isRecord(value.scores) || !isRecord(value.sourceProvenance)) return false;
+  if (value.evaluationMethod !== undefined && value.evaluationMethod !== "semantic" && value.evaluationMethod !== "deterministic") return false;
   if (value.practice !== undefined) {
     const practice = value.practice;
     if (!isRecord(practice) || typeof practice.openingLine !== "string" || typeof practice.focus !== "string" || typeof practice.needsConfirmation !== "boolean") return false;

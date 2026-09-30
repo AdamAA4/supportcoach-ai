@@ -1,11 +1,17 @@
 import { createHash } from "node:crypto";
-import { DeterministicEvaluator } from "../../../evaluation/deterministic-evaluator";
+import { GroundedEvaluator } from "../../../evaluation/grounded-evaluator";
+import { clientKeyOf, createRateLimiter, rateLimitingEnabled } from "../../../lib/rate-limit";
 import { equalData, isPracticeContext, isRecord, isTranscript } from "../../../evaluation/validation";
 
 export const runtime = "nodejs";
 const invalid = () => Response.json({ error: { code: "invalid_evaluation", message: "Use the confirmed session source and a transcript of at most 200 turns and 20,000 characters." } }, { status: 400 });
+const evaluationRateLimiter = createRateLimiter(60_000, 10);
 
 export async function POST(request: Request): Promise<Response> {
+  if (rateLimitingEnabled()) {
+    const decision = evaluationRateLimiter(clientKeyOf(request));
+    if (!decision.allowed) return Response.json({ error: { code: "rate_limited", message: "Too many coaching requests. Try again shortly." } }, { status: 429, headers: { "Retry-After": String(decision.retryAfterSeconds) } });
+  }
   let body: unknown;
   try { body = await request.json(); } catch { return invalid(); }
   if (!isRecord(body) || !isPracticeContext(body.context) || !isTranscript(body.transcript)) return invalid();
@@ -16,7 +22,7 @@ export async function POST(request: Request): Promise<Response> {
     if (hash !== context.sourceContentHash) return invalid();
   }
   try {
-    const evaluator = new DeterministicEvaluator(context.sourceProvenance);
+    const evaluator = new GroundedEvaluator(context.sourceProvenance);
     return Response.json(await evaluator.evaluate({ scenario: context.scenario, facts: context.facts, notes: context.notes, transcript }), { headers: { "Cache-Control": "no-store" } });
   } catch {
     return Response.json({ error: { code: "evaluation_failed", message: "The coaching report could not be generated. Please try again." } }, { status: 500 });

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Profit-target paraphrases such as "you need to gain 10% profit" can earn factual credit without repeating the FAQ wording; incorrect quantities and competing percentage metrics remain rejected (2026-09-30).
 - Intercom FAQ imports now extract the real article body and exclude collection menus, duplicate article-header metadata, contents lists, reactions, and footers from both extraction and LLM grounding evidence (2026-09-30).
 - The live customer prompt now receives only the selected scenarios' confirmed FAQ facts, matching the question plan and factual grader. Coaching notes and unselected topics cannot supply customer questions.
 - Factual scoring now retains complete spoken turns so required evidence can span several sentences. Question sentences, missing conditions, wrong values, and conflicts remain uncredited; evidence is never pooled across separate turns.
@@ -19,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Grounded AI-assisted factual review using the existing server-only Gemini/OpenAI configuration. Verdicts require actual trainee evidence and preserve numeric safeguards; provider errors or invalid responses fall back to the existing matcher with a visible report label (2026-09-30).
+- Original ADAMTRADING FAQ at `/adamtrading-faq.html`: 22 fictional trading, loss-limit and simulated-reward rules, clearly marked as demo material (2026-09-30).
 - Continuous live trainee transcription: AssemblyAI sessions now request `continuous_partials`, allowing the existing call transcript UI to render trainee words while they are being spoken instead of waiting only for a finalized turn.
 - Privacy-safe live voice diagnostics: the active call now distinguishes browser audio sent (duration, sample rate, and aggregate signal level), provider speech detection, and trainee transcript receipt. These aggregate measurements stay in browser memory for the current call only; no raw audio or diagnostics are saved by SupportCoach.
 - Rotating FAQ-derived practice suggestions: setup now keeps every deterministic drill available for session validation while showing a six-item window. Confirming a source stores a normalized per-content-hash rotation cursor in local storage; `Refresh suggestions` advances that window without submitting the form or changing source confirmation.
@@ -29,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Customer prompts now acknowledge equivalent answers, remember prior details, skip answered topics and ask focused clarifications instead of repeating the question plan. Voice transport is unchanged; physical-phone behavior still needs acceptance testing.
+- Privacy disclosure now explains external processing of selected FAQ facts and transcripts for AI-assisted coaching. The evaluation endpoint has a per-instance 10-request/minute rate limit and a nine-second provider deadline.
 - Approved submission cleanup (2026-09-30): audio diagnostics and source hashes move into collapsed Technical details; the repeated snapshot-confirmation row and manual note-format selector are removed. Markdown files and pasted Markdown structure are detected automatically. Call controls, microphone/customer status, FAQ answers, optional notes, four scores, and the Maison Rose design remain.
 - Live phone capture now requests browser noise suppression and automatic gain control alongside echo cancellation. AssemblyAI transcription requests its accuracy-focused mode and receives a bounded list of terms from the selected scenario's confirmed FAQ facts. Physical-phone recognition verification remains pending.
 - Live AssemblyAI calls now explicitly use a VAD threshold of 0.3, a single measured sensitivity change for the reported phone-capture issue. Physical-device transcription verification remains pending.

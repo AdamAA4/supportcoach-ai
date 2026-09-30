@@ -2,7 +2,7 @@ import type { Evaluator } from "./evaluator";
 import type { SourceProvenance } from "../domain/reference-source";
 import type { CoachingReport } from "../domain/report";
 import type { Score } from "../domain/practice-pack";
-import { matchReferenceFacts } from "./structured-fact-matcher";
+import { matchReferenceFacts, type FactualMatchResult } from "./structured-fact-matcher";
 import { buildPracticeTask } from "./practice-task";
 
 const words = (text: string): string[] => text.toLowerCase()
@@ -19,14 +19,14 @@ const sentences = (text: string): string[] => text.match(/[^.!?]+[.!?]?/g)?.map(
 const score = (value: number): Score => Math.max(0, Math.min(3, Math.round(value))) as Score;
 
 export class DeterministicEvaluator implements Evaluator {
-  constructor(private readonly provenance: SourceProvenance) {}
+  constructor(private readonly provenance: SourceProvenance, private readonly factualOverride?: FactualMatchResult) {}
   async evaluate({ scenario, facts, notes, transcript }: Parameters<Evaluator["evaluate"]>[0]): Promise<CoachingReport> {
     const traineeTurns = transcript.filter((turn) => turn.speaker === "trainee");
     const traineeSentences = traineeTurns.flatMap((turn) => sentences(turn.text));
     const traineeText = traineeSentences.join(" ");
     // Normalization uses note-* IDs for advice. Advice never establishes factual policy.
     const referenceFacts = facts.filter((fact) => !fact.id.startsWith("note-") && scenario.factIds.includes(fact.id));
-    const factual = matchReferenceFacts(
+    const factual = this.factualOverride ?? matchReferenceFacts(
       referenceFacts,
       // Preserve a complete spoken answer. The matcher excludes question
       // sentences before pooling evidence within this turn, never across turns.
