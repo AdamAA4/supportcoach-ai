@@ -129,8 +129,15 @@ export function CoachingReport({ report, onClear }: { report: Report; onClear: (
           <div className="mt-4"><TranscriptPane turns={report.transcript} /></div>
         </details>
         <p className="break-all text-sm leading-relaxed text-ink-muted">
-          Confirmed source: {report.sourceProvenance.sourceUrl ?? "Pasted FAQ or policy"} · {report.sourceProvenance.contentHash}
+          Confirmed source: {report.sourceProvenance.sourceUrl ?? "Pasted FAQ or policy"}
         </p>
+        <details className="text-sm text-ink-muted">
+          <summary className="cursor-pointer font-semibold">Technical details</summary>
+          <dl className="mt-2">
+            <dt className="font-semibold">Source hash</dt>
+            <dd className="mt-1 break-all tabular-nums">{report.sourceProvenance.contentHash}</dd>
+          </dl>
+        </details>
         <div className="flex flex-wrap gap-3">
           <Link href="/setup" className={btnPrimary}>Practice again</Link>
           <button type="button" onClick={onClear} className={btnDanger}>Clear practice data</button>

@@ -18,6 +18,9 @@ it("restores four score cards, transcript, and clears persisted source, notes, a
   for (const name of ["Factual accuracy", "Empathy", "Clarity", "Resolution"]) expect(screen.getByRole("heading", { name })).toBeVisible();
   // The displayed score must be the evaluator's score for this exact transcript and confirmed source.
   expect(screen.getByLabelText(`Factual accuracy: ${report.scores.factualAccuracy} out of 3`)).toBeVisible();
+  expect(screen.getByText(report.sourceProvenance.contentHash)).not.toBeVisible();
+  fireEvent.click(screen.getByText("Technical details"));
+  expect(screen.getByText(report.sourceProvenance.contentHash)).toBeVisible();
   expect(screen.getByText("Full transcript").closest("details")).not.toHaveAttribute("open");
   fireEvent.click(screen.getByText("Full transcript"));
   // The confirmed answer legitimately appears in the transcript and in the practice facts.

@@ -21,13 +21,16 @@ const score = (value: number): Score => Math.max(0, Math.min(3, Math.round(value
 export class DeterministicEvaluator implements Evaluator {
   constructor(private readonly provenance: SourceProvenance) {}
   async evaluate({ scenario, facts, notes, transcript }: Parameters<Evaluator["evaluate"]>[0]): Promise<CoachingReport> {
-    const traineeSentences = transcript.filter((turn) => turn.speaker === "trainee").flatMap((turn) => sentences(turn.text));
+    const traineeTurns = transcript.filter((turn) => turn.speaker === "trainee");
+    const traineeSentences = traineeTurns.flatMap((turn) => sentences(turn.text));
     const traineeText = traineeSentences.join(" ");
     // Normalization uses note-* IDs for advice. Advice never establishes factual policy.
     const referenceFacts = facts.filter((fact) => !fact.id.startsWith("note-") && scenario.factIds.includes(fact.id));
     const factual = matchReferenceFacts(
       referenceFacts,
-      traineeSentences.map((text) => ({ text, isQuestion: text.endsWith("?") })),
+      // Preserve a complete spoken answer. The matcher excludes question
+      // sentences before pooling evidence within this turn, never across turns.
+      traineeTurns.map((turn) => ({ text: turn.text, isQuestion: false })),
     );
     const missedFacts = referenceFacts
       .filter((fact) => !factual.supportedFactIds.has(fact.id))

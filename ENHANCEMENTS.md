@@ -1,6 +1,6 @@
 # Enhancements
 
-Last updated: 2026-09-24
+Last updated: 2026-09-30
 
 Completed the focused FAQ percentage-paraphrase scoring correction on 2026-09-24; this was a report reliability bug, not a new enhancement priority.
 
@@ -22,6 +22,7 @@ Completed: follow-up Task 6 review fixes for distinct-topic coordinated facts an
 
 | Priority | Idea | Notes |
 | --- | --- | --- |
+| Done | Simplify submission practice screens | Completed 2026-09-30 within the approved scope: collapsed technical diagnostics/hashes, one confirmation badge, automatic note-format detection. Voice-only flow and all four scores remain. |
 | Done | Rotate FAQ-derived practice suggestions | Completed 2026-09-22. Confirmed sources keep a normalized rotation cursor per content hash; setup shows six candidates at a time, `Refresh suggestions` advances the window, and every deterministic scenario ID remains valid for stored-session reconstruction. |
 | ⭐⭐ | Add PDF and DOCX experience-note imports | Deferred from the hackathon MVP; plain text and Markdown are the approved formats. |
 | ⭐⭐ | Support private or authenticated policy links | Deferred from the hackathon MVP; the source importer accepts public HTTPS links only. |

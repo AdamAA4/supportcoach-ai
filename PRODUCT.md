@@ -26,9 +26,11 @@ Solo practice sessions in a browser. The session source snapshot, notes, complet
 
 - Voice-only practice: the trainee answers by voice; typed-response practice is explicitly out of scope.
 - Source setup: paste FAQ/policy text or import one public HTTPS page (sanitized snapshot, SHA-256 provenance); confirmation required before a call starts.
-- Optional experience notes (plain text or Markdown file, 200 KB cap) classified as personal coaching note or approved practice advice.
+- Optional experience notes (plain text or Markdown file, 200 KB cap) classified as personal coaching note or approved practice advice. Format is detected from the file extension or pasted Markdown structure.
 - One or more source-derived practice scenarios per voice session; selected scenarios combine their confirmed facts into one customer question plan and one coaching report.
 - Deterministic rule-based evaluation; conservative English lexical matching; can miss paraphrases (documented limitation).
+- The live customer and factual grader share the selected scenarios' FAQ facts. Complete spoken turns can supply evidence across sentences; questions and separate incomplete turns cannot be combined into a factual pass.
+- Intercom directories provide discovery links only. Article bodies provide facts; menus, update metadata, contents lists and feedback controls are excluded from grounding evidence.
 - AssemblyAI API key is server-only; browser receives a single-use temporary token.
 - Live calls report provider session-error or WebSocket close codes verbatim for debugging.
 

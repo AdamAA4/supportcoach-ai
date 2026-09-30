@@ -22,14 +22,6 @@ export function ReferencePanel({ context }: { context: PracticeContext }) {
           <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-tape-muted">Source</dt>
           <dd className="text-right font-semibold text-tape-ink">{context.sourceLabel}</dd>
         </div>
-        <div className="flex items-baseline justify-between gap-3 border-b border-dashed border-tape-line py-2">
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-tape-muted">Snapshot</dt>
-          <dd className="text-right font-semibold text-ok-ink">Confirmed for this session</dd>
-        </div>
-        <div className="flex items-baseline justify-between gap-3 py-2">
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-tape-muted">Hash</dt>
-          <dd className="mt-0.5 text-right text-xs break-all tabular-nums text-tape-ink">{context.sourceContentHash}</dd>
-        </div>
         {canonicalLinkOf(context) && (
           <div className="border-b border-dashed border-tape-line py-2">
             <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-tape-muted">Canonical link</dt>
@@ -37,6 +29,13 @@ export function ReferencePanel({ context }: { context: PracticeContext }) {
           </div>
         )}
       </dl>
+      <details className="mt-3 text-xs text-tape-muted">
+        <summary className="cursor-pointer font-semibold">Technical details</summary>
+        <dl className="mt-2">
+          <dt className="font-semibold">Source hash</dt>
+          <dd className="mt-1 break-all tabular-nums">{context.sourceContentHash}</dd>
+        </dl>
+      </details>
       <section className="mt-5" aria-labelledby="facts-heading">
         <h3 id="facts-heading" className="text-[11px] font-bold uppercase tracking-[0.14em] text-tape-muted">
           FAQ and policy facts ({context.facts.length})

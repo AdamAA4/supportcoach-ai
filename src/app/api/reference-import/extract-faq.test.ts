@@ -108,6 +108,31 @@ describe("extractFaqContent", () => {
   });
 });
 
+describe("Intercom help centers", () => {
+  it("fails closed when an identified article has no readable article body", () => {
+    const html = `<script id="__NEXT_DATA__">${JSON.stringify({ page: "/[helpCenterIdentifier]/[locale]/articles/[articleSlug]" })}</script><h1>Payout</h1><p>Updated over a month ago. Table of contents.</p>`;
+    expect(extractFaqContent(html).qaPairs).toBe(0);
+    expect(harvestFaqCorpus(html).corpus).toBe("");
+  });
+  it("extracts only the article body, excluding duplicate title metadata and footer", () => {
+    const html = `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({ page: "/[helpCenterIdentifier]/[locale]/articles/[articleSlug]", props: { pageProps: { articleContent: {} } } })}</script>
+      <div class="article intercom-force-break"><h1>How do payouts work?</h1><p>Payout Rules, Profit Split & Reward Caps</p><time>Updated over a month ago</time><p>Table of contents</p>
+      <div class="article_body"><article><h2>How do payouts work?</h2><p>Traders become eligible after 14 calendar days.</p><h2>Payout Processing Fee</h2><p>All payouts have a 3% processing fee.</p></article></div></div>
+      <fieldset>Did this answer your question?</fieldset><footer>All Collections</footer>`;
+    const result = extractFaqContent(html);
+    expect(result.qaPairs).toBe(2);
+    expect(result.extractedText).toContain("A: Traders become eligible after 14 calendar days.");
+    expect(result.extractedText).not.toMatch(/Updated|Table of contents|Reward Caps|Did this answer|All Collections/);
+    expect(harvestFaqCorpus(html).corpus).not.toMatch(/Updated|Table of contents|Reward Caps|Did this answer|All Collections/);
+  });
+
+  it.each(["landing", "collections/[collectionSlug]"])("does not treat a %s directory as policy evidence", (page) => {
+    const html = `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({ page: `/[helpCenterIdentifier]/[locale]/${page}`, props: { pageProps: {} } })}</script><h2>Payout</h2><p>10 articles. Payout rules and payment methods. Updated over a month ago.</p>`;
+    expect(extractFaqContent(html)).toEqual({ extractedText: "", qaPairs: 0, structured: false });
+    expect(harvestFaqCorpus(html).corpus).toBe("");
+  });
+});
+
 describe("extractSameOriginLinks", () => {
   const hub = new URL("https://equityedge.io/faq/");
 

@@ -30,6 +30,9 @@ const channelTile =
 
 const rotationStorageKey = (contentHash: string) => `supportcoach-suggestion-rotation-v1:${contentHash}`;
 
+const pastedNoteFormat = (text: string): ExperienceNoteFormat =>
+  /^(?:#{1,6}\s|[-*+]\s|\d+\.\s|>\s|```)|\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*/m.test(text) ? "markdown" : "plain-text";
+
 const storedCursor = (value: string | null): number | undefined => {
   if (!value || !/^\d+$/.test(value)) return undefined;
   const cursor = Number(value);
@@ -250,17 +253,14 @@ export function SourceSetupForm() {
           type="file"
           accept="text/plain,text/markdown,.txt,.md"
           onChange={readNoteFile}
+          aria-label="Upload experience notes"
           className="block w-full text-sm text-ink-muted file:mr-3 file:cursor-pointer file:rounded-lg file:border file:border-line file:bg-transparent file:px-3.5 file:py-2 file:text-sm file:font-semibold file:text-ink transition-colors duration-150 hover:file:border-line-strong"
         />
-        <textarea value={notes} onChange={(event) => { setNotes(event.target.value); invalidateSetup(); }} rows={3} className={`${inputBase} leading-relaxed`} placeholder="Paste a coaching note" />
+        <textarea value={notes} onChange={(event) => { setNotes(event.target.value); setNoteFormat(pastedNoteFormat(event.target.value)); setNoteFileSizeBytes(undefined); invalidateSetup(); }} rows={3} className={`${inputBase} leading-relaxed`} placeholder="Paste a coaching note" aria-label="Experience notes" />
         <div className="flex flex-wrap gap-3">
           <select value={noteKind} onChange={(event) => { setNoteKind(event.target.value as ExperienceNote["kind"]); invalidateSetup(); }} className="rounded-xl border border-line bg-surface px-3 py-2.5 text-base text-ink transition-colors duration-200 hover:border-line-strong focus:border-accent focus:outline-none">
             <option value="personal-coaching-note">Personal coaching note</option>
             <option value="approved-practice-advice">Approved practice advice</option>
-          </select>
-          <select value={noteFormat} onChange={(event) => { setNoteFormat(event.target.value as ExperienceNoteFormat); invalidateSetup(); }} className="rounded-xl border border-line bg-surface px-3 py-2.5 text-base text-ink transition-colors duration-200 hover:border-line-strong focus:border-accent focus:outline-none" aria-label="Experience note format">
-            <option value="plain-text">Plain text</option>
-            <option value="markdown">Markdown</option>
           </select>
         </div>
         {fieldError("notes")}

@@ -77,6 +77,14 @@ The browser stages the current source snapshot and notes in the existing active-
 
 Reproduce the boundary and persistence checks with `npm test -- src/evaluation/evaluator.test.ts src/app/api/evaluate/route.test.ts src/storage/local-practice-store.test.ts src/app/call/page.test.tsx src/components/coaching-report.test.tsx`. The report preserves the existing typed `sourceProvenance` contract. No dependencies were added.
 
+## FAQ and report consistency
+
+The customer prompt, question plan and factual grader use the same selected FAQ facts. Select every topic you want to practice; unselected topics are not part of that call's grading scope. Intercom Help Center directories are used only to discover links, while article bodies supply the confirmed answers. The existing eight-link crawl cap still applies, so import stats describe only the pages actually read; paste any additional required FAQ answers.
+
+The factual matcher preserves complete spoken turns and can cover required terms across sentences in one turn. It excludes question sentences and retains numeric, negation and condition safeguards. It remains a conservative English rule-based check, so some paraphrases still need review alongside the transcript. Existing reports and confirmed source snapshots are not rewritten: re-import the FAQ and complete a new call after an update.
+
+Audio diagnostics and source hashes remain available under Technical details. Notes detect Markdown file extensions or pasted Markdown structure automatically; personal coaching notes and approved advice remain distinct from factual policy.
+
 ## Browser support
 
 Current desktop Chrome or Edge with microphone permission is the demo target. The live practice flow requires microphone access; if it is unavailable, enable permission and retry the call. If live voice is unavailable, use mock voice mode. Public FAQ links require an HTTPS URL and confirmation of the extracted source snapshot; private or authenticated links, PDF notes, and DOCX notes are outside the MVP.

@@ -78,7 +78,8 @@ const transcriptionContextFor = (scenario: ScenarioDefinition, facts: ReferenceF
 };
 
 const promptFor = (scenario: ScenarioDefinition, facts: ReferenceFact[]): string => {
-  const questionPlan = buildQuestionPlan(scenario, facts);
+  const selectedFacts = facts.filter((fact) => scenario.factIds.includes(fact.id) && !fact.id.startsWith("note-"));
+  const questionPlan = buildQuestionPlan(scenario, selectedFacts);
   return [
     "You are a simulated customer in a support-practice exercise, never a real customer support assistant.",
     "The trainee is the support responder. Stay in character as the customer and do not answer the trainee's customer questions for them.",
@@ -88,12 +89,13 @@ const promptFor = (scenario: ScenarioDefinition, facts: ReferenceFact[]): string
     `Customer goals: ${scenario.goals.join("; ") || "Ask for help with the scenario."}.`,
     "After every trainee answer, react to its specific content with one concise realistic follow-up. Never repeat the opening line after the first turn.",
     "Use only these confirmed FAQ/policy facts when reacting to the trainee's answer:",
-    ...facts.map((fact) => `- ${fact.question}: ${fact.answer}`),
+    ...selectedFacts.map((fact) => `- ${fact.question}: ${fact.answer}`),
     "Work through this question plan one question at a time, in order, and never repeat a question you have already asked:",
     ...(questionPlan.length
       ? questionPlan.map((item) => `- ${item.question}`)
       : ["- Ask the trainee for a next step you can check with your team."]),
     "If the trainee asks about something these facts do not cover, say that you need to check rather than inventing policy details.",
+    "Keep every question and follow-up within these selected FAQ topics. Once the plan is complete, wrap up the conversation; do not introduce another policy topic.",
   ].join("\n");
 };
 

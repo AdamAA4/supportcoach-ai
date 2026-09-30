@@ -105,13 +105,20 @@ export const compileFactMatchSpecs = (facts: ReferenceFact[]): Map<string, FactM
 const positionsOf = (tokens: string[], terms: string[]): number[] =>
   terms.flatMap((term) => tokens.flatMap((token, index) => token === term ? [index] : []));
 
+const evidenceSentences = (statement: { text: string; isQuestion: boolean }) =>
+  statement.text.split(/(?<=[.!?])\s+/).filter((text) => text.trim()).map((text) => ({
+    text, isQuestion: statement.isQuestion || text.trimEnd().endsWith("?"),
+  }));
+
 const relationAnchoredSpans = (
   spec: FactMatchSpec,
   allSpecs: FactMatchSpec[],
   statement: { text: string; isQuestion: boolean },
 ): EvidenceSpan[] => {
   if (spec.relationTerms.length === 0) {
-    return [{ ...statement, originalText: statement.text, tokens: normalizeFactTokens(statement.text) }];
+    return evidenceSentences(statement).map((sentence) => ({
+      originalText: statement.text, tokens: normalizeFactTokens(sentence.text), isQuestion: sentence.isQuestion,
+    }));
   }
 
   const differentRelations = unique(allSpecs.flatMap((candidate) => candidate.relationTerms))
@@ -119,7 +126,7 @@ const relationAnchoredSpans = (
 
   // Punctuation is an evidence boundary, not an attempt to parse independent
   // English clauses. Never split bare conjunctions: they can belong to subjects.
-  return statement.text.split(/[,.!?;:]+|\b(?:but|while|however)\b/i).flatMap((segment) => {
+  return evidenceSentences(statement).flatMap((sentence) => sentence.text.split(/[,.!?;:]+|\b(?:but|while|however)\b/i).flatMap((segment) => {
     const tokens = normalizeFactTokens(segment);
     const ownAnchors = unique(positionsOf(tokens, spec.relationTerms))
       .sort((left, right) => left - right);
@@ -160,10 +167,10 @@ const relationAnchoredSpans = (
       return {
         tokens: tokens.slice(start, nextDifferentAnchor),
         originalText: statement.text,
-        isQuestion: statement.isQuestion,
+        isQuestion: sentence.isQuestion,
       };
     });
-  });
+  }));
 };
 
 const hasScopedNegation = (tokens: string[], spec: FactMatchSpec): boolean =>
@@ -336,7 +343,7 @@ export const matchReferenceFacts = (
       // Conditions and negation still require the full fact matcher. The
       // paraphrase path only resolves an omitted subject for a unique metric.
       if (!supported && !conflict && spec.conditionTerms.length === 0 && metric &&
-        supportsPercentageParaphrase(statement, metric, metricIsUnique)) supported = true;
+        evidenceSentences(statement).some((sentence) => supportsPercentageParaphrase(sentence, metric, metricIsUnique))) supported = true;
       if (supported) supportedFactIds.add(fact.id);
       if (conflict) unsupportedClaims.add(statement.text);
     }

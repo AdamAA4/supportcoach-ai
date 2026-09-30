@@ -159,12 +159,15 @@ export function CallConsole({ context, createAgent = createConfiguredAgent, onCa
                   <StatusLamp tone={customerAudioActive ? "ok" : customerAudioAvailability === "text-only" ? "danger" : "warn"} pulse={customerAudioActive} />
                   <span>Customer audio: {customerAudioActive ? "Speaking" : customerAudioAvailability === "text-only" ? "Unavailable" : "Ready"}</span>
                 </p>
-                <div className="border-t border-line pt-2 text-xs text-ink-muted" aria-live="polite">
+                <details className="border-t border-line pt-2 text-xs text-ink-muted">
+                  <summary className="cursor-pointer font-semibold">Technical details</summary>
+                  <div className="mt-2" aria-live="polite">
                   <p>Audio sent: {diagnostics ? `${diagnostics.audioSecondsSent.toFixed(1)} s at ${Math.round(diagnostics.inputSampleRate / 1000)} kHz` : "Waiting"}</p>
                   <p>Average signal: {diagnostics ? `${Math.round(diagnostics.rms * 100)}%` : "Waiting"}</p>
                   <p>Provider speech: {providerSpeech === "turn-complete" ? "Turn complete" : providerSpeech === "detected" ? "Detected" : "Waiting"}</p>
                   <p>Transcript: {transcriptStatus === "receiving" ? "Receiving words" : transcriptStatus === "received" ? "Received" : "Waiting"}</p>
-                </div>
+                  </div>
+                </details>
               </div>
               {error && (
                 <div role={state === "error" ? "alert" : "status"} className="mx-5 mt-4 rounded-lg border border-danger/40 bg-danger-bg px-3.5 py-3 text-sm text-danger-ink sm:mx-6">

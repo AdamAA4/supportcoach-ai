@@ -64,6 +64,8 @@ describe("CallConsole voice-only practice", () => {
     await screen.findByText("Microphone: On — speak naturally");
 
     await act(async () => agent.emit({ type: "capture-diagnostics", inputSampleRate: 48_000, audioSecondsSent: 1.2, framesSent: 12, rms: 0.18 } as unknown as VoiceAgentEvent));
+    expect(screen.getByText("Audio sent: 1.2 s at 48 kHz")).not.toBeVisible();
+    fireEvent.click(screen.getAllByText("Technical details")[0]);
     expect(screen.getByText("Audio sent: 1.2 s at 48 kHz")).toBeVisible();
     expect(screen.getByText("Average signal: 18%")).toBeVisible();
     expect(screen.getByText("Provider speech: Waiting")).toBeVisible();

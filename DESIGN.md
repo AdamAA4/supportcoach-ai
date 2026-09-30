@@ -15,6 +15,7 @@ World: **Maison Rose**, ported from the product lead's `cosmet` project (Downloa
 
 ## Components
 
+- Approved cleanup (2026-09-30): collapsed native Technical details disclosures hold audio diagnostics and source hashes. Call controls, microphone/customer status, FAQ answers and four scores stay visible. The session sheet has one confirmation badge, without a repeated Snapshot row. Note format is automatic; the note-kind choice remains.
 - Console island (double bezel): `bg-shell p-1.5 shadow-card` shell, inner `bg-panel rounded-xl`. Header row: cream source chip (plum ink) + status pill (lamp + capitalized state, tinted by state). Status rows keep pinned sentences with lamps. Transport: rose primary pill / white outline pill / danger outline pill.
 - Transcript: white panel; timecodes right-aligned `tabular-nums`; speaker tags in letterspaced bold caps (Customer = warning gold, You = success green); hairline row separators; dashed empty state; red REC pulse when live.
 - Session sheet: cream panel with 2px plum header rule, dashed key/value rows, white fact cards, rotated confirmed stamp.

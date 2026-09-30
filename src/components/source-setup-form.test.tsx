@@ -1,9 +1,10 @@
 import React from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createSourceContentHash } from "../domain/reference-source";
 import { SourceSetupForm } from "./source-setup-form";
+import { CURRENT_PRACTICE_SESSION_KEY } from "../domain/practice-session";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
@@ -73,5 +74,37 @@ describe("SourceSetupForm suggestion rotation", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Refresh suggestions" }));
     expect(localStorage.getItem(rotationKey(pastedHash))).toBe("6");
+  });
+
+  it.each([
+    ["Speak clearly and acknowledge the concern.", "plain-text"],
+    ["# Coaching notes\n- Acknowledge the concern.", "markdown"],
+  ])("detects pasted note format and preserves the note in the practice session: %s", (text, format) => {
+    render(<SourceSetupForm />);
+    expect(screen.queryByRole("combobox", { name: "Experience note format" })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Session name"), { target: { value: "Example shop" } });
+    fireEvent.change(screen.getByLabelText("FAQ or policy text"), { target: { value: eightFaqPairs } });
+    fireEvent.change(screen.getByLabelText("Experience notes"), { target: { value: text } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm this source" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start practice call" }));
+    const saved = JSON.parse(localStorage.getItem(CURRENT_PRACTICE_SESSION_KEY)!);
+    expect(saved.notes).toEqual([expect.objectContaining({ text, format, kind: "personal-coaching-note" })]);
+  });
+
+  it("detects Markdown files and accepts pasted recovery after an oversized note file", async () => {
+    render(<SourceSetupForm />);
+    fireEvent.change(screen.getByLabelText("Upload experience notes"), { target: { files: [new File(["Acknowledge the concern."], "notes.md", { type: "text/markdown" })] } });
+    await waitFor(() => expect(screen.getByLabelText("Experience notes")).toHaveValue("Acknowledge the concern."));
+    fireEvent.change(screen.getByLabelText("Session name"), { target: { value: "Example shop" } });
+    fireEvent.change(screen.getByLabelText("FAQ or policy text"), { target: { value: eightFaqPairs } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm this source" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start practice call" }));
+    expect(JSON.parse(localStorage.getItem(CURRENT_PRACTICE_SESSION_KEY)!).notes[0].format).toBe("markdown");
+
+    fireEvent.change(screen.getByLabelText("Upload experience notes"), { target: { files: [new File(["x".repeat(201 * 1024)], "too-large.txt")] } });
+    fireEvent.change(screen.getByLabelText("Experience notes"), { target: { value: "Speak clearly." } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm this source" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start practice call" }));
+    expect(JSON.parse(localStorage.getItem(CURRENT_PRACTICE_SESSION_KEY)!).notes[0]).toEqual(expect.objectContaining({ text: "Speak clearly.", format: "plain-text" }));
   });
 });

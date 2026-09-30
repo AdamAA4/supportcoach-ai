@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Intercom FAQ imports now extract the real article body and exclude collection menus, duplicate article-header metadata, contents lists, reactions, and footers from both extraction and LLM grounding evidence (2026-09-30).
+- The live customer prompt now receives only the selected scenarios' confirmed FAQ facts, matching the question plan and factual grader. Coaching notes and unselected topics cannot supply customer questions.
+- Factual scoring now retains complete spoken turns so required evidence can span several sentences. Question sentences, missing conditions, wrong values, and conflicts remain uncredited; evidence is never pooled across separate turns.
+- Pasting replacement notes clears a stale uploaded-file size, allowing recovery from an oversized note file without restarting setup.
 - FAQ import now explains when a source website refuses automatic access (HTTP 401/403) and directs the trainee to copy its FAQ questions and answers into Paste text. The public-link importer still refuses redirects and keeps its existing network and size limits.
 - Coaching reports now credit a unique, unconditional FAQ percentage metric when a trainee gives the correct value and metric in different words, such as "10% profit target" instead of repeating "1 Step Legacy account has a 10% profit target." Digit and spoken percentage forms are supported; conflicting values and ambiguous account variants remain uncredited.
 - The live Android trainee-recognition issue is closed following the product lead's successful phone verification on 2026-09-24.
@@ -25,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Approved submission cleanup (2026-09-30): audio diagnostics and source hashes move into collapsed Technical details; the repeated snapshot-confirmation row and manual note-format selector are removed. Markdown files and pasted Markdown structure are detected automatically. Call controls, microphone/customer status, FAQ answers, optional notes, four scores, and the Maison Rose design remain.
 - Live phone capture now requests browser noise suppression and automatic gain control alongside echo cancellation. AssemblyAI transcription requests its accuracy-focused mode and receives a bounded list of terms from the selected scenario's confirmed FAQ facts. Physical-phone recognition verification remains pending.
 - Live AssemblyAI calls now explicitly use a VAD threshold of 0.3, a single measured sensitivity change for the reported phone-capture issue. Physical-device transcription verification remains pending.
 - Voice practice can now combine multiple selected FAQ-derived scenarios into one session. The combined scenario retains every selected fact for the customer question plan and factual scoring, then saves one deterministic coaching report; existing single-scenario sessions remain compatible.

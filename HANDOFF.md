@@ -13,19 +13,41 @@ The outgoing coding model completes this file before moving to another tool. Run
 ## Current Git snapshot
 
 - Branch: `supportcoach-mvp`
-- Current commit: `164b568`
-- Generated: 2026-09-27T20:24:13.664Z
+- Current commit: `06f9063`
+- Generated: 2026-09-30T05:42:29.326Z
 - Uncommitted files excluding this handoff:
 
 ```text
 M BUGS.md
  M CHANGELOG.md
+ M DESIGN.md
+ M ENHANCEMENTS.md
+ M PRODUCT.md
  M README.md
- M src/app/api/reference-import/route.test.ts
- M src/app/api/reference-import/route.ts
+ M src/app/api/reference-import/extract-faq.test.ts
+ M src/app/api/reference-import/extract-faq.ts
+ M src/components/call-console.test.tsx
+ M src/components/call-console.tsx
+ M src/components/coaching-report.test.tsx
+ M src/components/coaching-report.tsx
+ M src/components/reference-panel.tsx
+ M src/components/source-setup-form.test.tsx
+ M src/components/source-setup-form.tsx
+ M src/evaluation/deterministic-evaluator.ts
+ M src/evaluation/evaluator.test.ts
+ M src/evaluation/structured-fact-matcher.ts
+ M src/voice/assemblyai-voice-agent.test.ts
+ M src/voice/assemblyai-voice-agent.ts
+?? src/components/reference-panel.test.tsx
 ```
 <!-- GENERATED SNAPSHOT: END -->
 ## Work completed in this handoff
+
+2026-09-30 submission-recording review and approved cleanup: reviewed the complete 275.98-second phone recording, sampled frames and locally transcribed its audio. The production Blue Guardian import reproduced 17 facts, including article-header metadata and collection menus. Identified Intercom landing/collection routes now provide no policy corpus; article routes extract only their semantic article body, for both deterministic facts and optional LLM grounding. The local built-app import returns 10 article facts across eight pages. All network controls, grounding, paste fallback, API contracts and dependencies remain unchanged.
+
+The live voice customer previously received all FAQ facts, while the question plan and grader used only selected scenario facts. `promptFor` now filters to selected FAQ IDs, excludes note IDs, and directs the customer to finish after the selected topics. A separate reproduced grading failure lost a complete answer when its evidence spanned multiple sentences. Evaluation now passes whole trainee turns to the matcher, which marks question sentences before pooling fact-local evidence. Separate turns, wrong values, missing conditions, negation and conflicts still cannot supply a factual pass. The real-source built API returns 3/3 factual accuracy for the complete payout answer, and 0/3 when its 14-day conditions are omitted. The recording's eligibility answer omitted those conditions; this fix does not automatically credit that incomplete answer or rewrite old reports.
+
+Approved UI cleanup: audio diagnostics and source hashes sit in collapsed Technical details disclosures; the repeated Snapshot confirmation row and manual Plain text/Markdown selector are removed. File extensions and pasted Markdown structure detect note format. Pasted note replacement clears a stale oversized-file value. Call controls, microphone/customer status, source links and answers, optional note-kind choice, four report scores, voice transport and Maison Rose styling remain. An in-app browser walked through the actual public import, confirmation, multi-topic selection and call screen without starting microphone capture. Local evidence is outside the repository under `../work/video-review-2026-09-29/`: `fixed-import.json`, `fixed-evaluation.json`, and `approved-cleanup.png`.
 
 2026-09-27 FundingPips FAQ import diagnosis and recovery: the product lead's 37-second Android recording shows a public link import of `https://help.fundingpips.com/hc/en-us` ending with the generic "The reference source could not be imported" message. The production API reproduces HTTP 502, and direct HTTPS GET/HEAD return HTTP 403 with `Cf-Mitigated: challenge`, so the server is denied the page before extraction. The importer now identifies upstream 401/403 denial and returns the existing `reference_unavailable` error code and 502 status with a clear Paste text recovery. The URL, SSRF validation, no-redirect rule, two-megabyte cap, five-second deadline, and FAQ grounding remain unchanged. The external site still blocks automatic import; this is open in BUGS.md. Users must copy actual questions and answers from relevant FAQ articles, rather than menu labels, into the existing Paste text flow.
 
@@ -57,6 +79,7 @@ Follow-up round 3 (2026-09-18, product-lead request): the import body cap was ra
 
 ## Checks run
 
+- 2026-09-30: regression tests reproduced metadata-as-facts, out-of-scope voice prompt, and complete multi-sentence answer scoring zero before the fixes. `npm run lint`, `npm run typecheck`, `npm test` (25 files, 294/294), `npm run build` and `git diff --check` passed. Coverage includes question/value/condition failures, note detection/recovery and collapsed diagnostics/hash interactions. Built-app public import and evaluation were tested over HTTP; complete payout answer 3/3, missing conditions 0/3. No raw audio or diagnostics were sent to an API or persisted. Production verification remains pending at this pre-deployment checkpoint.
 - 2026-09-27 blocked-source recovery: the new 401/403 regression tests failed before the code change and passed after. The local app POST to `/api/reference-import` with the recorded FundingPips URL returned the specific recovery message; the pre-change production endpoint returned only a generic 502. `npm run lint`, `npm run typecheck`, `npm test` (24 files, 281/281), and `npm run build` passed. The post-deployment production response remains to be checked.
 
 - 2026-09-24 report correction: the new matcher regression failed before implementation and passed afterward. `npm run lint`, `npm run typecheck`, `npm test` (24 files, 279/279), `npm run build`, and `git diff --check` passed. Live phone grading against the newly deployed build remains to be checked by the product lead; automated tests use the exact reported fact and answer.
@@ -108,6 +131,8 @@ Follow-up round 6 (2026-09-18, product-lead 20-item launch checklist): privacy p
 
 ## Remaining work or known issues
 
+- For recording, re-import the FAQ and start a fresh call. Select all desired topics first. Saved reports and previously confirmed snapshots remain unchanged. Verify the AI stays within selected topics on a physical phone; prompt tests verify configuration, not actual model behavior or microphone recognition.
+- Bounded imports are not a full Help Center crawl: only discovered pages inside the existing cap contribute facts. Paste additional FAQ answers when needed. General semantic paraphrase grading remains outside this fix.
 - FundingPips Help Center still returns a Cloudflare challenge to server requests, so it cannot be imported automatically. Use Paste text with the real FAQ article questions and answers. Do not bypass the challenge or score Help Center menu labels as facts.
 - The product lead confirmed the Android voice issue fixed on 2026-09-24. After the new grading deployment, run one fresh call using the 1 Step Legacy profit-target FAQ and check that its coaching report credits the spoken 10% answer. Older saved reports are unchanged snapshots.
 - The native file-input label ("Choose File") is unthemed browser copy, accepted in the finish review; revisit if it bothers anyone.

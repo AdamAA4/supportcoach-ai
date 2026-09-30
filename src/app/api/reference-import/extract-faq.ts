@@ -37,6 +37,22 @@ const stripInvisible = (html: string): string => html
   .replace(/<!--[\s\S]*?-->/g, "")
   .replace(/<(script|style|noscript|template|svg|iframe)\b[^>]*>[\s\S]*?<\/\1>/gi, "");
 
+// Intercom directories contain article titles, counts and update metadata,
+// not policy answers. Their article pages expose a semantic article_body.
+// Use that same evidence boundary for deterministic and LLM extraction.
+const intercomArticleBody = (html: string): string | undefined => {
+  const payload = /<script\b[^>]*\bid=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i.exec(html)?.[1];
+  if (!payload) return undefined;
+  let page: unknown;
+  try { page = (JSON.parse(payload) as { page?: unknown }).page; } catch { return undefined; }
+  if (typeof page !== "string" || !page.startsWith("/[helpCenterIdentifier]/[locale]/")) return undefined;
+  if (/\/(?:landing|collections\/\[collectionSlug\])$/.test(page)) return "";
+  if (!page.endsWith("/articles/[articleSlug]")) return undefined;
+  const bodyStart = /<div\b[^>]*\bclass=["'][^"']*\barticle_body\b[^"']*["'][^>]*>/i.exec(html);
+  if (!bodyStart) return "";
+  return /<article\b[^>]*>[\s\S]*?<\/article>/i.exec(html.slice(bodyStart.index + bodyStart[0].length))?.[0] ?? "";
+};
+
 const isQuestionType = (value: unknown): boolean =>
   typeof value === "string" && /question/i.test(value);
 
@@ -281,6 +297,7 @@ export const extractSameOriginLinks = (html: string, baseUrl: URL, cap: number):
 };
 
 export const extractFaqContent = (html: string): FaqExtraction => {
+  html = intercomArticleBody(html) ?? html;
   // JSON-LD runs first: its scripts are data containers and must not be
   // stripped before their FAQPage payload is read.
   const jsonLd = extractJsonLdPairs(html);
@@ -316,6 +333,7 @@ const READABLE_STRING = (value: string): boolean =>
 // corpus feeds the optional AI-assisted extraction and grounds every
 // extracted pair against the page's actual words.
 export const harvestFaqCorpus = (html: string): { corpus: string } => {
+  html = intercomArticleBody(html) ?? html;
   const withoutComments = html.replace(/<!--[\s\S]*?-->/g, "");
 
   const jsonLdParts: string[] = [];

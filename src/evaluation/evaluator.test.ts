@@ -6,6 +6,42 @@ const evaluate = (transcript: ReturnType<typeof turn>[], notes = context.notes) 
   new DeterministicEvaluator(context.sourceProvenance).evaluate({ ...context, notes, transcript });
 
 describe("deterministic evaluation", () => {
+  it("credits a complete FAQ answer across sentences in one spoken turn", async () => {
+    const fact = { ...context.facts[0], id: "payout", question: "How do payouts work?", answer: "Traders become eligible for payouts after 14 calendar days. The minimum trading day requirement must be met." };
+    const report = await new DeterministicEvaluator(context.sourceProvenance).evaluate({
+      ...context, facts: [fact], scenario: { ...context.scenario, factIds: [fact.id] },
+      transcript: [turn(fact.answer)],
+    });
+    expect(report.scores.factualAccuracy).toBe(3);
+    expect(report.missedFacts).toEqual([]);
+    expect(report.unsupportedClaims).toEqual([]);
+  });
+
+  it("does not combine questions or separate incomplete turns into a complete answer", async () => {
+    const fact = { ...context.facts[0], id: "fee", question: "Payout fee", answer: "Payouts carry a 3% processing fee. The final amount differs from the payout certificate." };
+    const run = (texts: string[]) => new DeterministicEvaluator(context.sourceProvenance).evaluate({
+      ...context, facts: [fact], scenario: { ...context.scenario, factIds: [fact.id] }, transcript: texts.map((text) => turn(text)),
+    });
+    for (const texts of [
+      ["Payouts carry a 3% processing fee. The final amount differs from the payout certificate?"],
+      ["Payouts carry a 3% processing fee.", "The final amount differs from the payout certificate."],
+      ["Payouts carry a 5% processing fee. The final amount differs from the payout certificate."],
+    ]) {
+      expect((await run(texts)).missedFacts).toEqual([fact.answer]);
+    }
+  });
+
+  it.each([
+    "Traders become eligible for payouts after 14 calendar days.",
+    "Traders become eligible for payouts after 7 calendar days. The minimum trading day requirement must be met.",
+    "Traders become eligible for payouts after 14 calendar days. The minimum trading day requirement must be met?",
+  ])("keeps missing, incorrect or questioned payout conditions uncredited: %s", async (text) => {
+    const fact = { ...context.facts[0], id: "payout", question: "How do payouts work?", answer: "Traders become eligible for payouts after 14 calendar days. The minimum trading day requirement must be met." };
+    const report = await new DeterministicEvaluator(context.sourceProvenance).evaluate({
+      ...context, facts: [fact], scenario: { ...context.scenario, factIds: [fact.id] }, transcript: [turn(text)],
+    });
+    expect(report.missedFacts).toEqual([fact.answer]);
+  });
   it("credits a correct spoken percentage paraphrase in the coaching report", async () => {
     const target = {
       ...context.facts[0], id: "profit-target", question: "What's the profit target?",
